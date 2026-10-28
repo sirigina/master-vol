@@ -1,0 +1,198 @@
+---
+title: The gamma-theta trade-off
+description: Connect gamma and theta through one equation, compute the daily breakeven move for a hedged option, and test it against SPY's real moves.
+lessonId: D7
+prereqs: [D2, D3]
+minutes: 25
+bookRef: the chapters on risk measurement
+---
+
+import BreakevenMove from '../../../components/widgets/d/BreakevenMove.tsx';
+import RentVsPayoff from '../../../components/widgets/d/RentVsPayoff.tsx';
+import Elasticity from '../../../components/widgets/d/Elasticity.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+Gamma and theta are not two separate risks. They are two sides of one bet: **will SPY move more or less than the option price assumes?** This lesson makes that bet precise, puts a dollar figure on the daily breakeven, and checks it against what SPY actually did.
+
+## One equation ties gamma to theta
+
+<Plain>
+
+A hedged long option is a deal: you pay **rent** every day (the melting ice, theta) and in return you collect a payoff whenever SPY makes a move (the accelerator, gamma). The price of the option sets the rent at exactly the level where, if SPY moves as much as the implied volatility forecasts, you break even.
+
+So a hedged option is a pure bet on the **weather that happens versus the forecast**. Bigger swings than forecast: the long side wins. Smaller swings: the short side wins. Direction doesn't matter.
+
+</Plain>
+
+<Pro>
+
+For a delta-hedged option in the Black-Scholes world, the pricing equation itself says
+
+$$
+\Theta + \tfrac{1}{2}\,\Gamma\,S^2\sigma^2 + rS\Delta - rV = 0
+$$
+
+For a delta-hedged position the financing terms ($$rS\Delta - rV$$) are small near the money over a day, which leaves the core relation
+
+$$
+\Theta \approx -\tfrac{1}{2}\,\Gamma\,S^2\sigma^2
+$$
+
+with $$\Theta$$ per year. Over one day, the hedged P/L is therefore
+
+$$
+\Delta\Pi \approx \tfrac{1}{2}\Gamma\left[(\Delta S)^2 - S^2\sigma^2\,\Delta t\right]
+$$
+
+Positive when the realized squared move beats the implied one. Check it on the snapshot: the 770 straddle has gamma 0.0252 at 14.06% volatility, so $$\tfrac{1}{2}\times 0.0252\times 769.66^2\times 0.1406^2/365 = 0.404$$ per calendar day. The model's straddle theta is **0.409**. The small difference is the financing term.
+
+</Pro>
+
+## The daily breakeven move
+
+Set $$(\Delta S)^2 = S^2\sigma^2\Delta t$$ and solve: the hedged position breaks even on a day when SPY moves
+
+$$
+\Delta S^{*} = S\,\sigma\sqrt{\Delta t} = \frac{\sigma}{\sqrt{252}}\,S
+$$
+
+At 14.06% and SPY 769.66, that is **$6.82**, the same "rule of 16" daily move from [lesson C2](/vol/c2/). Any day SPY moves more than about $6.80 pays the long straddle's rent; any quieter day doesn't.
+
+<BreakevenMove client:visible />
+
+At the snapshot's volatility, ten hedged 770 straddles cost about **$599** of rent per trading day, and the full reprice puts the breakeven at +$6.96 and −$6.70 (slightly asymmetric because gamma is a little higher below the strike). Slide implied volatility down to 10% and the rent falls to about $431 a day with a ±$4.90 breakeven; at 20% the rent is about $846 and the breakeven near ±$9.70. Higher implied volatility means a higher bar for the long side to clear.
+
+Note the clock: this chart uses one **trading** day (1/252 of a year), so each weekday's rent includes a share of weekend decay. On a calendar-day basis the theta is $409 per day for ten straddles and the breakeven is about $5.70, which is why [lesson D2](/vol/d2/) found ±$5.70 for a single calendar day.
+
+<Plain>
+
+Here is the deal in numbers. Owning ten hedged 770 straddles costs about $600 a trading day in melt. SPY has to move about **$6.80** on a given day, in either direction, to pay that day's rent. Move $14 (twice the breakeven) and you collect about four times the rent; sit still and you lose the rent.
+
+</Plain>
+
+<Pro>
+
+The trade-off scales cleanly:
+
+- Rent per day is $$\tfrac{1}{2}\Gamma S^2\sigma_{\text{implied}}^2/252$$; payoff per day is $$\tfrac{1}{2}\Gamma(\Delta S)^2$$.
+- Summed over many days, the hedged P/L is about $$\tfrac{1}{2}\sum_t \Gamma_t S_t^2(r_t^2 - \sigma_{\text{implied}}^2\Delta t)$$: a **gamma-weighted** difference between realized and implied variance. Moves that happen when gamma is large (near the strike, near expiry) count most. [Lesson E1](/vol/e1/) builds on this.
+
+</Pro>
+
+## Rent vs payoff: SPY's last 60 days
+
+Replay SPY's actual daily moves against the rent. The position here is one hedged straddle with the 770 straddle's snapshot gamma (0.0252) held constant, so each day's payoff is exactly $$\tfrac{1}{2}\Gamma(\Delta S)^2$$ and each day's rent is fixed by the implied volatility you choose.
+
+<RentVsPayoff client:visible />
+<SnapshotNote detail="SPY daily closes Aug 3 to Oct 27, 2026; gamma from the 770 straddle, Nov 27 expiry" />
+
+Over the 60 trading days to October 27, only **7 days** beat the $6.82 breakeven, and SPY's realized volatility (measured as the root-mean-square daily move) was **9.9%**. At 14.06% implied, the long straddle collected about **$1,732** of gamma payoff against **$3,508** of rent per straddle: the seller won. Slide implied volatility down to 9.9% and the two lines meet. That is the general rule: **a hedged long option makes money if realized volatility beats the implied volatility paid**.
+
+Shorten the window to 10 days. Realized volatility over the last two weeks rose to 11.8%, with three days beyond $6.82 (October 14, 16 and 22): closer, but still short of 14%.
+
+<Plain>
+
+The market forecast stormy weather (14%), and the weather was calmer (about 10%). Anyone who sold the forecast collected the difference; anyone who bought it paid for storms that didn't come. This is the most common pattern in index options, and also the one that hurts sellers most when it breaks: the March 2026 selloff would have reversed the picture.
+
+</Plain>
+
+<Pro>
+
+The constant-gamma replay is a clean teaching device, not a backtest. In a real hedged straddle, gamma rises as expiry nears and falls if SPY drifts away from 770, so the gamma-weighted realized variance depends on the path. Discrete daily rehedging adds noise around the expected P/L ([lesson E2](/vol/e2/)). And sixty days is a small sample: the standard error of a 60-day realized volatility estimate is roughly $$\sigma/\sqrt{2n} \approx 9\%$$ of its level, about ±0.9 points here.
+
+</Pro>
+
+## Elasticity: options as leverage
+
+Gamma vs theta is the hedger's view. The directional trader's view of the same trade-off is **leverage**: how many percent the option moves for a 1% move in SPY.
+
+<Pro>
+
+Elasticity (also called lambda or leverage) is
+
+$$
+\lambda = \frac{\partial V / V}{\partial S / S} = \Delta \cdot \frac{S}{V}
+$$
+
+The 770 call: $$0.541 \times 769.66 / 13.90 = 30.0$$. A 1% SPY rise ($7.70) moves the call about 30%, from $13.90 to roughly $18. The 800 call: $$0.158 \times 769.66 / 2.14 = 56.8$$. The 700 call, deep in the money: 9.5. Elasticity measures leverage for small moves only; gamma and theta then change it.
+
+</Pro>
+
+<Elasticity client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, vendor deltas, mid prices" />
+
+<Plain>
+
+Cheaper, further out-of-the-money options give more **bang per dollar** for a move in the right direction. The 800 call moves about 57% for each 1% in SPY. But that leverage is paid for with a high probability of losing everything, and a faster melt relative to its price. The put side tops out around 34× (the 740 put) because OTM puts carry much higher implied volatility (the skew), which makes them more expensive per unit of delta.
+
+</Plain>
+
+Leverage and the gamma-theta trade-off are the same fact seen two ways. High elasticity means a small premium buys a lot of exposure, and a small premium also means time decay eats a large share of the position each day.
+
+## Common mistakes
+
+- **Treating theta as free money.** It is payment for the gamma risk you are short. The relation $$\Theta \approx -\tfrac{1}{2}\Gamma S^2\sigma^2$$ says the two are priced against each other.
+- **Comparing realized and implied without matching the clock.** Use 252 trading days for daily moves; theta on a calendar-day basis looks smaller on weekdays and larger over weekends.
+- **Reading the last month as the next month.** Implied above realized for 60 days does not guarantee the next 60; it is the volatility risk premium, and it can reverse violently.
+- **Confusing leverage with edge.** A 57× elasticity amplifies outcomes; it does not improve the odds.
+
+<Takeaway>
+
+- For a delta-hedged option, $$\Theta \approx -\tfrac{1}{2}\Gamma S^2\sigma^2$$: theta is the price of gamma at the implied volatility.
+- Daily breakeven move = $$S\sigma/\sqrt{252}$$, about $6.82 for SPY at 14.06%.
+- Long gamma wins when realized volatility beats implied; short gamma wins when it doesn't.
+- Over the 60 days to Oct 27, SPY realized about 9.9% vs 14.1% implied; a hedged long straddle collected about half its rent.
+- Elasticity λ = Δ·S/V: 30× for the 770 call, 57× for the 800 call. Leverage and decay rise together.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="D7"
+  questions={[
+    {
+      q: 'A stock trades at $200 with implied volatility 32%. What daily move does a delta-hedged long ATM option need to break even?',
+      options: ['About $1', 'About $4', 'About $6.40', 'About $12.80'],
+      answer: 1,
+      why: 'S × σ / √252 ≈ 200 × 0.32 / 15.87 ≈ $4.03.',
+    },
+    {
+      q: 'You hold a hedged long straddle with $500 of daily theta. SPY moves exactly twice the breakeven move today. Ignoring other effects, your P/L is about…',
+      options: ['+$500', '+$1,500', '+$1,000', '$0'],
+      answer: 1,
+      why: 'The gamma payoff scales with the square of the move: 2² × $500 = $2,000 earned, minus $500 rent, = +$1,500.',
+    },
+    {
+      q: 'Over a month, SPY realizes 10% volatility. You bought hedged options at 14% implied. Which is most likely?',
+      options: ['You profit', 'You lose', 'Break even', 'Depends only on direction'],
+      answer: 1,
+      why: 'Your gamma payoff tracks realized variance (10%²) while the rent was set by implied variance (14%²). Realized below implied means a loss.',
+    },
+    {
+      q: 'The 800 call has delta 0.158 and costs $2.14 with SPY at 769.66. What is its elasticity?',
+      options: ['About 16', 'About 57', 'About 0.16', 'About 360'],
+      answer: 1,
+      why: 'λ = Δ × S / V = 0.158 × 769.66 / 2.14 ≈ 56.8.',
+    },
+    {
+      q: 'Which statement best captures the gamma-theta trade-off?',
+      options: [
+        'High gamma positions also tend to have low theta',
+        'Theta is the price paid for gamma at the implied volatility',
+        'Gamma and theta are independent risks',
+        'Theta only depends on interest rates',
+      ],
+      answer: 1,
+      why: 'Θ ≈ −½ΓS²σ²: positions with large gamma carry large (negative) theta, priced at the implied volatility.',
+    },
+  ]}
+/>
+
+<BookRef />

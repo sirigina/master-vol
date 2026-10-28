@@ -1,0 +1,175 @@
+---
+title: Protective strategies
+description: Price and compare protective puts, covered calls and collars on 100 SPY shares, and see what insurance really costs per year.
+lessonId: I1
+prereqs: [A6]
+minutes: 25
+---
+
+import HedgeBuilder from '../../../components/widgets/i/HedgeBuilder.tsx';
+import ProtectionCost from '../../../components/widgets/i/ProtectionCost.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+You own 100 shares of SPY at 769.66, about $77,000 of stock. You want to keep the upside but sleep through a selloff. Options give you three basic tools for this, and each one trades protection, cost and upside in a different way.
+
+## The protective put: buying insurance
+
+<Plain>
+
+A put is an **insurance policy** on your shares. You pay a premium now; if SPY falls below the strike by expiration, the policy pays the difference.
+
+With SPY at 769.66, the November 27 750 put costs **$5.94 a share**, or $594 for 100 shares. That buys you a floor: however far SPY falls, you can sell at 750. Your worst case is the $19.66 drop to 750 plus the $5.94 premium, a loss of **$2,560**. Without the put, a crash to 650 would cost you $11,966.
+
+The price is the deductible plus the premium. A put closer to today's price has a smaller deductible and a bigger premium. A put further away is cheap, but you absorb more of the fall yourself.
+
+</Plain>
+
+<Pro>
+
+Stock plus a long put has the same expiration payoff as a long call at the same strike plus cash (put-call parity, [lesson F2](/vol/f2/)):
+
+$$
+S + P(K) = C(K) + K e^{-rT}
+$$
+
+So the protected position is long a call in disguise: delta below 1, positive gamma, negative theta, long vega. At expiry,
+
+$$
+\text{P/L} = \max(S_T, K) - S_0 - P, \qquad \text{worst case} = K - S_0 - P, \qquad \text{breakeven} = S_0 + P
+$$
+
+For the 750 November put: worst case $$750 - 769.66 - 5.94 = -25.60$$ a share, breakeven 775.60. The insurance has to be earned back by a rally before the position shows a profit.
+
+</Pro>
+
+<HedgeBuilder client:visible />
+<SnapshotNote detail="Nov 27 (31 days) and Dec 18 (52 days) expiries, mid prices" />
+
+Start on **Protective put** and click through the put strikes. The floor rises as the strike rises, and the breakeven moves further away. Then switch to December: the same 750 put costs $9.68 for 52 days of cover, and the worst case widens to $2,934 because you paid more for it.
+
+## The covered call: selling upside for income
+
+<Plain>
+
+A covered call is the opposite trade. You **collect** a premium by selling someone the right to buy your shares at a higher price. With the November 27 790 call at $4.44, you take in $444.
+
+That money is a cushion, not a floor. It absorbs the first $4.44 of a fall; below 765.22 you lose dollar for dollar like a plain shareholder. And if SPY rallies past 790, your gains stop there.
+
+A covered call is a partial hedge at best. It suits a view that the market will drift sideways, not a fear of a crash.
+
+</Plain>
+
+<Pro>
+
+Stock plus a short call is synthetically a short put ([lesson F1](/vol/f1/)): $$S - C(K) = -P(K) + K e^{-rT}$$. The position is short gamma and short vega, the exact reverse of the protective put. Delta falls from 1 to about $$1 - 0.27 = 0.73$$ with the 790 call (delta 0.271), so it hedges about a quarter of the price risk for small moves and less in a crash, because the short call's delta shrinks toward zero as SPY falls.
+
+The trade-off is explicit in the payoff: maximum gain $$K - S_0 + C = 790 - 769.66 + 4.44 = 24.78$$ a share, and a loss that runs all the way down to zero, less the premium.
+
+</Pro>
+
+## The collar: let the call pay for the put
+
+<Plain>
+
+A collar combines the two: buy a put below the market, sell a call above it, and use the call money to pay for the insurance.
+
+On the snapshot, the November 27 **740 put and 790 call both cost $4.44**. Buy one, sell the other, and the protection is free in cash terms. You give up everything above 790 to get a floor at 740. Your result at expiry is boxed in between a loss of $2,966 and a gain of $2,034, whatever happens.
+
+"Zero cost" is a description of the cash flow, not a free lunch. You paid with the upside you sold.
+
+</Plain>
+
+<Pro>
+
+The collar's expiry payoff equals a long bull call spread $$C(K_1) - C(K_2)$$ plus cash $$K_1 e^{-rT}$$. Its Greeks are the stock's delta of 1 minus the put and call deltas: $$1 - 0.196 - 0.271 = 0.53$$ for the 740/790, so roughly half the market exposure for a small move.
+
+Skew matters here. The 740 put trades at 17.9% implied volatility and the 790 call at 12.2%. At a single flat 14.1% volatility the 790 call ($5.91) would be worth far more than the 740 put ($2.31), and the call that pays for the 740 put would sit near 807, about 4.9% above SPY instead of 2.6%. Because index puts are rich ([lesson C8](/vol/c8/)), a collar buyer sells relatively cheap upside to buy relatively expensive downside. That is why many zero-cost index collars cap the upside closer to spot than the floor sits below it: here the floor is 3.9% below SPY and the cap only 2.6% above.
+
+</Pro>
+
+Switch the builder to **Collar** and pick a put strike; the note under the chart tells you which call comes closest to paying for it. In December, the 750 put ($9.68) is almost covered by the 790 call ($8.54), a net debit of $1.14.
+
+## The time cost of insurance
+
+<Plain>
+
+Insurance is priced per period, and short policies are expensive per day. The question to ask is **what it costs per year** if you keep renewing it.
+
+The chart below shows two views. By strike: the further below the market the strike sits, the cheaper the put, but the decline is steep at first and then flattens, because far-away puts carry high implied volatility (the 650 put is priced at 32.1% volatility against 14.0% for the 770 put). By expiry: the at-the-money put for 10 days costs 0.90% of SPY, which works out to **32.7% a year** if you rolled it forever. The 416-day put costs 5.90%, or **5.2% a year**.
+
+</Plain>
+
+<Pro>
+
+At constant volatility, at-the-money option value grows with $$\sqrt{T}$$ (about $$0.4\,S\sigma\sqrt{T}$$), so the annualized cost scales as $$1/\sqrt{T}$$. Over the listed expiries the 770 put's price rises 6.6× for 41.6× the time, slightly more than the 6.4× that $$\sqrt{T}$$ predicts, because the term structure slopes upward (14.5% to 18.6% put IV).
+
+Two cautions when comparing annualized figures:
+
+- **Rolling short-dated at-the-money puts is not the same product** as one long-dated put. Each roll resets the strike to the new spot, so the cover follows the market up and protects gains; a one-year put struck at 770 does not. Part of the extra cost buys that reset.
+- **Theta is front-loaded.** An at-the-money option loses value fastest in its last weeks ([lesson D3](/vol/d3/)). Hedgers who need continuous cover often buy two to six months out and roll before the last month, trading a higher upfront premium for slower decay.
+
+</Pro>
+
+<ProtectionCost client:visible />
+<SnapshotNote detail="Nov 27 and Dec 18 put chains; 770 put across nine listed expiries" />
+
+Toggle **Per option** and **Annualized**. Per option, December puts always cost more than November puts at the same strike. Annualized, the order flips near the money: the 750 put costs 9.1% a year in November but 8.8% a year in December.
+
+## Common mistakes
+
+- **Calling a collar "free".** The premium nets to zero; the cost is the upside you sold, and on index collars skew means you usually sell more upside than you buy downside.
+- **Treating a covered call as a hedge.** It cushions a small dip by the premium received, nothing more. Below the cushion, losses run all the way down to zero.
+- **Comparing put prices across expiries without annualizing.** A cheap-looking one-week put can be the most expensive insurance per day you can buy.
+- **Forgetting the breakeven moves.** A protective put pushes your breakeven above today's price by the premium; you need a rally just to stand still.
+
+<Takeaway>
+
+- Protective put = floor at the strike minus the premium; it turns stock into a synthetic long call.
+- Covered call = premium cushion and a cap on gains; it is a synthetic short put, not crash insurance.
+- Collar = long put plus short call; on the snapshot the Nov 27 740 put and 790 call both price at $4.44, a zero-cost collar with a $2,966 floor and a $2,034 cap.
+- Put skew makes downside strikes expensive, which pulls zero-cost collar caps closer to spot.
+- Insurance cost scales roughly with √time, so short-dated puts are far more expensive per year (32.7% a year for 10 days at the money vs 5.2% for 416 days).
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="I1"
+  questions={[
+    {
+      q: 'You own SPY at 769.66 and buy the 750 put for $5.94. What is your worst-case loss per share at expiry?',
+      options: ['$5.94', '$19.66', '$25.60', 'Unlimited'],
+      answer: 2,
+      why: 'You can lose the drop to the strike (769.66 − 750 = 19.66) plus the premium (5.94): 25.60 per share, $2,560 per 100 shares.',
+    },
+    {
+      q: 'Stock plus a long put has the same expiration payoff shape as which position?',
+      options: ['A short put', 'A long call', 'A short call', 'A long straddle'],
+      answer: 1,
+      why: 'By put-call parity, S + P = C + K·e^(−rT). The floor below and open upside above is exactly a long call, plus cash.',
+    },
+    {
+      q: 'A zero-cost collar on SPY uses a 740 put and a 790 call. Why does the call sit closer to spot than the put?',
+      options: [
+        'Calls always cost more than puts',
+        'Put skew: downside strikes carry higher implied volatility, so you need a nearer call to pay for them',
+        'Interest rates make puts cheaper',
+        'It is a coincidence of the strikes listed',
+      ],
+      answer: 1,
+      why: 'The 740 put is priced at 17.9% IV and the 790 call at 12.2%. Rich puts and cheap calls mean the call must be nearer the money to raise the same premium.',
+    },
+    {
+      q: 'The 10-day ATM put costs 0.90% of SPY and the 416-day ATM put costs 5.90%. Which is cheaper insurance per year?',
+      options: ['The 10-day put', 'The 416-day put', 'They cost the same per year', 'Cannot be compared'],
+      answer: 1,
+      why: 'Annualized: 0.90% × 365/10 ≈ 32.7% a year versus 5.90% × 365/416 ≈ 5.2%. Option value grows with √time, so cost per day falls with longer expiries.',
+    },
+  ]}
+/>

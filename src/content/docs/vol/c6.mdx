@@ -1,0 +1,194 @@
+---
+title: Volatility characteristics & forecasting
+description: Recognize how volatility behaves (mean reversion, clustering, the volatility cone, the down-market asymmetry) and turn those habits into a simple, defensible forecast.
+lessonId: C6
+prereqs: [C4]
+minutes: 25
+bookRef: the chapter on volatility characteristics and forecasting
+---
+
+import VolCone from '../../../components/widgets/c/VolCone.tsx';
+import VolClustering from '../../../components/widgets/c/VolClustering.tsx';
+import ForecastBlender from '../../../components/widgets/c/ForecastBlender.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+Prices are hard to forecast. Volatility is easier, because it has habits. It drifts back toward an average, it arrives in bunches, and it jumps when markets fall. [Lesson C4](/vol/c4/) showed that the volatility that matters is the future one; this lesson shows what its habits tell you about where it is likely to go, and how to turn them into a number.
+
+## Volatility returns to its average
+
+<Plain>
+
+Weather has seasons and storms, but over the years a town's climate is stable. A heatwave ends; a cold snap breaks. Volatility behaves the same way. A very calm month is usually followed by a somewhat less calm one, and a stormy month by a calmer one. Neither extreme lasts.
+
+That gives you a first, surprisingly good forecasting rule: **when volatility is far from its usual level, bet on it moving back toward that level**.
+
+</Plain>
+
+<Pro>
+
+Mean reversion in variance is the central feature of every standard volatility model. In a GARCH(1,1),
+
+$$
+\sigma_{t+1}^2 = \omega + \alpha\,r_t^2 + \beta\,\sigma_t^2, \qquad \bar\sigma^2 = \frac{\omega}{1-\alpha-\beta}
+$$
+
+and the expected variance $$k$$ days ahead decays geometrically toward the long-run level: $$\mathbb{E}[\sigma^2_{t+k}] - \bar\sigma^2 = (\alpha+\beta)^k(\sigma_t^2 - \bar\sigma^2)$$. For equity indexes $$\alpha+\beta$$ is typically 0.97 to 0.99 per day, a half-life of roughly one to three months. VIX shows the same thing in implied space: after its **31.05** peak on March 27, 2026 it was back to **17.83** twenty-one sessions later.
+
+</Pro>
+
+## The volatility cone
+
+A volatility cone puts mean reversion on one chart. For each window length (10, 20, 30, 60, 90, 120 trading days) it shows the full range of realized volatility measured over every such window in the past year.
+
+<VolCone client:visible />
+<SnapshotNote detail="realized vol from 257 daily closes; implied = ATM IV of the 770 strike, plotted at trading days to expiry" />
+
+The shape gives the chart its name. Short windows swing widely: 10-day realized ranged from **5.5% to 24.1%**. Long windows are pinned near the average: 120-day realized never left **11.9% to 14.6%**. Over a long stretch, calm and stormy days average out, so long-window volatility can't stray far from the mean.
+
+<Plain>
+
+Read the cone as a reality check on any forecast. If someone prices a 10-day option at 30% volatility, the cone says SPY hasn't realized that over any 10-day stretch in the past year. If they price a 4-month option at 16%, the cone says a 90-day window never got above about 15%.
+
+Now look at the orange dots, the market's implied volatilities on October 27. The short-dated ones (14% to 15%) hug the top of the 25th-to-75th percentile band, some just above it. The March 19 option, about 98 trading days out, implies **15.9%**, *above* the maximum that any 90- or 120-day window realized all year. The market was charging for a stormier future than the whole past year delivered.
+
+</Plain>
+
+<Pro>
+
+Three ways desks use the cone:
+
+- **Relative value by tenor.** Compare each expiry's implied vol to the percentile of realized for the same horizon. Here the Nov 27 expiry (22 trading days, 14.06%) sits just below the 75th percentile of 20-day realized (14.2%); the March expiry (15.86%) sits above the max of the 90-day distribution (15.1%).
+- **Current position in the cone.** Trailing realized (dashed green) sits below the 25th percentile at 20 days and at the very bottom at 60 days: the trailing 60-day reading of 10.0% is the lowest of the year. Recent history is calm relative to the year, which is exactly when mean reversion argues for higher, not lower, future vol.
+- **Caveat.** One year is a short sample: it contains one real selloff. A cone built on ten years would have a much higher maximum. Overlapping windows also make the percentiles less independent than they look.
+
+</Pro>
+
+## Volatility clusters
+
+<Plain>
+
+Big days arrive in bunches. A 2% drop is more likely tomorrow if there was one today, and long quiet stretches tend to stay quiet. This is the **clustering** that makes "recent volatility" useful at all: if moves were independent of each other, the last month would tell you nothing about the next.
+
+</Plain>
+
+<Pro>
+
+Daily returns themselves have almost no autocorrelation (markets are hard to predict in direction), but the **size** of returns does: $$|r_t|$$ and $$r_t^2$$ are positively autocorrelated across many lags. That is the ARCH effect GARCH was built to capture. In a one-year sample of 256 days the measured autocorrelations are noisy; the clustering is easier to see than to estimate, which is exactly what the chart below shows.
+
+</Pro>
+
+<VolClustering client:visible />
+<SnapshotNote detail="absolute daily log returns, Oct 2025 to Oct 2026" />
+
+In real order, SPY's 14 days with a move bigger than 1.60% (two daily standard deviations) crowd into a few stretches: **five between March 20 and April 8**, four between June 5 and June 29. Switch to **Shuffled**: the same days, scattered at random, spread evenly across the year. The real market has seasons of calm and storm; a random one doesn't.
+
+## Volatility rises when prices fall
+
+<Plain>
+
+Markets take the stairs up and the elevator down. Rallies tend to be calm and steady; selloffs are fast and jumpy. That is why the "fear gauge" rises when stocks fall ([lesson C5](/vol/c5/)), and why insurance on the downside (puts) costs more than the same distance on the upside ([lesson C8](/vol/c8/)).
+
+</Plain>
+
+<Pro>
+
+The asymmetry shows up most cleanly in implied vol: over the past year VIX moved about **−1.5 points per +1% in SPY** with a correlation of −0.82 ([lesson C5](/vol/c5/)). In realized vol over a single year it is noisier. SPY's 20-day realized peaked at **20.7%** on April 9, 2026, just after the March low, and the sharp rebound days (+2.9% on March 31, +2.5% on April 8) count toward realized vol as much as the drops did. Models capture the effect with an asymmetric term, e.g. GJR-GARCH adds $$\gamma\,r_t^2\,\mathbb{1}[r_t<0]$$ so negative returns raise next-day variance more than positive ones. For an options trader the practical consequence is that **long vol pays off in a crash and short vol loses in one**: the direction of the market and of volatility are linked.
+
+</Pro>
+
+## A simple forecast
+
+You don't need GARCH to make a sensible forecast. A weighted average of three inputs captures most of what the habits above imply:
+
+1. **Long-run mean** (mean reversion): 12.67%, SPY's 1-year realized.
+2. **Recent realized** (clustering): 9.98%, the last 20 sessions.
+3. **Implied** (the market's information, including scheduled events): 14.06%, ATM for November 27.
+
+<ForecastBlender client:visible />
+<SnapshotNote detail="1-year and 20-day realized from closes; ATM implied and the 770 straddle (25.14) for Nov 27" />
+
+<Plain>
+
+With weights of 40% long-run, 30% recent and 30% implied, the forecast is **12.28%**, about 1.8 points below what options are charging. At that volatility the 770 straddle would be worth about $21.96 instead of $25.14.
+
+Does that mean the options are overpriced? Only if you trust your forecast more than the market's, and only if the gap is bigger than the fee sellers deserve for taking storm risk. Over the past year that fee averaged about 5.6 points on VIX ([lesson C4](/vol/c4/)). Try setting all the weight on implied: then you agree with the market and there's no trade.
+
+</Plain>
+
+<Pro>
+
+Weighting choices map to beliefs. Heavy long-run weight assumes fast mean reversion; heavy recent weight assumes persistence; heavy implied weight assumes the market knows something (an event, a macro release) the history doesn't. Blends of this kind often forecast as well as GARCH out of sample because estimation error in the model parameters is large in short samples. The horizon matters: for a 22-day option, recent realized should carry more weight than it would for a 1-year option, since mean reversion has less time to work. The straddle value in the widget scales in proportion to vol, $$\text{Straddle} \propto \sigma$$, which is accurate near the money: the full Black-Scholes reprice at 12.28% is $22.04. A forecast below implied is a *necessary* condition for selling volatility, not a sufficient one; the edge has to exceed the risk premium, hedging costs, and the jump risk the cone can't show.
+
+</Pro>
+
+## Common mistakes
+
+- **Extrapolating the last month.** Calm and stormy spells both fade; a forecast that ignores the long-run mean overreacts.
+- **Ignoring clustering.** After a big move, the next few days are more likely to be big too. Recent realized deserves weight.
+- **Treating the cone's edges as limits.** A one-year cone contains one selloff. The next one can break the maximum.
+- **Treating "forecast below implied" as a sell signal by itself.** Implied includes a risk premium for a reason.
+
+<Takeaway>
+
+- Volatility mean-reverts: extremes fade toward a long-run level, so volatility measured over long windows stays close to that level.
+- A volatility cone shows realized vol's range by window. Short windows swing widely; long windows stay near the mean.
+- Volatility clusters: big days come in bunches, so recent volatility carries information.
+- Volatility tends to rise when prices fall, which links market direction to vol positions.
+- A weighted blend of long-run, recent and implied vol is a simple, defensible forecast. At the snapshot, 40/30/30 gives 12.28% vs 14.06% implied.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="C6"
+  questions={[
+    {
+      q: 'On a volatility cone, why is the range for 120-day windows much narrower than for 10-day windows?',
+      options: [
+        'Long-dated options are less liquid',
+        'Over long windows calm and stormy days average out, so realized vol stays near its mean',
+        'The data for long windows is incomplete',
+        'Implied volatility is higher for long windows',
+      ],
+      answer: 1,
+      why: 'Averaging over more days dilutes extreme stretches. That is mean reversion seen across horizons.',
+    },
+    {
+      q: 'SPY\'s 20-day realized vol is at the 25th percentile of its cone. What does mean reversion suggest for the next month?',
+      options: ['It will likely stay exactly the same', 'It is more likely to rise toward the median than fall further', 'It must fall', 'Nothing; volatility is random'],
+      answer: 1,
+      why: 'Mean reversion means extremes tend to fade toward the average. From a low percentile, the drift is upward, though not guaranteed.',
+    },
+    {
+      q: 'Which observation is evidence of volatility clustering?',
+      options: [
+        'Daily returns average close to zero',
+        'Large daily moves tend to be followed by more large moves',
+        'SPY rose over the year',
+        'Implied vol is higher for longer expiries',
+      ],
+      answer: 1,
+      why: 'Clustering is about the size of moves being persistent, not their direction.',
+    },
+    {
+      q: 'Your forecast is 12.3% and ATM implied is 14.1%. Which statement is most accurate?',
+      options: [
+        'Options are certainly overpriced and selling them is riskless',
+        'The gap suggests options look rich to you, but it must exceed the risk premium and jump risk to justify selling',
+        'Your forecast must be wrong because the market is always right',
+        'You should buy options',
+      ],
+      answer: 1,
+      why: 'Forecast below implied is a necessary condition for selling vol, not a sufficient one. Index implied normally carries a premium as compensation for tail risk.',
+    },
+  ]}
+/>
+
+<BookRef />

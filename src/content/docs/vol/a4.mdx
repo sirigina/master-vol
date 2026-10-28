@@ -1,0 +1,188 @@
+---
+title: How options trade
+description: Read a two-sided market, measure what the bid-ask spread really costs across a chain, and choose order types that keep that cost under control.
+lessonId: A4
+prereqs: [A1]
+minutes: 20
+---
+
+import SpreadWidth from '../../../components/widgets/a/SpreadWidth.tsx';
+import RoundTrip from '../../../components/widgets/a/RoundTrip.tsx';
+import OrderBook from '../../../components/widgets/a/OrderBook.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+Two SPY puts, one strike apart, on October 27: the 775 put was quoted 13.30 / 13.37, a 7-cent spread. The 780 put was quoted 15.56 / 16.08, **52 cents**. Buying and immediately selling ten of the second would have cost $520 before fees. Knowing where those costs hide, and how to avoid paying them, is as much a part of options trading as any model.
+
+## Bid, ask and mark
+
+<Plain>
+
+Every option has two prices at once:
+
+- The **bid** is what buyers are offering. It's the price you get if you sell right now.
+- The **ask** (or offer) is what sellers want. It's the price you pay if you buy right now.
+- The **mark** is the midpoint, a fair-value reference that brokers use to value your account.
+
+The gap between bid and ask is the **spread**. It's like the difference between what a currency exchange booth pays for your dollars and what it charges you for them. Every time you trade immediately, you give up about half of it.
+
+</Plain>
+
+<Pro>
+
+The quote you see is the **NBBO**: the highest bid and lowest offer across the US options exchanges, each with a displayed size. SPY options trade on more than a dozen venues, and an order router sends your order to whichever venue shows the best price (or pays for the flow; see below).
+
+The **effective spread** you pay is $$2\,|P_{\text{fill}} - \text{mid}|$$. A useful normalization is the spread as a percentage of the mid:
+
+$$
+\text{spread\%} = \frac{\text{ask} - \text{bid}}{\text{mid}}
+$$
+
+Desks also think of the spread in **volatility points**: divide the dollar spread by vega. The 770 call's 6-cent spread over a vega of 0.885 is about 0.07 vol points; the 780 put's 52 cents over 0.846 is 0.61 points. That's the number a volatility trader compares with their edge.
+
+</Pro>
+
+<SpreadWidth client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry; bid and ask at the close" />
+
+Two stories, depending on the units:
+
+- **In dollars**, at-the-money and out-of-the-money strikes cost 1 to 7 cents to cross. In-the-money options are wider, and the deeper they go, the wider: 21 to 25 cents for the 750 to 765 calls, $1.62 for the 740 call, about **$2.75** for the 700 and 720 calls, and 50 to 62 cents for the 780, 790 and 800 puts.
+- **As a percentage of price**, the cheap far out-of-the-money options are the expensive ones to trade. The 840 call at 0.12 / 0.13 has a one-cent spread, but that's **7.7%** of its $0.13 price.
+
+The 770 call, by contrast, costs 0.43% of its price to cross. Liquidity concentrates where most of the trading is: near the money, and in out-of-the-money puts that investors buy as protection.
+
+## Who is on the other side
+
+<Plain>
+
+Most of the time the other side of your trade is a **market maker**: a firm that stands ready to buy at the bid and sell at the ask all day. It earns the spread as payment for that service, the way a shop marks up what it buys wholesale.
+
+Two ideas help judge how busy a contract is:
+
+- **Volume:** how many contracts traded today. A measure of activity.
+- **Open interest:** how many contracts are still open at the end of the day. A measure of how many positions exist.
+
+If you buy a new contract from someone who is also opening a position, open interest goes up by one. If you sell a contract you own to someone who is closing a short, it goes down by one. If one side opens and the other closes, it stays the same.
+
+</Plain>
+
+<Pro>
+
+Option market makers quote two-sided markets in hundreds or thousands of series at once, then **hedge the delta** with the underlying ([D1](/vol/d1/)) and manage the remaining gamma and vega risk across their book. Their spread compensates for:
+
+- **Hedging costs** and the risk that the price moves before they can hedge.
+- **Adverse selection:** trading against someone who knows more. Spreads widen into events and in thin, deep in-the-money series where an informed trader could pick them off.
+- **Inventory risk:** the vega and skew they accumulate when everyone wants the same side (typically buying puts).
+
+Deep in-the-money options are wide because their price is almost all intrinsic value, which tracks SPY one-for-one: the market maker has to hedge nearly 100 deltas per contract, and few customers trade them, so there is little competition at the touch. The 780 put's 52 cents versus the 775 put's 7 cents is an example of how quickly that changes as an option moves in the money. Retail order flow is often routed to wholesalers under **payment for order flow**, which can give fills inside the NBBO ("price improvement"), but also means the displayed quote is not the whole picture.
+
+Open interest is published by the OCC once a day, the morning after. Volume without a change in open interest means positions changed hands; volume with a large rise in open interest means new positions were opened.
+
+</Pro>
+
+## Order types
+
+<OrderBook client:visible />
+<SnapshotNote detail="780 put, Nov 27, 2026 expiry; top of book only, deeper levels invented" />
+
+Slide the limit price and switch sides. A buy limit at 15.82 (the mark) becomes the new best bid, alone at the front of the queue. Drop it to 15.56 and it joins the 40 contracts already bidding there; it fills only after they do. Raise it to 16.08 or above and it's **marketable**: it trades immediately at the ask, and any contracts that don't fill rest as a bid.
+
+<Plain>
+
+- A **market order** says "fill me now, at whatever the best price is." You'll pay the ask (or receive the bid), and if the market is thin, worse.
+- A **limit order** says "fill me only at this price or better." You may not get filled, but you never overpay.
+
+For options, limit orders are the norm. Start near the mark and adjust in small steps if no one takes it. On a contract with a wide spread, patience can save more than any commission.
+
+</Plain>
+
+<Pro>
+
+Standard practice for retail and professional option orders:
+
+- **Limit at mid, then walk.** Post at the mid; if unfilled after a short wait, move a penny or two toward the far side. Market makers' algorithms respond to resting orders inside the spread.
+- **Multi-leg (complex) orders.** A spread such as buy 770 call / sell 790 call is sent as one order at a **net price** (here a debit of 13.90 − 4.44 = 9.46 at the mids). It trades on the exchanges' complex order books, both legs fill or neither does (no "legging risk"), and the net spread is usually narrower than the sum of the two legs' spreads. Legging in yourself saves nothing on average and exposes you to the market moving between fills.
+- **Avoid market orders on options**, especially at the open and on wide strikes. Wide quotes can flicker wider still, and a market order has no protection.
+- **Size.** The displayed size at the touch can be small; a large order walks through the book. Professionals work large orders or ask for a quote through a broker.
+
+</Pro>
+
+## The round trip
+
+<RoundTrip client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry; fees are an illustrative $0.65 per contract per side" />
+
+Ten 770 calls bought at the ask and sold at the bid cost **$60** in spread plus $13 in fees: $73, about 0.53% of the $13,900 premium, which SPY covers with a move of about 13 cents. Switch to the **780 put** at natural fills: $520 in spread plus $13 in fees, 3.4% of the premium, and SPY has to fall about 88 cents just to cover it. Choose **Mid ± ⅓** to see how much a patient limit order recovers ($186 total on the 780 put).
+
+<Plain title="Why the round trip matters">
+
+Half the spread is paid twice: once getting in, once getting out, so a round trip costs the whole spread. A trade that looks like a small, quick profit can be eaten entirely by the spread. Before you trade, ask: how far must the price move just to get my costs back?
+
+</Plain>
+
+<Pro title="Pro detail: costs versus edge">
+
+For a volatility trader, the round-trip spread in vol points is the hurdle. The 770 call round trip at natural (6 cents over vega 0.885) costs about 0.07 vol points. If your view is that implied is two points too high, that is cheap. On the 780 put at natural (52 cents over vega 0.846, about 0.6 points), close to a third of a two-point edge disappears before fees. Transaction costs are why professional strategies concentrate in the most liquid strikes and why market makers, who *earn* the spread, can run strategies that would lose money for anyone paying it ([E4](/vol/e4/)).
+
+Fees on listed options include broker commission (often zero at retail brokers), exchange fees, the OCC clearing fee and small regulatory fees on sales. They are per contract, so they matter most for cheap options: $1.30 round trip on a $0.13 option is 10% of the price.
+
+</Pro>
+
+## Common mistakes
+
+- **Valuing a position at the mark and trading at it.** You exit at the bid (if long). On a wide strike the mark overstates what you would get.
+- **Using market orders on options.** Especially on strikes with wide or thin quotes.
+- **Legging into spreads one side at a time.** Use a multi-leg order at a net price.
+- **Ignoring percentage costs on cheap options.** A one-cent spread on a 13-cent option is nearly 8% of the price for the round trip.
+
+<Takeaway>
+
+- Bid is what you can sell for now, ask is what you can buy for now, mark is the midpoint.
+- Near-the-money SPY options have spreads of a few cents; deep in-the-money options and cheap far-out options are costly in dollars and percentages respectively.
+- Market makers earn the spread for providing liquidity and carrying hedging and adverse-selection risk.
+- Use limit orders, start at the mid, and send multi-leg strategies as one order at a net price.
+- A round trip at natural prices costs the full spread (half in, half out) plus fees on both sides; compare it with the move or volatility edge you expect.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="A4"
+  questions={[
+    {
+      q: 'The 760 put is quoted 8.06 / 8.12. You buy one contract with a market order. What do you pay, before fees?',
+      options: ['$806', '$809', '$812', '$8.12'],
+      answer: 2,
+      why: 'A market buy fills at the ask, 8.12 per share, times 100 shares = $812.',
+    },
+    {
+      q: 'Which option is most expensive to trade as a percentage of its price?',
+      options: ['770 call, 13.87 / 13.93', '840 call, 0.12 / 0.13', '750 put, 5.92 / 5.96', '760 call, 20.72 / 20.96'],
+      answer: 1,
+      why: 'One cent on a $0.125 mid is about 8%. The 770 call is 0.4%, the 750 put 0.7%, and the 760 call 1.2%.',
+    },
+    {
+      q: 'You buy 5 contracts to open from a seller who is also opening. What happens to open interest?',
+      options: ['Rises by 5', 'Falls by 5', 'Unchanged', 'Rises by 10'],
+      answer: 0,
+      why: 'Two new positions are created (your long, their short), counted as 5 contracts of open interest.',
+    },
+    {
+      q: 'Why send a bull call spread as a single multi-leg order rather than two separate orders?',
+      options: [
+        'It is required by the exchange',
+        'Both legs fill together at a net price, avoiding legging risk, usually at a tighter net spread',
+        'It avoids all fees',
+        'It guarantees a fill at the mid',
+      ],
+      answer: 1,
+      why: 'A complex order trades as a unit at the net debit or credit. No fill guarantee, but no risk of being left with one leg.',
+    },
+  ]}
+/>

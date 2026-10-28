@@ -1,0 +1,183 @@
+---
+title: Index fair value & arbitrage
+description: Compute the fair price of S&P 500 futures from rates and dividends, read the basis, and see why index arbitrage keeps futures, SPX and SPY in line.
+lessonId: J2
+prereqs: [J1, B3]
+minutes: 25
+---
+
+import FairValue from '../../../components/widgets/j/FairValue.tsx';
+import ArbBand from '../../../components/widgets/j/ArbBand.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+S&P 500 futures almost never trade at the index level. With SPX at 7722.6, the December future "should" trade about 39 points higher. That gap is not a forecast that the market will rise; it is the cost of carrying the stocks, and it is pinned in place by arbitrage.
+
+## Fair value: the cost of carry
+
+<Plain>
+
+Suppose you want to own the S&P 500 in 52 days. You have two ways to do it.
+
+1. **Buy the stocks today.** You pay the full price now, so you lose the interest that money would have earned. In return, you collect the dividends the stocks pay along the way.
+2. **Buy the futures.** You pay nothing today (apart from a margin deposit), keep your cash earning interest, but you do not get the dividends.
+
+For neither route to be a free win, the futures price has to be higher than the index by **interest minus dividends**. That gap is called the **basis**, and the futures price that makes the two routes equal is **fair value**.
+
+</Plain>
+
+<Pro>
+
+With continuous rate $$r$$ and dividend yield $$q$$:
+
+$$
+F = S\,e^{(r-q)T}, \qquad \text{basis} = F - S \approx S\,(r - q)\,T
+$$
+
+At the snapshot, SPX 7722.6, $$r = 4.6\%$$, $$q = 1.1\%$$, 52 days to the December 18 expiry:
+
+$$
+F = 7722.6\, e^{(0.046 - 0.011)\times 52/365} = 7761.20
+$$
+
+a basis of **+38.60 points**: about 50.78 points of interest less 12.17 points of dividends. In practice desks use discrete expected dividends rather than a yield, since S&P 500 dividends cluster around certain months, and the financing rate is the futures-implied rate rather than a Treasury yield.
+
+</Pro>
+
+<FairValue client:visible />
+<SnapshotNote detail="SPX level and the parity-implied 4.6% rate; dividend yield is an input (about 1.1% for the S&P 500)" />
+
+Set the dividend yield to 0 and the basis rises to the dashed "interest only" line. Raise it above 4.6% and the basis turns negative: futures below the index, as happens in markets where dividends exceed rates. Switch to **Convergence** to see the second rule of futures: whatever the index does, the basis shrinks to zero at expiry, because on that day the future and the index are the same thing.
+
+## Index arbitrage
+
+<Plain>
+
+If the futures trade **above** fair value, an arbitrageur sells the futures and buys all the stocks in the index. They hold the stocks to expiry, collect the dividends, and the two positions converge. The profit is how far the futures were above fair value, less trading costs.
+
+If the futures trade **below** fair value, they do the reverse: buy futures, sell (or sell short) the stocks.
+
+Because large firms watch for this all day, the futures stay within a narrow band around fair value. The band's width is set by the cost of doing the trade.
+
+</Plain>
+
+<Pro>
+
+The no-arbitrage condition is a band, not a line:
+
+$$
+S\,e^{(r-q)T} - c_{\text{lo}} \;\le\; F \;\le\; S\,e^{(r-q)T} + c_{\text{hi}}
+$$
+
+where $$c$$ covers commissions, bid-ask on 500 stocks and the future, market impact, and financing spreads. The two sides are not symmetric: the cheap-futures side requires shorting stock, which costs borrow fees and is harder to finance, so the lower bound is usually wider. Dividend uncertainty also matters; a long-dated future embeds a dividend forecast that can be wrong, and listed dividend futures exist to trade it.
+
+In modern markets most of the arbitrage is done via ETFs (SPY creations and redemptions), total return futures and swaps rather than literal baskets of 500 stocks. The economics are the same.
+
+</Pro>
+
+<ArbBand client:visible />
+
+Widen the cost slider and the number of tradable moments falls quickly. Narrow it to 0.01% (under a point) and almost every wiggle looks like an opportunity, which is why the lowest-cost players set the price and the band in practice is tight.
+
+## Why SPX/SPY is about 10.03, not 10
+
+<Plain>
+
+SPY was designed as one tenth of the S&P 500. At the snapshot it is 769.66 against an index of 7722.6, so SPY is about 0.34% *below* a tenth (772.26).
+
+Three things push it off a clean tenth: the fund's small annual fee, which has nibbled at its value since 1993; the way it collects dividends from its stocks and pays them out only every quarter, which makes the ratio drift through each quarter; and the fact that the fund's closing price and the index's closing level are struck at slightly different moments. The relationship is tight but not exact, so traders always use the live ratio.
+
+</Plain>
+
+<Pro>
+
+For hedging and strike conversion, use the ratio measured at the time: $$7722.6 / 769.66 = 10.034$$. A SPY 770 strike corresponds to about SPX 7726, not 7700. Over a quarter the ratio moves by a few hundredths as dividends accrue in the fund's NAV and then drop out on the ex-date (the third Friday of March, June, September and December), and it steps down very slightly over time from the expense ratio. A desk running an SPX-vs-SPY options position tracks this ratio as its own small risk.
+
+</Pro>
+
+## The forward inside every option price
+
+<Plain>
+
+An option on SPY or SPX is really priced off the **future** price of the index, not today's price, because the option pays out at a future date. That is why at-the-money calls usually cost more than at-the-money puts: with rates above dividends, the forward sits above today's price, so the "at-the-money" strike is slightly in the money for calls.
+
+On the snapshot, the November 27 770 call costs $13.90 and the 770 put $11.24. The $2.66 difference is mostly carry.
+
+</Plain>
+
+<Pro>
+
+Put-call parity gives the forward the options are priced off:
+
+$$
+F = K + e^{rT}\,(C - P)
+$$
+
+For November 27: $$F = 770 + e^{0.046 \times 31/365} \times 2.66 = 772.67$$, the same as the no-dividend forward $$769.66\,e^{0.046 \times 31/365}$$. (The snapshot's 4.6% rate was itself backed out of near-the-money parity, and no SPY dividend goes ex before November 27, so this agreement is by construction.) For December 18 the parity forward is **773.63**, about 1.09 below the no-dividend forward of 774.72: the market is pricing part of the December dividend, whose ex-date falls around that expiry.
+
+Options on ES futures make this explicit: the underlying is already the forward, and the Black model uses $$F$$ directly with no dividend or carry adjustment. For SPX options, desks build the forward curve from parity at each expiry and price off it, which also handles dividend timing automatically ([lesson F2](/vol/f2/), [lesson D5](/vol/d5/)).
+
+</Pro>
+
+## Common mistakes
+
+- **Reading the futures premium as a bullish forecast.** The basis is carry: interest minus dividends. It says nothing about direction.
+- **Treating fair value as a single price.** Arbitrage enforces a band whose width is the cost of the trade; inside it, prices can wander freely.
+- **Converting SPY strikes to SPX at exactly 10×.** Use the live ratio; at 10.03, a 770 SPY strike is about SPX 7726.
+- **Pricing index options off spot instead of the forward.** Ignoring carry makes calls look rich and puts look cheap.
+
+<Takeaway>
+
+- Futures fair value: F = S·e^((r−q)T). At the snapshot the December future's fair basis is +38.60 points (50.78 interest − 12.17 dividends).
+- The basis shrinks to zero at expiry: futures and index converge.
+- Index arbitrage keeps futures inside a cost band around fair value; the lower side is usually wider because shorting stock is costlier.
+- SPX/SPY ≈ 10.03: fees, quarterly dividend accrual, and timing push SPY off a clean tenth.
+- Options are priced off the forward; put-call parity on the Nov 27 770 strike recovers a forward of 772.67.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="J2"
+  questions={[
+    {
+      q: 'SPX is 7722.6, r = 4.6%, q = 1.1%. What is the approximate fair basis for a future 31 days out?',
+      options: ['+3 points', '+23 points', '+30 points', '−23 points'],
+      answer: 1,
+      why: '7722.6 × (0.046 − 0.011) × 31/365 ≈ 23 points. The exact value with continuous compounding is 22.99.',
+    },
+    {
+      q: 'The future trades 15 points above fair value and the round-trip cost of arbitrage is 5 points. The arbitrage is…',
+      options: [
+        'Buy futures, sell stocks',
+        'Sell futures, buy stocks',
+        'No trade: the gap is inside the band',
+        'Buy both',
+      ],
+      answer: 1,
+      why: 'Futures are rich: sell them and buy the stocks, hold to expiry as the basis converges. Profit is about 15 − 5 = 10 points.',
+    },
+    {
+      q: 'If a market’s dividend yield exceeds the interest rate, its futures trade…',
+      options: ['Above the index', 'Below the index', 'Exactly at the index', 'It depends on volatility'],
+      answer: 1,
+      why: 'F = S·e^((r−q)T) < S when q > r. Holding the stocks pays more in dividends than it costs in interest, so the future must be cheaper.',
+    },
+    {
+      q: 'At the snapshot, the Nov 27 770 call is $13.90 and the 770 put $11.24. Why is the call more expensive?',
+      options: [
+        'Calls carry higher implied volatility',
+        'The market expects a rally',
+        'The forward (≈ 772.67) is above the strike, because of carry',
+        'Puts are always cheaper',
+      ],
+      answer: 2,
+      why: 'Options are priced off the forward. With rates above dividends, the forward is above spot, so the 770 call is slightly in the money relative to the forward.',
+    },
+  ]}
+/>

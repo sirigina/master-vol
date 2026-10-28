@@ -1,0 +1,201 @@
+---
+title: Calendars & diagonals
+description: Build and value calendar and diagonal spreads across two expiries, and read them as trades on vega, time decay and the forward volatility between expiries.
+lessonId: G6
+prereqs: [G2, C7]
+minutes: 25
+---
+
+import CalendarBuilder from '../../../components/widgets/g/G6_CalendarBuilder.tsx';
+import CalendarHeatmap from '../../../components/widgets/g/G6_CalendarHeatmap.tsx';
+import TermContext from '../../../components/widgets/g/G6_TermContext.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+Every spread so far has used one expiry. A calendar spread uses two: sell the near month, buy a later month at the same strike. It is the one common spread that is **long volatility and short gamma at the same time**, and that odd combination is exactly why traders use it.
+
+## The structure: sell near, buy far
+
+<Plain>
+
+On October 27 the SPY 770 call expiring November 27 cost **$13.90**. The 770 call expiring December 18 cost **$18.97**. Sell the first, buy the second, and you pay the difference: **$5.07**, or $507 per contract.
+
+Why would anyone do that? Both options are melting ice, but they melt at different speeds. The November option, with 31 days left, loses value faster each day than the December option with 52 days left. You own the slow-melting block and you sold the fast-melting one, so as long as SPY stays near 770, time passes in your favor.
+
+The catch: if SPY runs far away in either direction, both options end up worth about the same (both nearly worthless far below 770, both worth about their intrinsic value far above), and the $5.07 you paid for the gap disappears.
+
+</Plain>
+
+<Pro>
+
+A **long calendar** (time spread) is short the near-term option and long the far-term option at the same strike and type. A **diagonal** changes the strike as well. The canonical 770 call calendar on the snapshot:
+
+| Leg | Expiry | Mid | IV (solved from mid) | Delta | Gamma | Theta/day | Vega |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Sell 770 call | Nov 27 (31d) | 13.90 | 14.0% | 0.54 | 0.0126 | −0.250 | 0.885 |
+| Buy 770 call | Dec 18 (52d) | 18.97 | 14.3% | 0.55 | 0.0095 | −0.206 | 1.146 |
+
+Net: debit 5.07, delta about **+0.01**, gamma **−0.0031**, theta **+0.044** per day, vega **+0.26** per vol point (all per share, vendor Greeks). Multiply by 100 per contract: about +$4 a day of decay and +$26 per vol point. The position is close to delta-neutral at inception, short gamma because near-dated gamma is larger, and long vega because vega grows with $$\sqrt{T}$$.
+
+</Pro>
+
+## Value at the front expiry
+
+A calendar has no simple expiration diagram, because on November 27 the December option still has **21 days** to run. Its value then depends on where SPY is and on December's implied volatility at that moment. The builder below values the December leg with the full Black-Scholes model at each price; the November leg is worth its intrinsic value.
+
+<CalendarBuilder client:visible />
+<SnapshotNote detail="Nov 27 and Dec 18, 2026 expiries, mid prices; strikes listed in both chains" />
+
+With December IV unchanged, the 770 call calendar's best outcome is SPY right at 770 on November 27: the November call expires worthless and the December call is still worth about $11.57, a profit of **$650** on the $507 debit. The profit tent runs from about **755 to 790**. Beyond that, losses approach the debit but never exceed it.
+
+Now move the IV slider. A 2-point drop in December IV cuts the best case to **$503** and narrows the tent to about 759–785. A 2-point rise lifts it to **$797**. That is the vega you bought.
+
+<Plain>
+
+Two forces decide how a calendar does, and you need both on your side:
+
+1. **SPY stays near the strike** (you are short the accelerator: big moves hurt).
+2. **The forecast for December doesn't drop** (you own sensitivity to the forecast, so a calmer forecast hurts).
+
+A quiet market that is also expected to stay quiet is bad for the second point even while it is good for the first. That tension is the whole trade.
+
+</Plain>
+
+<Pro>
+
+At the front expiry the calendar's value is
+
+$$
+V(S) = C\!\left(S, K, \tau = T_2 - T_1, \sigma_2'\right) - \max(S - K, 0)
+$$
+
+where $$\sigma_2'$$ is the back month's implied vol at that time. $$V$$ peaks at $$S = K$$ (where the time value of the remaining option is largest) and decays toward zero in both tails. Because $$\partial V / \partial \sigma_2' = \text{vega}$$ of a 21-day option, about 0.73 per point at the strike, each vol point is worth about $73 per contract at the peak. Notice the P/L is **not symmetric** in volatility: the vega shrinks away from the strike, so a vol rise helps most when SPY is pinned.
+
+Calls or puts? On the snapshot the 770 put calendar costs **$4.12** (15.36 − 11.24), $0.95 less than the call calendar, and peaks at **$611** at 770. Put-call parity explains the gap. With no dividend, a call calendar should cost more than the put calendar by the interest on the strike over the extra 21 days, $$K\,(e^{-rT_1} - e^{-rT_2}) \approx 2.03$$. SPY's December dividend (roughly $2, ex-date around the third Friday of December, between the two expiries) pushes the other way, cheapening the December call and richening the December put, and the American puts' early-exercise value adds a little to the put side. The observed $0.95 sits between those effects. The two calendars have nearly the same shape and vega; compare their prices before choosing.
+
+</Pro>
+
+## Price × volatility: where the calendar wins
+
+The builder shows one IV scenario at a time. The heatmap shows them all: every cell is the P/L on November 27 for a given SPY price (columns) and change in December IV (rows).
+
+<CalendarHeatmap client:visible />
+<SnapshotNote detail="770 calendar, Nov 27 / Dec 18, 2026; December IV shifted in parallel" />
+
+Read it along two axes:
+
+- **Across a row**, the tent: profit concentrated within about ±$15 of 770, losses in the tails.
+- **Down a column**, the vega: at SPY 770 the P/L goes from **$944** with IV up 4 points to **$357** with IV down 4. Far from the strike (735 or 805) the rows look much more alike, because a far out-of-the-money or deep in-the-money December option has little vega left.
+
+It would take roughly a **9-point** collapse in December IV to turn even the best price outcome into a loss. A calendar is far more exposed to the price moving away than to a moderate volatility change.
+
+<Plain>
+
+Each cell answers two questions at once: where did SPY land, and did the December forecast get stormier or calmer? The best cells are in a narrow column around 770 near the top, where SPY stood still and the forecast rose. Far from 770 the forecast barely matters, because the December option has little left that is sensitive to it.
+
+</Plain>
+
+<Pro>
+
+At SPY 770, +4 points adds $294 and −4 points subtracts $293 relative to unchanged IV: at the strike the value is almost linear in $$\sigma_2'$$ over this range, because the vega of an at-the-money option barely changes with vol (volga is near zero). The vol shift also moves the breakevens. With IV unchanged the profitable range is about 755 to 790; at −4 points it shrinks to roughly **762 to 780**. A short-gamma, long-vega position loses range as well as peak profit when the back month cheapens.
+
+</Pro>
+
+## Term structure: what a calendar really buys
+
+<Plain>
+
+The calendar is a bet on the **gap between two forecasts**. The November options carry one weather forecast; the December options carry another. When you buy December and sell November, what you have really bought is the forecast for the three weeks between November 27 and December 18.
+
+</Plain>
+
+<Pro>
+
+Implied variance is additive in time. If $$\sigma_1$$ is the IV to $$T_1$$ and $$\sigma_2$$ to $$T_2$$, the **forward volatility** between the two expiries is
+
+$$
+\sigma_{1,2} = \sqrt{\frac{\sigma_2^2 T_2 - \sigma_1^2 T_1}{T_2 - T_1}}
+$$
+
+With ATM IVs of 14.06% (31 days) and 14.74% (52 days), the forward vol for November 27 to December 18 is **15.7%**, noticeably higher than either spot IV. Using the 770 call IVs alone (14.13% and 14.43%) gives about 14.9%. A long calendar is roughly long this forward vol: it makes money if, by November 27, the market prices the remaining 21 days at more than the forward implied today, and loses if it prices them at less.
+
+</Pro>
+
+<TermContext client:visible />
+<SnapshotNote detail="770-strike term structure, ATM IV = average of call and put IV" />
+
+SPY's curve slopes upward from about one month out, so each forward step is priced above the spot IVs on either side of it. The orange step over the shaded band is the volatility your calendar is really trading. Two practical consequences:
+
+- **An upward-sloping curve makes calendars look expensive** in forward terms. You are paying 15.7% for three weeks that, if the curve simply holds its shape, will be priced at the 21-day IV on November 27, about 14.4% on today's curve (between the November 13 and November 20 expiries).
+- **Event weeks distort the forward.** An earnings date or a Fed meeting between the expiries raises the forward vol; one before the front expiry depresses it. The MSFT straddles in the snapshot are an extreme case: the 3-day options carry 75% IV for one earnings release.
+
+## Diagonals
+
+A diagonal uses a different strike for each leg. Switch the builder to **Diagonal** and try selling the November 790 call against the December 770 call.
+
+<Plain>
+
+The diagonal keeps the time-decay idea but tilts it. Owning the lower December strike means you gain if SPY rises, up to the November strike you sold. It is a cross between a calendar and a bull call spread.
+
+</Plain>
+
+<Pro>
+
+The 790/770 call diagonal (sell Nov 790 at 4.44, buy Dec 770 at 18.97) costs **14.53**, has delta **+0.28**, gamma −0.0027, theta **−0.038** and vega **+0.40** per share. Unlike the calendar, it is a net payer of theta at inception: the long December 770 is closer to the money than the short November 790, so it decays faster in dollars. Its best case on November 27 is SPY at the short strike, 790, for **+$1,058** per contract; at 720 it loses about $1,423. A diagonal is a directional position first and a time spread second.
+
+The opposite tilt, selling the November 750 put against the December 770 put, is mostly a bearish position with about −0.19 delta and +0.42 vega. Calendar strikes set the delta; the expiry gap sets the vega and theta.
+
+</Pro>
+
+## Common mistakes
+
+- **Reading a calendar off an expiration diagram.** At the front expiry the back option still has time value. You need a model and an assumption about the back month's IV.
+- **Forgetting the vega.** A calendar bought before an event in the back month can lose even with SPY pinned at the strike if the back-month IV falls afterwards.
+- **Assuming the loss is limited to the debit in every case.** With American-style options, the short front leg can be assigned early (deep in-the-money puts, or calls before a dividend), leaving a temporary naked long.
+- **Comparing spot IVs instead of forward vol.** "December is only 0.7 points above November" sounds cheap; the forward vol over the gap is 15.7%.
+
+<Takeaway>
+
+- A long calendar sells the near expiry and buys the far one at the same strike: long vega, short gamma, positive theta.
+- The 770 call calendar costs $5.07 and peaks at about $650 per contract with SPY at 770 on November 27 if December IV holds.
+- Value at the front expiry depends on the back month's IV then: each point is worth about $73 per contract near the strike.
+- A calendar trades the forward volatility between the two expiries, 15.7% on the snapshot.
+- Diagonals change the strike of one leg, adding delta: they behave like a vertical spread with a time-spread overlay.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="G6"
+  questions={[
+    {
+      q: 'A long calendar (sell near month, buy far month, same strike) is typically…',
+      options: ['Long gamma and long vega', 'Short gamma and long vega', 'Long gamma and short vega', 'Short gamma and short vega'],
+      answer: 1,
+      why: 'Near-dated options have more gamma and less vega than far-dated ones at the same strike. Short the near, long the far: short gamma, long vega.',
+    },
+    {
+      q: 'On November 27, SPY is exactly 770 and December IV has dropped 4 points. What happens to the 770 call calendar?',
+      options: ['It loses the full debit', 'It still profits, but less than with IV unchanged', 'It profits more than with IV unchanged', 'Its value is unaffected by IV'],
+      answer: 1,
+      why: 'The November call expires worthless and the December call still has time value. Lower IV reduces it: about $357 profit instead of $650 per contract.',
+    },
+    {
+      q: 'Nov ATM IV is 14.06% (31 days) and Dec ATM IV is 14.74% (52 days). Roughly what forward vol does a Nov/Dec calendar trade?',
+      options: ['About 14.4%, the average', 'About 14.7%, the December IV', 'About 15.7%', 'About 0.7%, the difference'],
+      answer: 2,
+      why: 'Forward variance = (0.1474² × 52 − 0.1406² × 31) / 21, whose square root is about 15.7%. Variance adds over time, so the forward exceeds both spot IVs on an upward slope.',
+    },
+    {
+      q: 'You sell the November 790 call and buy the December 770 call. Compared with the 770 calendar, this diagonal…',
+      options: ['Has more positive delta', 'Has no vega', 'Has a symmetric payoff around 770', 'Can lose more than its debit at expiry'],
+      answer: 0,
+      why: 'Owning the lower strike adds upside exposure: delta about +0.28 versus about +0.01 for the calendar. Its best case moves up to the short strike, 790.',
+    },
+  ]}
+/>

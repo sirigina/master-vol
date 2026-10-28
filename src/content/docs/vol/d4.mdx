@@ -1,0 +1,176 @@
+---
+title: Vega
+description: Size how much a position gains or loses when implied volatility moves, and see why vega concentrates at the money and in longer-dated options.
+lessonId: D4
+prereqs: [D1, C2]
+minutes: 25
+---
+
+import VegaStrikes from '../../../components/widgets/d/VegaStrikes.tsx';
+import IvShock from '../../../components/widgets/d/IvShock.tsx';
+import VegaTerm from '../../../components/widgets/d/VegaTerm.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+An option can lose money even when SPY goes your way, because the market changed its mind about volatility. Vega measures that exposure: how much the option's price changes when implied volatility moves one point.
+
+## Vega per vol point
+
+<Plain>
+
+Vega is **sensitivity to the forecast changing**. Implied volatility is the market's weather forecast for price swings ([lesson C2](/vol/c2/)). When the forecast turns stormier, every option gets more valuable, calls and puts alike, because a bigger swing makes the payoff more likely. When the forecast calms down, they all get cheaper.
+
+The SPY 770 call expiring November 27 has a vega of about **0.89**. If implied volatility rises from 14.1% to 15.1% (one "vol point"), the call gains about 89 cents, or **$89 per contract**, even if SPY doesn't move at all.
+
+</Plain>
+
+<Pro>
+
+Vega is the derivative of value with respect to volatility, quoted per 1 vol point (0.01):
+
+$$
+\mathcal{V} = \frac{\partial V}{\partial \sigma}\cdot 0.01 = S\,e^{-qT}\,n(d_1)\,\sqrt{T}\cdot 0.01
+$$
+
+It is the same for a call and a put at the same strike and expiry, and always positive for a long option. At the money $$n(d_1) \approx 0.4$$, so
+
+$$
+\mathcal{V}_{\text{ATM}} \approx 0.004\,S\sqrt{T}
+$$
+
+For SPY at 769.66 and 31 days: $$0.004 \times 769.66 \times \sqrt{31/365} \approx 0.90$$, matching the quoted 0.885. Per contract, multiply by 100. A long-volatility book is "long vega"; a short premium book is "short vega". Vega is not a true Black-Scholes sensitivity (the model assumes constant volatility), but every desk uses it as the first-order measure of volatility risk.
+
+</Pro>
+
+## Where vega lives: strikes and expiries
+
+<VegaStrikes client:visible />
+
+Two patterns, one cause.
+
+- **Vega peaks near the money.** An option that is far in or out of the money is mostly decided already; a change in the forecast barely shifts its odds. The at-the-money option is the one whose fate depends most on how far SPY travels.
+- **Vega grows with time.** With 10 days left, the 770 call's model vega is about $51 per contract; at 31 days $89; at 143 days $187; at 416 days about $300. Vega rises with $$\sqrt{T}$$: more time means more room for volatility to matter. Longer-dated vega also spreads across far more strikes.
+
+Switch to **% of option price**. The ranking flips for out-of-the-money options: the 800 call (Nov 27) has vega 0.54 on a price of $2.14, so one vol point is **25%** of its value, against about 6% for the 770 call. Cheap OTM options are leveraged bets on volatility as much as on direction.
+
+<Plain>
+
+A short-dated option is like a picnic tomorrow: a change in the long-range forecast hardly matters, because what happens is mostly settled. A long-dated option is like booking an outdoor wedding a year out: every revision to the seasonal forecast changes how much the plan is worth.
+
+</Plain>
+
+<Pro>
+
+Because ATM vega grows as $$\sqrt{T}$$ while ATM gamma falls as $$1/\sqrt{T}$$, long-dated positions are dominated by vega and short-dated ones by gamma. That is the structural logic of a calendar spread: short a front month, long a back month is short gamma and long vega ([lesson G6](/vol/g6/)). In the wings, $$n(d_1)$$ falls off quickly for short dates, so wing vega is small in dollars but large relative to price; risk systems usually show both.
+
+</Pro>
+
+## How IV changes move P/L
+
+Pick a real position from the chain and shift every leg's implied volatility by the same number of points.
+
+<IvShock client:visible />
+<SnapshotNote detail="Nov 27 and Dec 18, 2026 expiries, mid prices and quoted IVs" />
+
+The long 770 straddle (Nov 27) has vega of about 1.78, or **$178 per vol point**. A 2-point rise in IV adds about **$356**, a 2-point fall takes it away. The dashed line (vega × change) and the full reprice are almost the same line for an at-the-money position: ATM option value is nearly linear in volatility.
+
+Now try the 790 call, or the 750 put, and push IV down 6 or 8 points. The full reprice curves away from the vega line. Out-of-the-money options lose less than vega predicts when volatility drops, and gain more than predicted when it rises: vega itself rises with volatility (called *volga* or *vomma*), so their value is convex in volatility.
+
+<Plain>
+
+The most common surprise for new option buyers: **you can be right on direction and still lose**. Buy the 770 call for $13.90 before an event, see SPY rise $5, and watch the call barely move, because implied volatility dropped 3 points after the event (the forecast calmed down once the news was out). The delta gain of about $2.71 (plus about 16 cents from gamma) is almost entirely offset by about $2.67 of vega loss; a full reprice leaves the call up only about 27 cents.
+
+</Plain>
+
+<Pro>
+
+To first order, the P/L of an options position over a short interval is
+
+$$
+\Delta\Pi \approx \Delta\cdot\Delta S + \tfrac{1}{2}\Gamma(\Delta S)^2 + \Theta\,\Delta t + \mathcal{V}\cdot\Delta\sigma
+$$
+
+with $$\Delta\sigma$$ in vol points. In practice IV changes are not parallel: short-dated IV moves more than long-dated IV, and SPY IV tends to rise when SPY falls. A desk therefore aggregates vega by expiry bucket and often weights it (for example by $$\sqrt{30/\text{days}}$$) so that a 1-point move in the front month is not treated as equal to a 1-point move a year out.
+
+</Pro>
+
+## Vega across the term structure
+
+Here is the 770 call's vega at each real expiry, from November 6, 2026 to December 17, 2027.
+
+<VegaTerm client:visible />
+<SnapshotNote detail="770 call across 9 expiries, each at its own quoted IV" />
+
+- In dollars, vega climbs from about **$51** per contract (10 days) to **$306** (December 2027, 416 days).
+- As a share of price, it falls: one vol point is 6.4% of the November 27 call's value but only 4.0% of the December 2027 call's $77.25.
+- The **vega-to-theta** ratio tells the real story. The 10-day call carries about $1.2 of vega per $1 of daily decay; the December 2027 call about $26. Short-dated options are mostly a bet on realized moves (gamma vs theta); long-dated options are mostly a bet on implied volatility.
+
+<Plain>
+
+If you think volatility will rise over the coming months, longer-dated options give the most exposure per contract, and they melt slowly. If you think SPY is about to make a big move this week, short-dated options give the most exposure to that move. Different tools for different forecasts.
+
+</Plain>
+
+<Pro>
+
+Bucket your vega. A position long December 2027 vega and short November 2026 vega can be flat on total vega and still lose badly if the term structure steepens or inverts. The snapshot's term structure slopes upward (14.1% at 31 days, 18.1% at 416 days); in a sharp selloff the front month typically jumps above the back months, the kind of move that comes with a VIX spike like March 2026's 31. Treat "total vega" as a summary number only.
+
+</Pro>
+
+## Common mistakes
+
+- **Ignoring vega around events.** IV often rises before earnings or data releases and drops right after. A correct directional view can lose money to the drop.
+- **Adding vega across expiries as if it were one number.** Front-month IV moves more than back-month IV; weight or bucket it.
+- **Forgetting that short options are short vega.** A short straddle loses on a volatility spike even before SPY moves much.
+- **Trusting vega for large IV moves in the wings.** OTM option value is convex in volatility; reprice instead of multiplying.
+
+<Takeaway>
+
+- Vega = change in option value for a 1-point change in implied volatility; same for calls and puts at the same strike.
+- ATM vega ≈ 0.004 × S × √T per share: about $89 per contract for the Nov 27 770 call, about $306 for the Dec 2027 call.
+- Vega peaks at the money and grows with time; in percentage terms it is largest for cheap OTM options.
+- Long-dated options are mostly vega bets; short-dated options are mostly gamma/theta bets.
+- Measure vega by expiry bucket: IV moves are not parallel across the term structure.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="D4"
+  questions={[
+    {
+      q: 'You own 5 contracts of a call with vega 0.60. IV falls 3 points and nothing else changes. What is your P/L?',
+      options: ['−$1.80', '−$180', '−$900', '−$300'],
+      answer: 2,
+      why: '0.60 × 3 = $1.80 per share, × 100 shares × 5 contracts = $900 lost.',
+    },
+    {
+      q: 'Which option has the largest vega in dollars?',
+      options: ['ATM, 10 days', 'ATM, 400 days', 'Far OTM, 10 days', 'Deep ITM, 10 days'],
+      answer: 1,
+      why: 'Vega grows with √T and peaks at the money, so the long-dated ATM option has the most dollar vega.',
+    },
+    {
+      q: 'The 770 call and the 770 put (same expiry) both show vega ≈ 0.89. Why?',
+      options: [
+        'Coincidence on this date',
+        'Calls and puts at the same strike and expiry have the same vega',
+        'The rate is near zero',
+        'Vendors average them',
+      ],
+      answer: 1,
+      why: 'Put-call parity makes call minus put independent of volatility, so their vegas are equal.',
+    },
+    {
+      q: 'You buy a call before an announcement. SPY rises a little and the call loses value. The most likely reason is…',
+      options: ['Negative gamma', 'Implied volatility dropped after the news', 'Delta turned negative', 'Rates rose'],
+      answer: 1,
+      why: 'IV typically falls once an event passes. The vega loss can exceed the delta gain from a small move.',
+    },
+  ]}
+/>

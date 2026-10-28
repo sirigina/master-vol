@@ -1,0 +1,179 @@
+---
+title: 'Capstone: building a trade plan'
+description: Walk the full seven-step workflow on the SPY snapshot, from market read to sizing, scenarios, exit rules and review, and produce a written trade plan.
+lessonId: J4
+prereqs: [E1, G7, H4]
+minutes: 35
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import PlanWorksheet from '../../../components/widgets/j/PlanWorksheet.tsx';
+import PreTradeChecklist from '../../../components/widgets/j/PreTradeChecklist.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+Every lesson so far has handled one piece of the job: pricing, the Greeks, spreads, risk. A professional trade joins them in a fixed order, and writes each step down before any order is sent. This capstone walks that order on the October 27, 2026 snapshot.
+
+<Aside type="caution" title="Educational exercise">
+Everything here uses historical, static data from a single day. The worksheet shows how to reason through a trade, not what to trade. It is not a recommendation to buy or sell any security, and the prices have long since moved.
+</Aside>
+
+## The seven steps
+
+<Plain>
+
+A trade plan is a recipe you write **before** cooking, so that hunger (or panic) does not change it halfway through.
+
+1. **Market read:** what is the weather now, and what is the forecast the market is charging for?
+2. **Volatility view:** do you think the actual weather will be calmer or stormier than that forecast? By how much?
+3. **Spread selection:** pick a structure that profits if you are right and has a known worst case if you are wrong.
+4. **Sizing:** decide how much you can afford to lose, then size so the worst case fits inside it.
+5. **Greeks and scenarios:** check what happens if the price moves, the forecast changes, or time passes.
+6. **Rules:** write down when you will take profit, cut the loss, adjust, or simply leave.
+7. **Review:** afterwards, compare what happened with what you expected.
+
+</Plain>
+
+<Pro>
+
+The steps map onto earlier modules: market read (C2, C5, C7, C8), edge (E1), structure (G7, H1), sizing (H4), Greeks and scenarios (D6, H2, H3), management (G9, E3) and attribution (E4, H5). The order matters. Sizing comes after structure because max loss depends on structure; rules come before entry because they are hardest to set objectively once a position is on.
+
+</Pro>
+
+## Steps 1 and 2: the market read and the volatility view
+
+<Plain>
+
+On October 27, 2026, SPY closed at 769.66, close to its highs. The weather that actually happened over the last 20 trading days was calm: **10.0%** realized volatility. The forecast priced into November options was **14.06%**. VIX, which includes the more expensive downside protection, was 17.52.
+
+So the market was charging for a bumpier month than the last one. That is normal for an index (the insurance premium in [lesson C2](/vol/c2/)), but how big the gap should be is the whole question.
+
+</Plain>
+
+<Pro>
+
+Inputs on the snapshot:
+
+- **Level and trend:** SPY 769.66, recovered from the 631.97 low of March 30, 2026.
+- **Realized:** 10.0% (20-day), 12.7% (1-year). The 1-year figure includes the March selloff.
+- **Implied:** 14.06% ATM for 31 days; VIX 17.52.
+- **Term structure:** 14.7% (10 days), 14.1% (31), 14.7% (52), 15.9% (143), 18.1% (416), upward-sloping beyond the front.
+- **Skew:** Nov 740 put at 17.9% IV vs 800 call at 11.8%.
+
+A volatility view states a number: "I expect about 12% realized to November 27," for example, and a reason (a calm tape, but a 20-day window that is noisy and an index that has just made highs). The gap between forecast and implied is the raw edge. The worksheet converts it to dollars per spread by shifting every leg's implied vol by the gap and repricing, which preserves the skew shape: a simple but honest approximation of "what is this spread worth if my forecast is right?"
+
+</Pro>
+
+## Steps 3 to 5: structure, size and scenarios
+
+<Plain>
+
+With a forecast of 12% against 14.06% implied, the forecast says options are a little expensive, so the natural trades **sell volatility**. An iron condor (sell the 750 put and 790 call, buy the 720 put and 820 call for protection) collects $7.29 a share, $729 per spread, and can lose at most $2,271 per spread at expiry.
+
+With a $5,000 risk budget, that means **2 spreads**: a worst case of $4,542. Not 6 spreads because the credit "looks small", and not 1 because it "feels safer". The budget decides.
+
+</Plain>
+
+<Pro>
+
+At a 12% forecast the worksheet shows, per condor:
+
+- **Edge** about +$173 (theoretical value at the shifted surface minus the credit received).
+- **Greeks:** delta −8.5 shares, theta +$16.35 a day, vega −$83.20 per vol point: short volatility, slightly short the market (the short 790 call carries a little more delta than the short 750 put, and skew gives the 720 put wing far more delta than the 820 call wing).
+- **Scenarios after 7 days** (unchanged vol): −$565 if SPY −5%, +$123 if flat, −$1,059 if SPY +5%. Vol +3 points with SPY flat: −$102.
+
+Two things the grid exposes that the expiry diagram hides: the condor loses more on a 5% rally than a 5% fall at the 7-day horizon (skew again: the short 750 put brought in more premium than the 790 call, $5.94 against $4.44, and the long 720 put wing, at 20.8% IV, cushions a fall more than the 11.8% IV 820 call cushions a rally), and a parallel vol rise costs money before any price move. Compare with the long straddle under a 12% forecast: the model edge is −$360 per straddle, the wrong side of your own view, and the worksheet flags it.
+
+</Pro>
+
+<PlanWorksheet client:visible />
+<SnapshotNote detail="Nov 27 and Dec 18 chains, mid prices; scenarios reprice with Black-Scholes at each leg's IV plus the shift" />
+
+Try three paths through the worksheet:
+
+- **Forecast 12%, iron condor, $5,000.** The defaults above: positive edge, 2 spreads, short vega.
+- **Forecast 18%, long strangle.** Edge turns positive (about +$618 per strangle), max loss is the $1,038 premium, and theta is now the cost you pay every day.
+- **Forecast 14%, any structure.** The edge is close to zero. The honest plan is often "no volatility trade"; a calendar or a directional spread expresses a different view, not a volatility edge.
+
+## Steps 6 and 7: rules and review
+
+<Plain>
+
+Before entering, write down three exits: **profit** (take it at a set level), **loss** (cut it at a set level), and **time** (leave before the last week, when small moves swing the price most). Then write down what you will do if the market moves against you before any exit is hit.
+
+After the trade, review it honestly. Did SPY actually move less than implied? Did you make money because your forecast was right, or because of a lucky path? A losing trade with a good forecast and a winning trade with a bad one both teach something, but only if you write them down.
+
+</Plain>
+
+<Pro>
+
+Common desk conventions for defined-risk short-vol spreads: take profit at around 50% of the maximum gain, stop at a multiple of the credit or a fraction of the risk budget, close or roll by about a week before expiry as gamma rises ([lesson D7](/vol/d7/)), and adjust when position delta drifts beyond a set band ([lesson G9](/vol/g9/)). For long-vol trades, the exit logic is about realized vs implied: if the move has come, monetize gamma; if implied has dropped without a move, the thesis has weakened.
+
+The review step is P/L attribution: decompose the result into delta, gamma, theta and vega contributions and compare realized vol over the holding period with the forecast ([lesson E4](/vol/e4/), [lesson H5](/vol/h5/)). Over many trades, this separates forecasting skill from execution and from luck.
+
+</Pro>
+
+<PreTradeChecklist client:visible />
+
+## Common mistakes
+
+- **Sizing from the credit instead of the max loss.** A $729 credit with a $2,271 worst case is a $2,271 position.
+- **Starting from the strategy.** Picking a favorite structure first and finding a view to fit it reverses steps 2 and 3.
+- **Writing exit rules after entry.** Once a position is on, every rule bends toward hope.
+- **Skipping the review.** Without comparing realized vol to the forecast, wins and losses teach nothing about whether the edge was real.
+
+<Takeaway>
+
+- The workflow: market read → vol view → structure → size from max loss → Greeks and scenarios → rules → review.
+- On the snapshot, realized was 10.0% (20-day) against 14.06% implied, VIX 17.52, an upward term structure and steep put skew.
+- Edge is your forecast against implied, converted to dollars by repricing; it must point the same way as the structure's vega.
+- Size so the structure's max loss fits the risk budget: $2,271 per condor allows 2 condors in a $5,000 budget.
+- Write profit, loss and time exits before entry; review afterwards by attributing P/L and comparing realized to the forecast.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="J4"
+  questions={[
+    {
+      q: 'Your forecast is 12% realized vol against 14.06% implied. Which structure fits the view?',
+      options: ['Long straddle', 'Long strangle', 'Iron condor', 'Buying Dec calls'],
+      answer: 2,
+      why: 'Implied is above your forecast, so you want to be short volatility. The condor is short vega with defined risk; the straddle and strangle are long vega.',
+    },
+    {
+      q: 'A spread has a max loss of $2,271. Your risk budget is $5,000. How many spreads?',
+      options: ['1', '2', '3', '6'],
+      answer: 1,
+      why: '5,000 ÷ 2,271 = 2.2, rounded down to 2. Rounding up would put the worst case above the budget.',
+    },
+    {
+      q: 'Why does the plan set exit rules before entering the trade?',
+      options: [
+        'Brokers require it',
+        'Rules set after entry tend to bend toward hope and the existing position',
+        'It makes the trade cheaper',
+        'Exits are irrelevant for defined-risk spreads',
+      ],
+      answer: 1,
+      why: 'Once a position is on, judgment is biased by its P/L. Pre-committed rules are the main defence.',
+    },
+    {
+      q: 'After a short-vol trade made money, the review shows realized vol was 16% against your 12% forecast and 14% implied. What is the right conclusion?',
+      options: [
+        'The forecast was good',
+        'The profit came from something other than the forecast, such as the path or a vol drop; the forecast was wrong',
+        'Short vol always wins',
+        'Nothing; profits need no review',
+      ],
+      answer: 1,
+      why: 'Realized came in above implied, so the volatility thesis failed. The profit came from path, timing or implied vol falling. Attribution separates these.',
+    },
+  ]}
+/>

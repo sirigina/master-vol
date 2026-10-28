@@ -1,0 +1,200 @@
+---
+title: Models and the real world
+description: Test each Black-Scholes assumption against real SPY data, measure the pricing error it causes, and see how practitioners patch the model rather than discard it.
+lessonId: H5
+prereqs: [H4, C8]
+minutes: 25
+bookRef: the chapter on models and the real world
+---
+
+import AssumptionExplorer from '../../../components/widgets/h/AssumptionExplorer.tsx';
+import ModelError from '../../../components/widgets/h/ModelError.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+Every number in this course so far has come from Black-Scholes, a model built on assumptions that markets break every day. So why does every desk still use it? Because traders know exactly where it is wrong, and they have learned to correct for it. This lesson puts each assumption next to the evidence.
+
+## What the model assumes
+
+<Plain>
+
+Black-Scholes is like a map drawn for a perfectly flat country. It is very useful for getting around, as long as you remember where the real hills are. Its "flat country" assumptions:
+
+1. **Prices move smoothly**, with no sudden jumps, so a hedge can always be adjusted in time.
+2. **Volatility is one fixed number** for the life of the option. The weather forecast never changes.
+3. **Moves follow a bell curve** (in percentage terms). Extreme days are as rare as the bell curve says.
+4. **Trading is free**: no bid-ask spread, no commissions.
+5. **Interest rates and dividends are known** and do not change.
+6. **Options are European**: no early exercise.
+
+Each of these is false for SPY. The interesting question is *how* false, and what it costs.
+
+</Plain>
+
+<Pro>
+
+Formally, Black-Scholes assumes the underlying follows geometric Brownian motion with constant $$\sigma$$,
+
+$$
+\frac{dS}{S} = \mu\,dt + \sigma\,dW_t,
+$$
+
+continuous frictionless trading in the stock and a riskless bond at a constant rate $$r$$, a known dividend yield $$q$$, no arbitrage, and European exercise. Under these assumptions a continuously rebalanced delta hedge replicates the option exactly, so its price is unique. Each assumption supports a part of that replication argument; breaking one leaves the hedge with residual risk that someone must be paid to bear.
+
+</Pro>
+
+## Assumption vs evidence
+
+Pick an assumption to see what the snapshot data says.
+
+<AssumptionExplorer client:visible />
+<SnapshotNote detail="daily closes and VIX Oct 20, 2025 to Oct 27, 2026; option quotes Oct 27, 2026" />
+
+<Plain>
+
+The pattern across the tabs:
+
+- **Gaps.** SPY had 16 days beyond two standard deviations in a year, 3 beyond three. A hedge adjusted once a day cannot follow moves that size, and when they open with a gap, no hedge can trade through them at all.
+- **Constant volatility.** The weather forecast changed constantly. Realized volatility over 20 days ran from about 7% to about 21%; VIX from 13.47 to 31.05. Stormy days came in bunches.
+- **Fat tails.** On the quantile chart a bell-curve market would sit on the dashed line. SPY's biggest days peel off at both ends.
+- **Skew.** The market prices the 650 put at 32.1% volatility and the 800 call at 11.8%. A single number cannot describe them.
+- **Costs.** At-the-money spreads are a few cents; in the far call wing and the in-the-money strikes they are a few percent of the price.
+- **Rates and dividends.** A vendor that leaves out SPY's dividend shows put and call IVs drifting apart from the December expiry on. The "volatility" difference is really missing carry.
+
+</Plain>
+
+<Pro>
+
+Mapping evidence to consequence:
+
+| Assumption | Evidence (snapshot) | Consequence |
+| --- | --- | --- |
+| Continuous paths | 3 days beyond 3 SD (normal: 0.7) | Delta hedge cannot follow jumps; short gamma loses in gaps |
+| Constant $$\sigma$$ | 20d realized 7.0%–20.7%; VIX 13.47–31.05 | Vega risk; hedging P/L depends on the realized path |
+| Lognormal returns | excess kurtosis ≈ 0.75; worst day −3.3 SD | Model underprices the wings |
+| One vol per expiry | Nov 27 IV 32.1% (650 put) to 11.8% (800 call) | Need a surface, not a number |
+| No costs | 770 straddle 12¢ wide (≈0.07 vol pts); 840 call 7.7% of mid | Hedging frequency trade-off; edge must clear the spread |
+| Known $$r, q$$ | put − call IV gap of +0.6 to +1.0 pts from Dec on | Imply the forward from parity per expiry |
+
+Volatility clustering deserves a caveat: over this single year, the autocorrelation of absolute daily returns at short lags is small (about 0.1 or less), weaker than in long samples. The clustering is clearest at the regime level, March and June 2026, which is what the rolling-vol chart shows.
+
+</Pro>
+
+## The cost of one volatility
+
+The clearest way to see model error is to price real options with the model's assumption, a single volatility, and compare with the market.
+
+<ModelError client:visible />
+<SnapshotNote detail="Nov 27, 2026 put chain, market mids vs Black-Scholes at one volatility" />
+
+<Plain>
+
+At the at-the-money volatility of 14.1%, Black-Scholes gets the 770 put almost exactly right: $11.27 against a market price of $11.24. Move away from the money and the gap explodes:
+
+- The **740 put** (about 4% below SPY): market $4.44, model $2.31. The market charges about **twice** the model.
+- The **700 put** (about 9% below): market $1.72, model 8 cents. About **22 times**.
+- The **650 put** (about 15.5% below): market 80 cents, model less than a hundredth of a cent: the market charges over 10,000 times the model.
+
+The model says a 15% drop in a month is so unlikely that insurance against it is worth almost nothing. The market, having seen March 2026, disagrees. Slide the volatility up and notice that no single number fixes it: at 25%, the 650 put is still under-priced while the 740 put is now badly over-priced.
+
+</Plain>
+
+<Pro>
+
+The ratio chart is the smile in price space. Under one lognormal distribution, far-OTM put prices decay roughly like $$e^{-d^2/2}$$ in the standardized distance to the strike, so a modest misestimate of tail probability becomes a ratio of 10× to 10,000×. Implied volatility compresses that into a few points: 14.0% at the money to 32.1% at the 650 strike.
+
+How practitioners patch it, in rough order of sophistication:
+
+- **Volatility surface.** Keep Black-Scholes as a quoting convention and feed each strike and expiry its own implied vol (parametrized fits such as SVI). Greeks come from the surface; you must decide how it moves when SPY moves (sticky strike vs sticky delta, lesson [C8](/vol/c8/)).
+- **Stress and jump awareness.** Gap limits and scenario grids ([lesson H3](/vol/h3/)) price what the hedge cannot.
+- **Richer models** for exotics and for consistent dynamics: local volatility, stochastic volatility (Heston), jump-diffusion (Merton, Bates). These change hedge ratios, but every one is calibrated back to vanilla prices quoted in Black-Scholes vol.
+- **Carry from the market.** Imply the forward (rate and dividend together) from put-call parity at each expiry, as lesson [F2](/vol/f2/) shows, rather than plugging in a rate and a yield.
+- **American exercise.** Price early-exercise features with a tree ([lesson F6](/vol/f6/)); for SPY it matters mainly for calls just before an ex-dividend date and for deep in-the-money puts when rates are high.
+
+</Pro>
+
+## So is the model useless?
+
+<Plain>
+
+No. A map of a flat country is still the best map available, as long as you add the hills by hand. Black-Scholes does three things very well:
+
+- It gives everyone a **common language**: "14% volatility" means the same thing on every screen.
+- Its Greeks are **good local guides** for small moves (lesson H2).
+- Its errors are **known and measurable**, so traders correct them with a volatility surface and stress tests.
+
+The danger is forgetting the hills: trusting the model in exactly the place it is weakest, the tails.
+
+</Plain>
+
+<Pro>
+
+The industry's working arrangement is: Black-Scholes as the **interpolation and quoting layer**, the volatility surface as the **market's correction**, and scenario risk as the **control for what neither captures**. Model risk itself is then a line item: desks reserve against unhedgeable parameters (long-dated vol, skew in illiquid strikes), and trades whose value depends on a model choice get valued under several models. A trader's edge is often precisely in knowing where a counterparty's model is wrong.
+
+</Pro>
+
+## Common mistakes
+
+- **Pricing wings with at-the-money volatility.** It understates far-OTM put values by factors of 2 to thousands. Use the surface.
+- **Concluding the market is "wrong" when it disagrees with Black-Scholes.** The skew is the market's correction for fat tails and crash risk, not a mispricing.
+- **Hedging as if moves are continuous.** Gaps happen at the open and on news; short gamma pays for them.
+- **Reading put-call IV differences as volatility.** Beyond the next ex-dividend date they can be missing carry (rates, dividends) in the vendor's model.
+
+<Takeaway>
+
+- Black-Scholes assumes continuous prices, constant volatility, lognormal returns, no costs, known carry and European exercise. SPY violates all of them.
+- The biggest pricing error is in the tails: one volatility underprices far-OTM puts by enormous ratios.
+- The market patches the model with a volatility surface; desks add scenario stress for jumps and volatility shocks.
+- Black-Scholes remains the common language and a good local guide; its weaknesses are known and measurable.
+- Know where your model is wrong, and never let it size your tail risk.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="H5"
+  questions={[
+    {
+      q: 'Priced at the at-the-money vol of 14.1%, the Nov 27 700 put is worth about 8 cents in Black-Scholes. Its market price is $1.72. What best explains the gap?',
+      options: [
+        'The market is irrational',
+        'The market prices fatter left tails than a lognormal distribution, expressed as a higher implied vol (23.8%) at that strike',
+        'Interest rates are higher than the model assumes',
+        'The bid-ask spread',
+      ],
+      answer: 1,
+      why: 'Black-Scholes at one vol assigns tiny probability to a 9% fall in a month. The market charges for crash risk; the 700 put’s implied vol is 23.8%.',
+    },
+    {
+      q: 'Which assumption does a large overnight gap most directly violate?',
+      options: ['Known dividends', 'Continuous trading and price paths', 'European exercise', 'No transaction costs'],
+      answer: 1,
+      why: 'The replication argument needs to rebalance continuously. A gap moves the price with no chance to adjust the hedge, leaving the short-gamma side with a loss.',
+    },
+    {
+      q: 'From the December expiry on, the vendor’s 770 put IV exceeds the 770 call IV by 0.6–1.0 points. The most likely cause is…',
+      options: ['Skew', 'A volatility arbitrage', 'The vendor model omits SPY’s dividend, so carry shows up as an IV difference', 'Early exercise of puts'],
+      answer: 2,
+      why: 'At the same strike and expiry, put-call parity ties put and call prices together. A persistent IV gap that appears only past an ex-dividend date points to wrong carry inputs, not to volatility.',
+    },
+    {
+      q: 'How do most desks deal with Black-Scholes’ constant-volatility assumption in practice?',
+      options: [
+        'They abandon Black-Scholes',
+        'They use one volatility for all options',
+        'They use a volatility surface (vol by strike and expiry) and stress-test volatility shocks',
+        'They ignore it because the error is small',
+      ],
+      answer: 2,
+      why: 'Black-Scholes stays as the quoting and Greek engine; the surface supplies the right input per option, and scenario limits cover what the surface cannot.',
+    },
+  ]}
+/>
+
+<BookRef />

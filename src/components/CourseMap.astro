@@ -1,0 +1,129 @@
+---
+import { tracks, lessonHref } from '../data/curriculum.mjs';
+const track = tracks[0];
+const liveCount = track.modules.flatMap((m) => m.lessons).filter((l) => l.live).length;
+const total = track.modules.flatMap((m) => m.lessons).length;
+---
+
+<div class="map not-content">
+  {
+    liveCount < total ? (
+      <p class="progress">
+        <span class="bar"><span style={`width:${(liveCount / total) * 100}%`} /></span>
+        {liveCount} of {total} lessons published
+      </p>
+    ) : (
+      <p class="progress">{total} lessons in {track.modules.length} modules</p>
+    )
+  }
+  <div class="grid">
+    {
+      track.modules.map((m) => (
+        <section class="mod">
+          <h3>
+            <span class="mid">{m.id}</span> {m.title}
+          </h3>
+          <ul>
+            {m.lessons.map((l) => (
+              <li class={l.live ? 'live' : 'soon'}>
+                {l.live ? (
+                  <a href={lessonHref(track.slug, l.id)}>
+                    <span class="lid">{l.id}</span>
+                    {l.title}
+                  </a>
+                ) : (
+                  <span>
+                    <span class="lid">{l.id}</span>
+                    {l.title}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+  </div>
+</div>
+
+<style>
+  .progress {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+  }
+  .bar {
+    display: inline-block;
+    width: 10rem;
+    height: 0.4rem;
+    border-radius: 99px;
+    background: var(--sl-color-gray-6);
+    overflow: hidden;
+  }
+  .bar span {
+    display: block;
+    height: 100%;
+    background: var(--sl-color-accent);
+  }
+  .grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    margin-top: 1rem;
+  }
+  .mod {
+    border: 1px solid var(--sl-color-hairline-shade);
+    border-radius: 0.75rem;
+    padding: 0.9rem 1rem;
+  }
+  h3 {
+    margin: 0 0 0.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--sl-color-white);
+  }
+  .mid {
+    display: inline-grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-inline-end: 0.35rem;
+    border-radius: 0.35rem;
+    background: var(--sl-color-accent-low);
+    color: var(--sl-color-accent-high);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.86rem;
+  }
+  li {
+    padding: 0.2rem 0;
+  }
+  .lid {
+    display: inline-block;
+    min-width: 2rem;
+    font-family: var(--__sl-font-mono, ui-monospace);
+    font-size: 0.78rem;
+    color: var(--sl-color-gray-3);
+  }
+  .live a {
+    text-decoration: none;
+    font-weight: 600;
+    color: var(--sl-color-white);
+  }
+  .live a:hover {
+    color: var(--sl-color-accent-high);
+  }
+  .live .lid {
+    color: var(--sl-color-accent-high);
+  }
+  .soon {
+    color: var(--sl-color-gray-3);
+  }
+</style>

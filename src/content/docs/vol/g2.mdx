@@ -1,0 +1,156 @@
+---
+title: Classifying volatility spreads
+description: Sort any volatility spread into long or short volatility by the signs of its gamma, vega and theta, and spot the calendar exception.
+lessonId: G2
+prereqs: [G1, D4]
+minutes: 20
+bookRef: the chapter on volatility spreads
+---
+
+import G2ClassMatrix from '../../../components/widgets/g/G2_ClassMatrix.tsx';
+import G2GammaVegaMap from '../../../components/widgets/g/G2_GammaVegaMap.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+Straddles, strangles, butterflies, ratios, backspreads, calendars: the list of named spreads is long, but almost all of them answer one question the same way. **Do you make money if SPY moves a lot, or if it sits still?** This lesson gives you a two-sign test that classifies any of them in seconds.
+
+## Two families
+
+<Plain>
+
+Every volatility spread is a bet on the **weather forecast for price swings**: will the real weather be stormier or calmer than the forecast priced into the options?
+
+- **Long volatility** spreads want storms. They profit from big moves in either direction, and from the forecast itself getting stormier. While they wait, the **ice melts** against them: they lose a little every day.
+- **Short volatility** spreads want calm. They collect the melting ice every day, and they lose when SPY makes a big move or the forecast turns stormy.
+
+You can't have both. A spread that collects decay is one that suffers from big moves, and the other way round.
+
+</Plain>
+
+<Pro>
+
+Classify a spread by the sign of its **gamma** (curvature in price) and **vega** (sensitivity to implied volatility), measured near the current price with the position roughly delta-neutral:
+
+| Family | Gamma | Vega | Theta | Examples |
+| --- | --- | --- | --- | --- |
+| Long volatility | + | + | − | long straddle, long strangle, backspreads, short butterfly |
+| Short volatility | − | − | + | short straddle, short strangle, ratio spreads, long butterfly |
+| Calendar (long) | − | + | + | sell the near month, buy the far month |
+
+The gamma-theta link is not a coincidence. For a delta-hedged position under Black-Scholes, $$\Theta \approx -\tfrac{1}{2}\Gamma S^2\sigma^2$$ (ignoring the small financing term), so a position with positive gamma pays theta and vice versa. Gamma and vega usually share a sign because, for options of the *same* expiry, both are proportional to $$\phi(d_1)$$. Mix expiries and that link breaks, which is exactly what a calendar does.
+
+</Pro>
+
+## Try the map
+
+Pick any spread and read its payoff and its three signs. Switch to **Quiz me** to hide the answers, guess from the payoff shape, then reveal.
+
+<G2ClassMatrix client:visible />
+<SnapshotNote detail="Nov 27, 2026 legs at mid; the calendar's long leg is the Dec 18 770 call" />
+
+A few readings from the snapshot, per spread:
+
+- **Long 770 straddle** ($25.14): gamma +2.52 shares per $1, vega **+$178** per vol point, theta −$41 a day.
+- **Long 750/770/790 call butterfly** ($5.38): gamma −0.43, vega **−$30**, theta +$6.60. It is the opposite of a short butterfly, and in the short-volatility family despite being bought for a debit.
+- **Put backspread** (sell one 770 put, buy two 750s, $0.64 debit): gamma +0.49, vega +$57. More options bought than sold makes it long volatility.
+- **Calendar** (sell Nov 770 call, buy Dec 770 call, $5.07 debit): gamma **−0.31** but vega **+$26**, theta +$4.30.
+
+<Plain title="Reading the shape">
+
+You can often classify a spread from its expiry payoff alone. If the picture is a **valley** (losses in the middle, profits at the edges) the spread wants movement: long volatility. If it is a **hill or plateau** (profits in the middle, losses at the edges) it wants calm: short volatility. Backspreads and ratios are lopsided versions: a valley that only opens on one side, or a hill with one cliff.
+
+The calendar breaks this rule because its two options expire on different dates, so its "expiry" picture depends on what the longer option is still worth.
+
+</Plain>
+
+<Pro title="Pro detail: why the calendar is the exception">
+
+Vega grows with the square root of time while gamma shrinks with it: at the money, $$\mathcal{V} \propto S\sqrt{T}$$ and $$\Gamma \propto 1/(S\sigma\sqrt{T})$$. Selling the 31-day option and buying the 52-day option at the same strike therefore leaves you short the shorter option's larger gamma and long the longer option's larger vega. On the snapshot the Nov 770 call has model vega 0.89 and gamma 0.0125; the Dec 770 call has 1.15 and 0.0094 (at their own IVs). Net: vega +0.26, gamma −0.0031 per share. Calendars are covered in depth in [lesson G6](/vol/g6/); for now, file them as "long implied volatility, short realized volatility".
+
+</Pro>
+
+## Where they sit on one chart
+
+Plot every spread by gamma (horizontal) and vega (vertical). The two families fall into opposite corners, and the calendar sits alone in the top-left.
+
+<G2GammaVegaMap client:visible />
+<SnapshotNote detail="per spread; SPY and implied volatilities held at the snapshot" />
+
+Now drag the days slider. Three things happen as November 27 approaches:
+
+1. **Gamma grows and vega shrinks** for the at-the-money structures. The long straddle's gamma rises from 2.5 to 8.1 by day 28 while its vega falls from $178 to $56. Short-dated positions become gamma bets.
+2. **Backspreads can flip.** With SPY parked at 769.66, right on the backspreads' short strike, the call backspread's gamma turns negative in the last week (−3.4 by day 28). The family label describes the position across a range of prices, not at every point.
+3. **The calendar's vega rises** as the front option dies (from $26 to $51), while its negative gamma deepens. It becomes a purer bet on the December option's implied volatility.
+
+<Plain>
+
+The labels "long" and "short" volatility describe what a spread is *built* to do. Where SPY sits and how much time is left can change how strongly it does it. Near expiry, almost everything becomes a bet on how much SPY moves in the last few days, and much less a bet on the forecast.
+
+</Plain>
+
+<Pro>
+
+Gamma and vega are local measures. A ratio or backspread is long volatility in the sense that its payoff is convex over a wide range, yet it can show negative gamma at a specific price near the short strike. Desks therefore classify positions by their **P/L under scenarios** (a grid of price and volatility shocks, lesson [H3](/vol/h3/)) as well as by point Greeks. A reasonable working rule: classify at the price you expect the market to spend most of its time near, then check the Greeks at the strikes.
+
+</Pro>
+
+## Common mistakes
+
+- **"Debit means long volatility."** A long butterfly is bought for a debit and is short volatility. A short butterfly is sold for a credit and is long volatility.
+- **Classifying from vega alone.** The calendar is long vega and short gamma; it can lose money on a big move even if implied volatility rises.
+- **Reading Greeks at one price only.** Backspreads and ratios can change sign as SPY moves between the strikes or as expiry approaches.
+- **Forgetting theta comes with the territory.** Every long-gamma position pays decay; there is no structure that is long gamma and collects theta at the same expiry.
+
+<Takeaway>
+
+- Long volatility: positive gamma and vega, negative theta. Wants big moves and rising IV.
+- Short volatility: negative gamma and vega, positive theta. Wants calm and falling IV.
+- Long straddles, strangles, backspreads and short butterflies are long volatility; their mirror images are short volatility.
+- Calendars are the exception: long vega, short gamma, positive theta, because vega and gamma scale oppositely with time.
+- Classifications are local: check them across prices and as expiry approaches.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="G2"
+  questions={[
+    {
+      q: 'You buy the 750/770/790 call butterfly for $5.38. Which family is it in?',
+      options: ['Long volatility', 'Short volatility', 'Neither: it is delta-only', 'Long vega, short gamma'],
+      answer: 1,
+      why: 'Selling two 770s outweighs the wings near the money: gamma −0.43, vega −$30, theta +$6.60 per spread. A debit does not make it long volatility.',
+    },
+    {
+      q: 'Which spread is long vega but short gamma?',
+      options: ['Long strangle', 'Call ratio spread', 'Long calendar', 'Short straddle'],
+      answer: 2,
+      why: 'Selling the near month and buying the far month leaves you short the near option\'s bigger gamma and long the far option\'s bigger vega.',
+    },
+    {
+      q: 'A spread shows positive gamma. Without any other information, what is the most likely sign of its theta?',
+      options: ['Positive', 'Negative', 'Zero', 'It cannot be inferred at all'],
+      answer: 1,
+      why: 'For a delta-hedged position, theta ≈ −½ Γ S² σ². Positive gamma comes with negative theta: you pay decay for the right to profit from movement.',
+    },
+    {
+      q: 'Sell one 770 put, buy two 750 puts. Why is this long volatility?',
+      options: [
+        'It is bought for a debit',
+        'It holds more long options than short, so it gains from a large fall and from rising IV',
+        'Puts always carry positive vega',
+        'It is delta-neutral',
+      ],
+      answer: 1,
+      why: 'Net one extra long put gives positive gamma and vega over most prices: a large drop profits, and rising IV lifts the two long puts more than the one short.',
+    },
+  ]}
+/>
+
+<BookRef />

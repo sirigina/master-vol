@@ -1,0 +1,174 @@
+---
+title: Lognormal vs normal
+description: Explain why option models treat prices as lognormal, read the skew it creates in the price distribution, and know when the difference from a normal model matters.
+lessonId: C3
+prereqs: [C1, C2]
+minutes: 20
+---
+
+import LognormalCompare from '../../../components/widgets/c/LognormalCompare.tsx';
+import UpDownCalc from '../../../components/widgets/c/UpDownCalc.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+[Lesson C1](/vol/c1/) built a bell curve out of coin flips, and [lesson C2](/vol/c2/) used one to turn 14% volatility into a dollar range. But a bell curve of *prices* has a flaw: stretch it far enough and it puts real probability on SPY trading below zero. This lesson fixes that, and the fix explains several quirks of option prices.
+
+## Prices move in percentages
+
+<Plain>
+
+A $10 move means something very different for a $20 stock than for a $770 one. Investors think in **percentages**: SPY "fell 2%", not "fell $15". And a stock that keeps falling 10% a year gets closer and closer to zero without ever crossing it, because each fall is 10% of a smaller number.
+
+So instead of saying "dollar moves are bell-shaped", the standard model says "**percentage moves are bell-shaped**". The price itself then follows a curve called **lognormal**: it can never go below zero, it is bunched up on the downside, and it has a long tail stretching to the upside.
+
+</Plain>
+
+<Pro>
+
+The Black-Scholes model assumes geometric Brownian motion: $$dS = \mu S\,dt + \sigma S\,dW$$. Its solution makes the **log return** normal:
+
+$$
+\ln\frac{S_T}{S_0} \sim \mathcal{N}\!\left(\left(\mu - \tfrac{1}{2}\sigma^2\right)T,\ \sigma^2 T\right)
+$$
+
+so $$S_T = S_0\,e^{X}$$ with $$X$$ normal: $$S_T$$ is **lognormal** and strictly positive. Two reasons to model log returns rather than price changes: they are scale-free (a 1% move means the same at any price level), and they **add over time**: $$\ln(S_2/S_0) = \ln(S_2/S_1) + \ln(S_1/S_0)$$. Adding independent normal pieces gives another normal, which is what makes the √time scaling of [lesson C1](/vol/c1/) work exactly in log space.
+
+</Pro>
+
+## Same volatility, two shapes
+
+Both curves below use the same volatility. The dashed one treats dollar moves as normal. The solid one treats log returns as normal. Both are centered so the average price equals today's price; only the shape differs.
+
+<LognormalCompare client:visible />
+<SnapshotNote detail="SPY close as the starting price; volatility and horizon are yours to choose" />
+
+At the defaults, **14% volatility and 31 days** (the November 27 expiry), the two curves nearly overlap. One standard deviation of log return is only 4.1%, and over such a small range a percentage scale and a dollar scale barely differ. The lognormal median is $769.02, just 64 cents under today's price.
+
+Now push the horizon to **5 years** and the volatility to **40%**. The difference becomes impossible to miss:
+
+- The normal curve spills far into negative prices. It assigns a **13.2%** chance to SPY being below zero, which cannot happen.
+- The lognormal curve piles up between roughly $100 and $800 and stretches a long tail past $2,000.
+- Its **median is $515.92** and its peak (mode) is near $232, while its mean is still $769.66.
+
+<Plain>
+
+Why would the middle outcome be lower than the average? Because of the long upside tail. A few paths go up enormously (a stock can triple or quadruple) while no path can go below zero. Those big winners pull the *average* up, even though the *typical* path ends lower. In the 5-year, 40% case, about two paths in three (**67.3%**) finish below today's price, yet the average finish equals today's price.
+
+</Plain>
+
+<Pro>
+
+For $$X \sim \mathcal{N}(m, s^2)$$ with $$s = \sigma\sqrt{T}$$ and $$S_T = S_0e^X$$:
+
+$$
+\text{mean} = S_0 e^{m + s^2/2}, \qquad \text{median} = S_0 e^{m}, \qquad \text{mode} = S_0 e^{m - s^2}
+$$
+
+Holding the mean at $$S_0$$ (zero drift in price terms, $$\mu = 0$$) gives $$m = -s^2/2$$, so the median is $$S_0e^{-s^2/2}$$ and $$P(S_T < S_0) = N(s/2)$$. At $$s = 0.0408$$ (14%, 31 days) that is 50.8%; at $$s = 0.894$$ (40%, 5 years), 67.3%. The gap between mean and median is the **volatility drag** $$\tfrac{1}{2}\sigma^2$$ per year: the reason a portfolio's compound growth rate trails its average return. Under the risk-neutral measure the drift becomes $$r - q$$ instead of zero, which shifts the whole curve but leaves the shape intact.
+
+</Pro>
+
+Flip the axis toggle to **Log return**. Now the solid lognormal curve is a perfect, symmetric bell: the model is symmetric in log space. The dashed normal-in-price curve becomes the lopsided one: a long tail stretching far to the left, because as the price nears zero each dollar lost is a bigger and bigger percentage, and a steep drop on the right. Its 13.2% of probability below zero has nowhere to go at all; log space has no room for negative prices.
+
+## Up and down are not mirror images
+
+The asymmetry is easiest to feel with a single round trip.
+
+<UpDownCalc client:visible />
+<SnapshotNote detail="SPY close as the starting price" />
+
+<Plain>
+
+If SPY rises 20% and then falls 20%, it does not end where it started. It ends **4% lower**, at about $739. The fall is 20% of a bigger number, so it takes away more dollars than the rise added. To recover from a 20% drop you need a **25%** gain; from a 50% drop, a 100% gain.
+
+Log returns sidestep this bookkeeping problem. A rise of 20% is a log return of +18.23%; a fall of 20% is −22.31%. They add to exactly −4.08%, which is the log of the net result. That is why volatility, which is computed from log returns, treats a +X% and −X% move consistently.
+
+</Plain>
+
+<Pro>
+
+For a simple return $$x$$ followed by $$-x$$: $$(1+x)(1-x) - 1 = -x^2$$. The loss is second order in $$x$$, which is why it is invisible for daily moves (a ±1% round trip costs 0.01%) and dominant for large ones. In log terms the round trip is $$\ln(1-x^2)$$. Equivalently, for symmetric log moves $$\pm u$$, the price moves are $$e^{u}-1 > 1-e^{-u}$$: equal-probability up and down moves in log space are **larger in dollars on the upside**. That is the geometric source of the lognormal's right skew.
+
+</Pro>
+
+## What the shape does to option prices
+
+<Plain>
+
+Under a lognormal model the upside has more room than the downside: SPY can rise $400 but can only fall $769.66. For two options the same dollar distance from today's price, that tilts things slightly toward the call. Over a month the effect is tiny; over years it grows.
+
+The real market disagrees with the model in the opposite direction. Traders fear crashes more than the lognormal curve does, so they pay **more** for downside puts, not less. That disagreement is the volatility **skew**, the subject of [lesson C8](/vol/c8/).
+
+</Plain>
+
+<Pro>
+
+Black-Scholes prices are expectations under the lognormal law, so the shape is built into every quote. Two consequences desks rely on:
+
+- **Strike symmetry is in log-moneyness, not dollars.** At equal implied vol, strikes $$K_1 = Fe^{-k}$$ and $$K_2 = Fe^{k}$$ around the forward $$F$$ are symmetric in $$d_1, d_2$$ terms; strikes equidistant in dollars are not. Skew metrics are therefore quoted by delta or by $$\ln(K/F)$$.
+- **The model's tail is thin on the downside.** A lognormal with 14% vol puts the 31-day risk-neutral probability of SPY below 700 under 1%. The market's put prices imply several times that ([lesson C8](/vol/c8/)). Implied volatility is the fudge factor that reconciles the two: one model, a different $$\sigma$$ for each strike.
+
+</Pro>
+
+## Common mistakes
+
+- **Assuming the median equals today's price.** Even with zero expected return, the lognormal median sits below the mean, and the gap grows with $$\sigma^2T$$.
+- **Treating +X% and −X% as cancelling.** A round trip loses $$X^2$$. At ±50% that is a 25% loss.
+- **Using the normal model for long horizons or high volatility.** It is fine for a month at 14% and badly wrong for years at 40%.
+- **Thinking the lognormal model explains the skew.** It produces a mild upside tilt; the market's skew runs the other way.
+
+<Takeaway>
+
+- Option models assume log returns are normal, so prices are lognormal: never negative, skewed to the right.
+- With the mean fixed, the median is lower than the mean and more than half of paths end below the start.
+- In log space the distribution is symmetric; in price space up moves are larger in dollars than equally likely down moves.
+- Over short horizons at normal volatility the two models nearly match; over long horizons or high volatility they diverge sharply.
+- A +X% move followed by −X% leaves you down X², which is why volatility is measured with log returns.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="C3"
+  questions={[
+    {
+      q: 'Why do option models treat prices as lognormal rather than normal?',
+      options: [
+        'Prices cannot go negative and moves scale with the price level',
+        'Lognormal curves have fatter tails, matching real markets',
+        'It makes the median equal to the mean',
+        'It removes the need for a volatility input',
+      ],
+      answer: 0,
+      why: 'Making log returns normal keeps prices positive and treats a 1% move the same at any price level. It does not add fat tails; real markets still have fatter tails than the lognormal.',
+    },
+    {
+      q: 'A stock rises 30% and then falls 30%. What is the net change?',
+      options: ['0%', '−3%', '−9%', '−30%'],
+      answer: 2,
+      why: '1.30 × 0.70 = 0.91, a loss of 9%, which is X² = 0.3².',
+    },
+    {
+      q: 'Under a lognormal model with the mean held at today\'s price, where does the median sit?',
+      options: ['Above today\'s price', 'Exactly at today\'s price', 'Below today\'s price', 'At zero'],
+      answer: 2,
+      why: 'The long upside tail lifts the mean above the median. With the mean pinned at today\'s price, the median is S₀·e^(−σ²T/2), below today.',
+    },
+    {
+      q: 'At 14% volatility over 31 days, the normal and lognormal curves for SPY almost overlap. Why?',
+      options: [
+        'Because SPY never moves more than 1%',
+        'Because one standard deviation is only about 4%, where percentage and dollar scales barely differ',
+        'Because the lognormal is symmetric in price',
+        'Because the risk-free rate offsets the difference',
+      ],
+      answer: 1,
+      why: 'σ√T = 0.14 × √(31/365) ≈ 4.1%. For small moves ln(1+x) ≈ x, so the two models agree. The gap grows with σ√T.',
+    },
+  ]}
+/>

@@ -1,0 +1,30 @@
+---
+import Default from '@astrojs/starlight/components/Footer.astro';
+import { snapshot } from '../../lib/snapshot';
+---
+
+<Default />
+<div class="site-legal not-content">
+  <p>
+    <strong>Educational content only, not investment advice.</strong> Options involve significant risk and are not
+    suitable for every investor. Examples use a static market snapshot of {snapshot.symbol} as of {snapshot.asOfLabel}, and
+    are not recommendations to buy or sell anything.
+  </p>
+  <p>
+    As an Amazon Associate this site earns from qualifying purchases. <a href="/about/">About this site</a>
+  </p>
+</div>
+
+<style>
+  .site-legal {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--sl-color-hairline);
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-3);
+    line-height: 1.5;
+  }
+  .site-legal p + p {
+    margin-top: 0.5rem;
+  }
+</style>

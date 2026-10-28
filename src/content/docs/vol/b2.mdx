@@ -1,0 +1,209 @@
+---
+title: Model inputs
+description: Name the six inputs every option pricing model needs, tell which you can look up and which you must estimate, and see why volatility dominates.
+lessonId: B2
+prereqs: [B1]
+minutes: 20
+---
+
+import InputBoard from '../../../components/widgets/b/InputBoard.tsx';
+import InputTornado from '../../../components/widgets/b/InputTornado.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+[Lesson B1](/vol/b1/) priced an option as an average payoff over a distribution of future prices. To draw that distribution and average over it, a model needs exactly six numbers. Five of them you can look up. The sixth is a forecast, and it is the one that matters most.
+
+## The six inputs
+
+<Plain>
+
+Think of an option as a **deposit that holds a price**. To decide what that deposit is worth, you need to know:
+
+1. **Where the price is now** (SPY at $769.66).
+2. **The price being held** (the strike, 770).
+3. **How long the hold lasts** (31 days to November 27).
+4. **What your money earns meanwhile** (the interest rate, about 4.6% a year). Money tied up in stock could have been earning interest instead.
+5. **What the stock pays meanwhile** (dividends). The option holder doesn't get them, the shareholder does.
+6. **How much the price is likely to swing** (volatility, the weather forecast for price swings).
+
+The first five are facts you can look up or read off the contract. The sixth is a forecast. Nobody knows it for sure.
+
+</Plain>
+
+<Pro>
+
+Every standard European option model, Black-Scholes included, takes
+
+$$
+V = V(S,\ K,\ T,\ r,\ q,\ \sigma)
+$$
+
+| Input | Symbol | Snapshot value | Where it comes from |
+| --- | --- | --- | --- |
+| Underlying price | $$S$$ | 769.66 | Quoted; use a mid, and match its time to the option quotes |
+| Strike | $$K$$ | 770 | Contract term |
+| Time to expiry | $$T$$ | 31/365 | Contract term; desks argue over calendar vs trading days |
+| Interest rate | $$r$$ | 4.6% | Observed; here backed out of the chain itself ([lesson B3](/vol/b3/)) |
+| Dividend yield | $$q$$ | 0 (no ex-date before Nov 27) | Forecast, but company dividends are rarely a surprise |
+| Volatility | $$\sigma$$ | ≈14.1% | Unobservable; must be estimated or implied |
+
+Note what is **not** an input: the expected return of the stock. Under the hedging argument in [lessons B4](/vol/b4/) and [B5](/vol/b5/), the stock's drift drops out and the forward $$S e^{(r-q)T}$$ takes its place. Two traders with opposite views on direction but the same volatility forecast compute the same value.
+
+</Pro>
+
+## Turn every dial
+
+Each slider below is one input. They start at the snapshot values, with volatility set to 14.1% (the average of the 770 call and put implied volatilities). Move one at a time and watch the two prices.
+
+<InputBoard client:visible />
+<SnapshotNote detail="770 strike, Nov 27, 2026 expiry; model prices from Black-Scholes" />
+
+At the starting point the model gives **$13.97** for the call and **$11.31** for the put, a few cents from the market's 13.90 and 11.24 because a single 14.1% volatility is used for both. Try these:
+
+- **Stretch time to 365 days.** The call goes to about $61.62. More time means a wider range of outcomes.
+- **Double volatility to 28.2%.** The call goes to about $26.54, nearly double. Price is almost proportional to volatility for an at-the-money option.
+- **Set the rate to 0%.** The call drops to $12.45 and the put rises to $12.79. With no interest, the at-the-money put is worth slightly *more* than the call. [Lesson B3](/vol/b3/) explains why.
+
+<Plain>
+
+Some dials push the call and the put the same way, others push them apart. More time and a stormier weather forecast make **both** more valuable: either can benefit from a bigger swing. A higher price, a higher rate or a lower dividend helps the call and hurts the put, because they all raise where SPY is expected to be at expiry.
+
+</Plain>
+
+<Pro>
+
+Signs of the first-order sensitivities for European options (no dividend unless stated):
+
+| Input up | Call | Put |
+| --- | --- | --- |
+| $$S$$ | + (delta) | − |
+| $$K$$ | − | + |
+| $$T$$ | + | + (usually; deep ITM European puts can lose value with more time when $$r>0$$) |
+| $$r$$ | + | − |
+| $$q$$ | − | + |
+| $$\sigma$$ | + | + (same vega) |
+
+Volatility and time are the inputs that move calls and puts together; $$S$$, $$r$$ and $$q$$ move them apart through the forward.
+
+</Pro>
+
+## Which input matters most?
+
+The board shows what each input *can* do. A fairer question is what each one *typically* does: in a normal week, how much does each input actually change, and what does that do to the price?
+
+<InputTornado client:visible />
+<SnapshotNote detail="770 call and put, Nov 27, 2026 expiry, each at its own quoted IV" />
+
+For the 770 call at its own 14.13% implied volatility:
+
+- **SPY ±1%** (about one typical day) moves the call by **+$4.53 / −$3.80**. This is delta at work, and it is the biggest bar. But price risk is easy to hedge away with the stock itself.
+- **Volatility ±1 point** moves it by **±$0.89**. That is the call's vega, and it is the largest risk you *cannot* hedge with stock.
+- **One week of time** costs **$1.87**. Unlike the others, it only goes one way.
+- **Rate ±0.5%** moves it only **±$0.17**, and **dividend yield ±0.5%** by about **∓$0.18**. Rates and dividends rarely move that much in a month anyway.
+
+<Plain>
+
+Price, time and volatility are the big three. Of these, the price you can see and the calendar you can count. Volatility is the only one where you have to make a forecast.
+
+That's why traders say an option is really a bet on volatility. If you get the weather forecast right, the other inputs mostly take care of themselves.
+
+</Plain>
+
+<Pro>
+
+The bars are first-order sensitivities plus curvature: delta and gamma for $$S$$, vega for $$\sigma$$, theta (summed over seven days) for $$T$$, rho for $$r$$, and the dividend sensitivity for $$q$$. For a near-the-money 31-day option:
+
+$$
+\text{vega} \approx S\sqrt{T}\,n(d_1)/100 \approx 0.89, \qquad \rho \approx K T e^{-rT} N(d_2)/100 \approx 0.34
+$$
+
+Per point, rho looks comparable to vega, but the realistic shocks are very different: short rates move by tenths of a percent in a month, implied volatility by whole points in a day. On a desk, $$S$$ risk is hedged continuously with the underlying, $$r$$ and $$q$$ risk is a small residual handled in aggregate, and $$\sigma$$ is the risk the book is actually running. A market maker's position is described first by its vega.
+
+Two further points. First, the call and put tornadoes have the same volatility bar (both ±$0.89), because a call and put at the same strike and expiry have the same vega. Second, rate and dividend move the call and put in *opposite* directions: they shift the forward, which helps one and hurts the other.
+
+</Pro>
+
+## Estimated vs observed: what this means in practice
+
+<Plain>
+
+If five inputs are facts and one is a forecast, then two traders with the same facts can only disagree about the forecast. So when an option looks "expensive", it really means the market's weather forecast looks too stormy to you. When it looks "cheap", the forecast looks too calm.
+
+That turns the question around. Instead of asking "what is this option worth?", traders ask "what volatility is the market charging?" and then decide whether they agree.
+
+</Plain>
+
+<Pro>
+
+Because volatility is the only free input, the market price can be inverted into a volatility: the **implied volatility** that makes the model match the price ([lesson B6](/vol/b6/)). Once you do that, options are quoted and compared in vol points rather than dollars. The practical workflow:
+
+1. Plug in $$S, K, T, r, q$$ from the market.
+2. Solve for the $$\sigma$$ that reproduces the option's price.
+3. Compare that implied volatility to your own forecast of realized volatility ([lesson C4](/vol/c4/)), or to other options' implied volatilities (lessons [C7](/vol/c7/) and [C8](/vol/c8/)).
+
+Errors in the "observable" inputs still matter at the margin. Using a stale underlying price is the most common one: if SPY quotes 769.66 but the option quotes are a minute old, the implied volatility you compute absorbs that mismatch. Using the wrong rate is the second: [lesson B3](/vol/b3/) shows how the rate is pulled from the options themselves to avoid it.
+
+</Pro>
+
+## Common mistakes
+
+- **Adding expected return as an input.** The model does not need your view on direction; the forward replaces it.
+- **Treating volatility as observable.** Historical volatility is a measurement of the past; the model wants the future. They differ ([lesson C2](/vol/c2/)).
+- **Ignoring the shock size.** Rho per point looks large, but rates rarely move a whole point in a month. Compare inputs by realistic moves, as in the tornado.
+- **Mixing time conventions.** Use the same day count for time to expiry everywhere, or a 31-day option will be priced with the wrong volatility.
+
+<Takeaway>
+
+- Six inputs: underlying price, strike, time, interest rate, dividends, volatility.
+- Five can be looked up; volatility must be estimated, so it carries most of the disagreement and most of the risk.
+- In a normal week, price and volatility moves dominate; rates and dividends barely register for short-dated options.
+- The stock's expected return is not an input; the forward price stands in for it.
+- Because volatility is the only unknown, markets quote options in implied volatility.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="B2"
+  questions={[
+    {
+      q: 'Which pricing input cannot be observed directly in the market and must be estimated?',
+      options: ['Interest rate', 'Time to expiry', 'Volatility', 'Strike'],
+      answer: 2,
+      why: 'Strike and time are contract terms; rates are quoted. Future volatility is a forecast.',
+    },
+    {
+      q: 'The 770 call has vega 0.89 and rho 0.34 per point. Over a typical week, which input is more likely to move its price more?',
+      options: [
+        'The rate, because 0.34 is a meaningful number',
+        'Volatility, because implied vol routinely moves a point or more while rates move a fraction of a point',
+        'Neither; both are negligible',
+        'Strike',
+      ],
+      answer: 1,
+      why: 'Sensitivity times realistic shock: a 1-point vol move is about $0.89; a 0.5% rate move is about $0.17.',
+    },
+    {
+      q: 'Two traders agree on SPY, the strike, time, rates and dividends, but one is bullish and one is bearish. Their volatility forecasts are identical. Their model values for the 770 call are…',
+      options: ['Higher for the bull', 'Higher for the bear', 'The same', 'Impossible to compare'],
+      answer: 2,
+      why: "Expected return isn't a model input; the risk-neutral forward replaces it. Same inputs, same value.",
+    },
+    {
+      q: 'With the rate set to 0% and no dividend, the 770 call is worth slightly less than the 770 put. Why?',
+      options: [
+        'Puts are always worth more',
+        'The strike 770 is above spot 769.66, so the put is slightly in the money',
+        'Volatility skew',
+        'Time decay is faster on calls',
+      ],
+      answer: 1,
+      why: 'With zero carry, the forward equals spot (769.66), so the 770 put is 34 cents in the money and the call 34 cents out.',
+    },
+  ]}
+/>

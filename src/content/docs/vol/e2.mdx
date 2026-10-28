@@ -1,0 +1,200 @@
+---
+title: Delta-neutral hedging
+description: Turn a volatility view into a position that profits from the size of moves rather than their direction, and see why its P/L tracks realized minus implied volatility.
+lessonId: E2
+prereqs: [E1, D2]
+minutes: 30
+bookRef: the chapters on dynamic hedging
+---
+
+import OneDayHedged from '../../../components/widgets/e/OneDayHedged.tsx';
+import HedgeSimulator from '../../../components/widgets/e/HedgeSimulator.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+[Lesson E1](/vol/e1/) found edge: a gap between your volatility forecast and the market's. But buying a straddle because you think volatility is cheap also leaves you exposed to which way SPY goes. Delta-neutral hedging strips the direction out, so what is left is a bet on **how much** SPY moves, which is the bet you actually wanted.
+
+## Neutralizing direction
+
+<Plain>
+
+Delta is the **speedometer**: how fast your position gains or loses as SPY moves. A position with zero delta does not care, for small moves, whether SPY goes up or down.
+
+So the recipe is: buy the options you think are cheap, then buy or sell enough SPY shares to bring the speedometer back to zero. Ten November 27 770 straddles start almost neutral already (the call's +0.54 and put's −0.47 nearly cancel), so the first hedge is tiny.
+
+The catch is the **accelerator**, gamma. As soon as SPY moves, the delta of the straddles changes, and the hedge is out of date. Keeping it at zero means trading SPY again and again until expiry. That is *dynamic* hedging.
+
+</Plain>
+
+<Pro>
+
+A delta-neutral portfolio $$\Pi = V - \Delta S$$ has $$\partial \Pi / \partial S = 0$$ at the moment it is set. Over a short interval its P/L, holding implied vol fixed, is
+
+$$
+d\Pi \;\approx\; \tfrac{1}{2}\,\Gamma\,(dS)^2 \;+\; \Theta\,dt
+$$
+
+The delta term is gone; what remains is a gamma term that is positive for a long option holder whatever the sign of $$dS$$, and a theta term that is negative. Long gamma pays theta for the right to profit from movement; short gamma collects theta and pays for movement. Rebalancing resets $$\Delta$$ to zero so the next interval starts clean.
+
+</Pro>
+
+## One session: movement against melting ice
+
+Before simulating a month, look at a single session. Ten long 770 straddles, hedged at 769.66, carry about **$572** of time decay per trading session. Gamma pays back $$\tfrac{1}{2}\Gamma \times \text{move}^2$$. Drag the move.
+
+<OneDayHedged client:visible />
+
+The two effects cancel at a move of about **±$6.72**, and that number is not a coincidence: it is SPY's one-standard-deviation daily move at 14.06% volatility. A day with a $10 move earns about $693; a flat day loses about $578. Flip to the short straddle and every number changes sign.
+
+<Plain>
+
+The **melting ice** (theta) costs the long straddle owner a fixed amount every day. The **accelerator** (gamma) pays them on every move, more than proportionally: a move twice as big pays four times as much.
+
+The market set the price of the ice so that a "typical" day, at the market's forecast, breaks even. If the real days are bigger than the forecast, the owner wins over time. If smaller, the seller wins.
+
+</Plain>
+
+<Pro>
+
+Under Black-Scholes with $$r = 0$$, $$\Theta = -\tfrac{1}{2}\Gamma S^2 \sigma_{\text{imp}}^2$$ (per year), so the one-step P/L is
+
+$$
+d\Pi \;\approx\; \tfrac{1}{2}\,\Gamma S^2 \left[\left(\frac{dS}{S}\right)^{2} - \sigma_{\text{imp}}^{2}\,dt\right]
+$$
+
+Breakeven is $$|dS| = S\,\sigma_{\text{imp}}\sqrt{dt}$$. The widget spreads the 31 calendar days to November 27 over 22 sessions, so $$dt = (31/365)/22$$, giving $$769.66 \times 0.1406 \times \sqrt{dt} = 6.72$$. With a nonzero rate there is an extra financing term ($$r$$ times the option value net of the hedge); it is small over a month and omitted here.
+
+</Pro>
+
+## A month of hedging
+
+Now run the full trade. SPY follows a random path from 769.66 at the volatility you choose, and the 10 straddles are rehedged at every close until expiry. The options were bought at the market's 14.06%.
+
+<HedgeSimulator client:visible />
+
+On the default setting (long, 10% realized, path 1) the straddle loses money and the hedge makes some back:
+
+- The straddles themselves lose about **$6,760**: SPY ends at 788.40, but the straddle cost $25.16 and finishes worth only $18.40.
+- The stock hedge earns about **$1,590**. Each day the position was rebalanced by *selling after rallies and buying after dips*, which is what a long-gamma hedge always does.
+- Total: about **−$5,170**. Path 1 realized 9.8%, about 4.3 points below implied.
+
+Open "Daily hedge trades" to see the pattern: after an up day the straddles' delta rises, so you sell shares; after a down day you buy. Switch to short and the trades reverse: the short-gamma hedger buys rallies and sells dips, and pays for it when moves are big.
+
+<Plain>
+
+Think of the hedge as a disciplined trader who always takes the other side of the last move: sell a bit when SPY rises, buy a bit when it falls. For the straddle owner, every one of those trades is at a better price than the previous one, so they add up to profit, **if** SPY moves enough. The straddle's melting value is the price of having that discipline built in.
+
+Set realized volatility to 18% and the long straddle wins on most paths. Set it to 14% (the market's own forecast) and it is roughly a coin flip.
+
+</Plain>
+
+<Pro>
+
+The bookkeeping is an identity: total P/L is the option mark-to-market plus the hedge P/L, $$\sum_i h_{i-1}\,(S_i - S_{i-1})$$, where $$h_{i-1} = -N\,\Delta_{i-1}$$ is the share position set at the previous close. For a long-gamma book $$\Delta$$ rises with $$S$$, so $$h$$ falls after rallies and rises after dips: the hedge mechanically sells high and buys low, and that harvest is what pays the theta. The simulator marks the options at the entry implied vol each day, so the only P/L sources are gamma, theta and the discreteness of the daily rebalance.
+
+</Pro>
+
+## Why the result tracks realized minus implied
+
+The scatter under the simulator runs the same position on 120 random paths. Each dot is one path's final P/L, plotted against how much that path's realized volatility beat or missed the 14.06% implied. The dashed line is a simple prediction: what the straddle would have been worth at the volatility that actually happened, minus what was paid.
+
+<Pro>
+
+Summing the one-step P/L over the life of the trade gives
+
+$$
+\text{P/L} \;\approx\; \sum_{i} \tfrac{1}{2}\,\Gamma_i S_i^2 \left(r_i^2 - \sigma_{\text{imp}}^2\,\Delta t\right)
+$$
+
+where $$r_i$$ is each period's return. If gamma were constant this would collapse to $$\tfrac{1}{2}\Gamma S^2 (\sigma_{\text{real}}^2 - \sigma_{\text{imp}}^2)\,T$$, the formula traders carry around. At entry, $$\tfrac{1}{2}\Gamma S^2 T$$ for the 1,000-share position is about $$636{,}600$$, so 10% realized against 14.06% implied predicts $$636{,}600 \times (0.10^2 - 0.1406^2) \approx -\$6{,}200$$; valuing the straddle at 10% gives a similar −$7,260. Both are **averages**. Gamma is not constant: it is largest when SPY sits near 770 late in the trade, so the same realized volatility pays more if it arrives then. The stat "Path-by-path estimate" applies the sum with each day's actual gamma; on path 1 it gives −$5,440 against the simulated −$5,170, while valuing the straddle at the path's 9.8% realized says −$7,620. Try path 3 at 18%: realized 21.1%, the vol-gap estimate is +$12,500, but the trade makes about **$27,500** because SPY was back near 770 in the final week, where gamma is largest, and swung by as much as $19 a session there.
+
+</Pro>
+
+<Plain>
+
+The cloud slopes the way you would expect: more realized volatility than the market charged, more profit for the long straddle. But the dots scatter around the line. Two paths with the same realized volatility can end far apart, because *when* and *where* SPY moves matters. A big move with SPY near 770 and a week left pays far more than the same move a month out or with SPY far from the strike.
+
+Run 10% realized: 119 of 120 paths lose money for the long straddle. At 18%, 107 of 120 make money. At 14%, 60 of 120: a coin flip, as it should be when the forecast matches the market.
+
+</Plain>
+
+## Long volatility vs short volatility
+
+<Plain>
+
+The long hedged straddle is **long volatility**: it pays a known daily cost and wins when real swings beat the forecast. The short hedged straddle is **short volatility**: it collects that daily cost like an insurer collects premiums, and loses when the storm comes.
+
+Neither is the "safe" side. The short side wins more often for an index (lesson [E1](/vol/e1/) showed implied usually exceeds realized) but its losing paths are bigger, because realized volatility has no ceiling.
+
+</Plain>
+
+<Pro>
+
+The two sides are exact mirrors in this simulator because there are no costs, the hedges are symmetric, and the options are marked at a constant implied vol. In practice they differ in three ways that later lessons pick up:
+
+- **Distribution of outcomes.** Realized volatility is bounded below by zero but not above, so short-vol P/L is negatively skewed ([lesson E4](/vol/e4/)).
+- **Hedging frequency.** Hedging more often lowers the variance of the outcome but raises costs; the trade-off differs for long and short gamma ([lesson E3](/vol/e3/)).
+- **Vega.** If implied volatility moves before expiry, the position's mark changes by vega times the move, which can swamp a month of gamma P/L. The 10 straddles carry vega of about $1,790 per vol point.
+
+</Pro>
+
+## Common mistakes
+
+- **Expecting the hedge to make the trade riskless.** Delta-hedging removes direction, not variance; path 2 with the slider at 14% loses about $8,870 because that path happened to realize only 9.6%. The hedge removes the direction; it cannot guarantee how much SPY moves.
+- **Judging the trade by the option P/L alone.** On path 3 at 18%, the straddles lose about $23,240 while the hedge makes $50,750; only the total matters.
+- **Using the variance formula as a guarantee.** $$\tfrac{1}{2}\Gamma S^2(\sigma_r^2 - \sigma_i^2)T$$ is an average over paths with constant gamma; real P/L depends on where the movement happens.
+- **Forgetting that the hedge trades are contrarian for long gamma and momentum for short gamma.** A short-gamma hedger who hesitates to buy into a rally is not hedged.
+
+<Takeaway>
+
+- Delta-neutral hedging converts an option position into a bet on the size of moves.
+- Each session, long gamma earns ½ Γ × move² and pays theta; they cancel at a one-standard-deviation move (about ±$6.72 here).
+- Over the life of the trade, P/L tracks realized² − implied², weighted by gamma along the path.
+- Long gamma sells rallies and buys dips; short gamma does the opposite.
+- The same average edge can produce very different results on different paths.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="E2"
+  questions={[
+    {
+      q: 'You are long a delta-hedged straddle. SPY rallies $8 over the day. What hedge trade restores delta neutrality?',
+      options: ['Buy SPY', 'Sell SPY', 'No trade: a straddle is always neutral', 'Buy more straddles'],
+      answer: 1,
+      why: 'Positive gamma: after a rally the straddle’s delta is positive, so you sell shares. Long gamma always sells strength and buys weakness.',
+    },
+    {
+      q: 'A hedged long straddle loses $572 a session to theta. Gamma pays ½ × 25.3 × move². Roughly what move breaks even?',
+      options: ['About $2', 'About $4.75', 'About $6.70', 'About $22'],
+      answer: 2,
+      why: '½ × 25.3 × m² = 572 gives m² ≈ 45.2, so m ≈ $6.72, which is SPY’s one-standard-deviation daily move at the implied volatility.',
+    },
+    {
+      q: 'Two paths both realize 18% against 14% implied. Why can the long hedged straddle make very different amounts on them?',
+      options: [
+        'The hedge ratio was calculated wrongly on one path',
+        'Gamma varies with price and time, so moves near the strike close to expiry pay more',
+        'Theta is random',
+        'Realized volatility is measured differently on each path',
+      ],
+      answer: 1,
+      why: 'P/L is a gamma-weighted sum of squared moves. The same total variance pays more when it arrives where gamma is large.',
+    },
+    {
+      q: 'You are short a delta-hedged straddle at 14% implied, and SPY realizes 10%. On average you…',
+      options: ['Lose, because theta works against you', 'Make money, roughly vega-sized per vol point', 'Break even, because the hedge removes all P/L', 'Lose on the hedge and on the options'],
+      answer: 1,
+      why: 'Short gamma collects theta priced for 14% and pays for moves that turned out to be 10%-sized. On average that is a profit, close to the straddle’s value at 14% minus its value at 10%.',
+    },
+  ]}
+/>
+
+<BookRef />

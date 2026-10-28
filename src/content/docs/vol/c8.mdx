@@ -1,0 +1,186 @@
+---
+title: Skew & smile
+description: Read the SPY volatility smile, explain why downside puts carry higher implied volatility, measure skew with risk reversals, and see what it implies about the market's distribution.
+lessonId: C8
+prereqs: [C4, B6]
+minutes: 30
+---
+
+import SmileChart from '../../../components/widgets/c/SmileChart.tsx';
+import ImpliedDistribution from '../../../components/widgets/c/ImpliedDistribution.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+If the Black-Scholes model were literally true, every SPY option expiring November 27 would have the same implied volatility, because they all describe the same stock over the same month. They don't. The 650 put is priced at **32.1%**, the 770 straddle at about **14%**, the 800 call at **11.8%**. This lesson explains that pattern, how traders measure it, and what it tells you about the market's view of risk.
+
+## The smile, plotted
+
+<Plain>
+
+Take every strike, find its implied volatility ([lesson B6](/vol/b6/)), and plot them in a line. For SPY the line is not flat. It starts high on the left (cheap-looking strikes far below today's price), falls through the middle, and flattens out on the right. Traders call the general shape a **smile**; for stock indexes, where the left side is far higher than the right, it's more of a **smirk** or simply **skew**.
+
+In weather terms: the forecast isn't one number. The market forecasts a stormier world for the scenario where SPY falls a long way than for the scenario where it rises.
+
+</Plain>
+
+<Pro>
+
+The smile is $$K \mapsto \sigma_{\text{imp}}(K, T)$$ for a fixed expiry. Convention is to use **out-of-the-money** options on each side (puts below the forward, calls above) because they are more liquid and their prices are almost pure time value; put-call parity means the in-the-money option at the same strike has the same IV up to dividends and borrow costs. Three x-axes are common:
+
+- **Strike**: what you trade.
+- **Moneyness** $$K/S$$ or log-moneyness $$\ln(K/F)$$: comparable across underlyings and price levels.
+- **Delta**: comparable across expiries and volatility levels, since it accounts for $$\sigma\sqrt{T}$$. FX and many equity desks quote skew in delta.
+
+</Pro>
+
+<SmileChart client:visible />
+<SnapshotNote detail="Nov 27 and Dec 18 chains, IV as quoted per strike; deltas recomputed with Black-Scholes at each strike's IV" />
+
+Switch the x axis to **Delta**. The chart flips (1 on the left, puts' territory) and the points spread evenly, because delta stretches the strikes near the money and compresses the far wings. Now switch the expiry to **Both** and compare. By strike, the December smile looks flatter; by delta, it is steeper. Both are true, and the next section explains why.
+
+## Why downside puts cost more
+
+<Plain>
+
+A put is an insurance policy. Big investors (pension funds, insurers, anyone managing a stock portfolio) buy downside insurance all the time, and almost nobody has a natural reason to sell it. More buyers than sellers means a higher price, and in options a higher price means a higher implied volatility.
+
+There's also a real-world reason the insurance is worth more than the model says. When markets fall, they fall fast and get jumpier on the way down ([lesson C6](/vol/c6/)). Rallies tend to be calm. So a far-below-the-market put really is more likely to pay off than a calm, constant-volatility model assumes.
+
+</Plain>
+
+<Pro>
+
+Three forces, roughly in order of importance for index options:
+
+- **Crash risk and jump premia.** Equity indexes have negatively skewed, fat-tailed returns ([lesson C2](/vol/c2/)). A lognormal at ATM vol understates the probability of large declines, so OTM puts must carry a higher $$\sigma$$ to be priced correctly. Since the 1987 crash, index smiles have been persistently downward-sloping.
+- **Leverage and volatility feedback.** Volatility rises as prices fall (VIX moved about −1.5 points per +1% SPY over the past year, [lesson C5](/vol/c5/)). A put pays off in exactly the states where vol is high, which a constant-vol model can't capture; local and stochastic volatility models reproduce the skew from this correlation.
+- **Supply and demand.** Portfolio hedgers are structurally long puts; overwriters (covered-call sellers) are structurally short calls. Dealers who take the other side charge for the gap risk they warehouse, and that premium shows up as IV.
+
+</Pro>
+
+## Measuring skew
+
+A whole curve is hard to track day to day. Desks boil it down to two or three numbers.
+
+<Plain>
+
+The most common is the **risk reversal**: compare an out-of-the-money call and an out-of-the-money put that are equally far from the money, and subtract. For SPY's November options, the call with a delta of 0.25 (traders say "25-delta": roughly a 1-in-4 chance of finishing in the money) is priced at **12.1%** volatility and the matching put at **16.7%**. The call is **4.6 points cheaper**, and that 4.6 is the skew in one number.
+
+The second is the **put wing**: how much more the downside put costs than the at-the-money option. Here, 16.7% vs 13.7%: about **3 points** of fear premium.
+
+</Plain>
+
+<Pro>
+
+With IVs interpolated linearly in call delta from the November 27 chain:
+
+$$
+\text{RR}_{25} = \sigma_{25\Delta C} - \sigma_{25\Delta P} = 12.14\% - 16.75\% = -4.61 \text{ pts}
+$$
+
+$$
+\text{Put wing} = \sigma_{25\Delta P} - \sigma_{50\Delta} = 16.75\% - 13.74\% = +3.01 \text{ pts}
+$$
+
+The 25-delta "butterfly" $$\tfrac12(\sigma_{25C}+\sigma_{25P}) - \sigma_{50\Delta} = +0.71$$ pts measures curvature (the smile part) rather than tilt. The 10-delta put sits at 21.83%. For December 18 the 25-delta risk reversal is **−5.69** and the put wing **+3.90**, larger in delta terms. By fixed moneyness the picture reverses: the 95%-of-spot strike is 5.06 points over the at-spot IV in November and 4.41 in December. A 25-delta put is further from spot in a longer expiry, so delta-based skew tends to look steeper with time while strike-based skew flattens roughly like $$1/\sqrt{T}$$. Always say which convention you are quoting. Note also that SPY goes ex-dividend around December 18 and the vendor IVs ignore it, which nudges December put IVs up and call IVs down slightly and exaggerates that expiry's risk reversal a little.
+
+</Pro>
+
+A few things to spot in the chart:
+
+- **The far call ticks back up.** The 840 call (12.9%) is priced above the 800 and 820 calls (both about 11.8%). Deep out-of-the-money calls have a tiny price, so a minimum tick and a bit of demand for lottery tickets lift their IV. That small upturn is the "smile" in the smirk.
+- **The put side is nearly a straight line** from 32.1% at 650 to about 14% at the money: steep, persistent, and the dominant feature.
+
+## What skew implies about the distribution
+
+Option prices at every strike pin down a probability distribution for where SPY will finish. A flat smile corresponds to the lognormal of [lesson C3](/vol/c3/). A skewed smile corresponds to something else.
+
+<ImpliedDistribution client:visible />
+<SnapshotNote detail="Nov 27 chain; smile smoothed with a cubic in log-moneyness, extended linearly beyond the quoted strikes; illustrative" />
+
+<Plain>
+
+The orange curve is the shape the smile implies; the blue dashed one is the plain lognormal at the at-the-money volatility. Compared with the lognormal, the smile shape has:
+
+- **A fatter left tail.** The market prices about a **2.8%** chance of SPY finishing below $700 by November 27, more than three times the lognormal's **0.9%**. Below $680: about 1.8% vs 0.1%.
+- **A thinner middle-left.** Moderate declines (to $740 or $760) are actually *less* likely than the lognormal says: about 12% vs 14.9% below $740.
+- **A peak above today's price**, near $782. Small rises are the single most likely outcome, and the median is above spot.
+
+That is the classic shape of a stock market: up by the stairs most of the time, down by the elevator occasionally.
+
+</Plain>
+
+<Pro>
+
+The risk-neutral density is the second derivative of call prices with respect to strike (Breeden-Litzenberger):
+
+$$
+q(K) = e^{rT}\,\frac{\partial^2 C}{\partial K^2}
+$$
+
+Here the 15 quoted IVs are fitted with a cubic in $$\ln(K/F)$$, calls are priced on a $0.60 grid, and the second difference gives $$q$$. Both densities have a mean close to the forward (about 772.7); the skewed one moves mass from the near-left shoulder into the far-left tail and slightly above the forward, giving negative skewness and excess kurtosis. Two caveats: the tails depend on how the smile is extrapolated beyond 650 and 840, and the result is a **risk-neutral** density that includes risk premia, not a real-world forecast. Lesson [C2](/vol/c2/) showed SPY's realized returns do have fat tails, but the market's left tail is priced fatter still: part of the skew is premium.
+
+</Pro>
+
+## Common mistakes
+
+- **Comparing put and call IVs at the same strike and calling that skew.** At one strike, put and call IV should match via parity. Skew is about IV across strikes.
+- **Mixing conventions.** Skew by delta and skew by moneyness can move in opposite directions across expiries; say which one you mean.
+- **Reading the implied density as a forecast.** It is risk-neutral and includes the premium investors pay for crash protection.
+- **Assuming high put IV means puts are "overpriced".** Part of it is real crash risk the lognormal model misses; only the remainder is premium.
+
+<Takeaway>
+
+- SPY's implied volatility falls from the downside puts to the upside calls: 32.1% at the 650 put, about 14% at the money, 11.8% at the 800 call.
+- Causes: crash risk the lognormal model misses, volatility rising as prices fall, and persistent demand for downside protection.
+- The 25-delta risk reversal summarizes skew: −4.6 points for November 27, −5.7 for December 18 (by delta).
+- Delta-based skew can look steeper for longer expiries even while strike-based skew flattens.
+- The smile implies a distribution with a fat left tail, a peak above spot, and thinner moderate declines than the lognormal.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="C8"
+  questions={[
+    {
+      q: 'Why is the SPY 650 put priced at a much higher implied volatility than the 800 call?',
+      options: [
+        'The 650 put has more time to expiry',
+        'The market prices more crash risk and demand for downside protection than a constant-volatility model assumes',
+        'Puts always have higher IV than calls at the same strike',
+        'The 800 call is in the money',
+      ],
+      answer: 1,
+      why: 'Skew reflects fat left tails, volatility rising in selloffs, and structural demand for puts. At the same strike, put and call IV are linked by parity.',
+    },
+    {
+      q: 'The 25-delta call has IV 12.1% and the 25-delta put has IV 16.7%. What is the 25-delta risk reversal?',
+      options: ['+4.6 points', '−4.6 points', '+14.4 points', '28.8 points'],
+      answer: 1,
+      why: 'Risk reversal = call IV − put IV = 12.1 − 16.7 = −4.6 points. Negative means puts are bid relative to calls.',
+    },
+    {
+      q: 'Compared with a lognormal at ATM vol, the distribution implied by SPY\'s smile has…',
+      options: [
+        'A thinner left tail',
+        'A fatter left tail and its peak slightly above the current price',
+        'Exactly the same shape',
+        'A fatter right tail',
+      ],
+      answer: 1,
+      why: 'High put IVs put more probability on large declines; to keep the mean at the forward, mass shifts toward modest gains. The peak sits near $782.',
+    },
+    {
+      q: 'You want to compare the skew of a 1-month and a 6-month option fairly across expiries. Which x-axis is most useful?',
+      options: ['Strike in dollars', 'Delta (or moneyness scaled by σ√T)', 'Option price', 'Open interest'],
+      answer: 1,
+      why: 'Delta accounts for the fact that a given dollar distance is "further" for a short-dated option than for a long-dated one.',
+    },
+  ]}
+/>

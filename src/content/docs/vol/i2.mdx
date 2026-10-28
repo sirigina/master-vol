@@ -1,0 +1,186 @@
+---
+title: Complex hedges
+description: Build put spreads, 1×2 put spreads and seagulls on SPY, measure what tail protection you give up, and see how skew changes the bill.
+lessonId: I2
+prereqs: [I1, G5]
+minutes: 25
+bookRef: the chapter on hedging with options
+---
+
+import StructureCompare from '../../../components/widgets/i/StructureCompare.tsx';
+import ProtectionMap from '../../../components/widgets/i/ProtectionMap.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+A plain protective put is the cleanest hedge and usually the most expensive one. Every cheaper alternative works the same way: it sells back some piece of the protection you are least worried about. The skill is knowing exactly which piece you sold.
+
+## Put spreads: insurance with a limit
+
+<Plain>
+
+A **put spread** buys one put and sells a lower one. On SPY, buying the November 27 750 put ($5.94) and selling the 700 put ($1.72) costs $4.22 a share, $422 for 100 shares instead of $594.
+
+Think of it as an **insurance policy with a coverage limit**. Between 750 and 700 you are fully covered. Below 700 the policy has paid out its maximum ($50 a share) and you are on your own again. You saved $172 by giving up cover for a fall of more than 9%.
+
+That is a sensible trade if your worry is an ordinary correction, and a poor one if your worry is a crash.
+
+</Plain>
+
+<Pro>
+
+With long strike $$K_1$$ and short strike $$K_2 < K_1$$, the hedge pays at most $$K_1 - K_2$$. Stock plus put spread at expiry:
+
+$$
+\text{P/L} = (S_T - S_0) + \max(K_1 - S_T, 0) - \max(K_2 - S_T, 0) - (P_1 - P_2)
+$$
+
+Between the strikes the position is flat; below $$K_2$$ it regains full delta of 1. On the snapshot the 750/700 spread costs 4.22 and pays up to 50, an 11.8-to-1 maximum payout ratio. The outright 750 put costs 5.94 for open-ended cover.
+
+Risk profile: the short 700 put reduces vega and gamma in the tail, so the hedge's value in a fast crash grows more slowly than the outright put's, even before expiry. A put spread is cheaper insurance against a move to the short strike, not a cheaper version of the same insurance.
+
+</Pro>
+
+## Ratio put spreads and seagulls
+
+<Plain>
+
+Two more ways to cut the cost further:
+
+- **1×2 put spread:** buy one 750 put and sell **two** 700 puts. The extra sale cuts the cost to $250 for 100 shares. But below 700, the second short put starts to cost you money, and at 652.50 the hedge has gone from helpful to harmful. In a deep crash you lose *more* than if you had never hedged.
+- **Seagull:** a put spread paid for by selling a call. Buy the 750 put, sell the 700 put, sell the 790 call. On the snapshot it brings in a small credit of $22. You are protected from 750 to 700 and your gains stop at 790.
+
+Each structure is a menu choice: what are you willing to give up, the crash cover, the upside, or both?
+
+</Plain>
+
+<Pro>
+
+The 1×2 put spread is a ratio spread ([lesson G5](/vol/g5/)): long one put, short two lower puts, net short one put below the lower strike. With the stock, the hedge's payoff below $$K_2$$ is
+
+$$
+(K_1 - S_T) - 2(K_2 - S_T) - D = S_T - (2K_2 - K_1) - D
+$$
+
+which turns negative below $$2K_2 - K_1 + D = 650 + 2.50 = 652.50$$. Below 700 the hedged position has a delta of 2: you are long the stock and short a put on top of it. The structure is **short tail risk while appearing hedged**, and it is short vega and short gamma at the low strike.
+
+The seagull adds a short call to a put spread. It funds the spread from upside the holder expects not to need, at the price of a capped payoff above $$K_3$$. Its expiry delta is 0 above the call strike, 1 between the call and the long put, 0 between the put strikes, and 1 again below $$K_2$$.
+
+</Pro>
+
+<StructureCompare client:visible />
+<SnapshotNote detail="Nov 27 expiry, mid prices; flat-vol column reprices at 14.1% ATM IV" />
+
+Click each structure in the highlight bar or table. Watch the line below 700: the protective put stays flat, the put spread and seagull rejoin the unhedged slope, and the 1×2 falls *faster* than the unhedged line. Change the short strike to 720 and the 1×2 becomes nearly free ($64), but its crossover moves up to 690.64, less than 11% below today.
+
+## How skew changes the price of each structure
+
+<Plain>
+
+SPY's out-of-the-money puts are expensive relative to the at-the-money options: the 700 put is priced at 23.8% volatility and the 750 put at 16.5%, while the 790 call is at 12.2%. The market charges extra for crash insurance.
+
+That premium cuts both ways. If you **buy** downside puts, skew makes them dear. If you **sell** downside puts, as in a put spread or a 1×2, you collect the same rich prices. Selling calls to pay for puts, as in a collar or seagull, works against you: you sell the cheap side to buy the dear one.
+
+</Plain>
+
+<Pro>
+
+The table's last column reprices every leg at a single flat 14.1% volatility. Compare it to the market cost:
+
+| Structure (750 / 700 / 790) | Market cost | Flat-vol cost | Effect of skew |
+| --- | --- | --- | --- |
+| Protective put | $594 | $424 | +$170 |
+| Put spread | $422 | $416 | +$6 |
+| 1×2 put spread | $250 | $408 | −$158 |
+| Seagull | −$22 | −$175 | +$153 |
+
+The outright put pays the full skew premium on the 750 strike. The put spread is almost skew-neutral, because the rich 700 put it sells offsets the rich 750 put it buys. The 1×2 sells the skew twice and is **cheaper** than a flat-vol model would say. The seagull suffers twice: it buys the rich put and sells a cheap call.
+
+The desk reading: when skew is steep, structures that are net short far out-of-the-money puts look attractive on price, and that is exactly when the market is charging most for the tail you are giving back. Cheap in premium is not the same as cheap in risk.
+
+</Pro>
+
+## The protection map
+
+Payoff diagrams show every price. A hedge committee usually asks a simpler question: what do we lose if the market falls 5%, 10% or 20%?
+
+<ProtectionMap client:visible />
+<SnapshotNote detail="Nov 27 expiry, mid prices, 100 SPY shares at 769.66" />
+
+With the 750/700 strikes:
+
+- **−5% (SPY 731):** every hedge helps. The seagull loses least (−$1,944) because its put spread is already paying and it was put on for a small credit; the unhedged shares lose $3,848.
+- **−10% (SPY 693):** the protective put holds at −$2,560 and the put spread at −$3,119. The 1×2 has started to give back gains (−$3,677) because both short 700 puts are now in the money.
+- **−20% (SPY 616):** the protective put is still −$2,560. The put spread and seagull lose about $10,400 to $10,800, and the 1×2 loses **$19,070**, about $3,700 more than the unhedged shares.
+
+<Plain>
+
+The cheapest hedges are the best in a mild selloff and the worst in a crash. Choose the hedge for the scenario that would actually hurt you, not the one that is most likely.
+
+</Plain>
+
+<Pro>
+
+A useful way to present any hedge is cost versus loss across a grid of scenarios, including at least one beyond the lowest short strike. Desks pair the expiry grid with a pre-expiry one, since a sharp drop with high implied volatility marks the short tail puts up sharply ([lesson H3](/vol/h3/)): a 1×2 can show a mark-to-market loss long before the crossover is reached at expiry.
+
+</Pro>
+
+## Common mistakes
+
+- **Buying a put spread and calling it crash protection.** It covers the distance between the strikes. Below the short strike you are unhedged again.
+- **Running a 1×2 without knowing the crossover.** Below $$2K_2 - K_1$$ plus the debit, the hedged position loses more than the bare stock.
+- **Judging structures by premium alone.** A cheap structure is cheap because it sold something; check the scenario grid, not only the debit.
+- **Ignoring skew when comparing quotes.** Flat-vol intuition says the 700 put is almost worthless (about $0.08); the market prices it at $1.72.
+
+<Takeaway>
+
+- Every cheaper hedge sells back part of the protection: tail cover (put spread), more than the tail (1×2), or upside (collar, seagull).
+- 750/700 put spread: $422 for 100 shares vs $594 for the outright put; cover ends at 700.
+- 1×2 put spread: $250, but the hedged position loses more than unhedged stock below 652.50.
+- Skew makes outright puts and seagulls dearer and 1×2 spreads cheaper than flat-vol pricing; put spreads are roughly skew-neutral.
+- Pick a hedge with a scenario grid (−5%, −10%, −20%, and worse), not by premium.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="I2"
+  questions={[
+    {
+      q: 'You hold SPY and buy the 750/700 put spread. SPY falls to 620 at expiry. Compared with the outright 750 put, your hedge…',
+      options: ['Pays the same', 'Pays $50 a share less than the outright put would', 'Pays $50 a share in total; the outright put pays $130', 'Loses money'],
+      answer: 2,
+      why: 'The spread pays at most 750 − 700 = 50. The outright 750 put pays 750 − 620 = 130.',
+    },
+    {
+      q: 'With a 750/700 1×2 put spread costing 2.50, below what SPY price does the hedged position lose more than unhedged stock?',
+      options: ['700', '697.50', '652.50', '650'],
+      answer: 2,
+      why: 'Below 700 the hedge pays S − 650 − 2.50, which is negative below 652.50. There the net short put adds to the stock loss.',
+    },
+    {
+      q: 'Repricing all legs at a flat 14.1% vol, which structure becomes more expensive than its market price?',
+      options: ['Protective put', 'Seagull', '1×2 put spread', 'None of them'],
+      answer: 2,
+      why: 'The 1×2 sells two expensive OTM puts. At flat vol those puts are worth far less, so the structure costs $408 instead of $250.',
+    },
+    {
+      q: 'Why does a seagull cost more under skew than under flat volatility?',
+      options: [
+        'It buys an expensive downside put and sells a cheap upside call',
+        'It has more legs',
+        'It is short vega',
+        'Calls always carry higher IV than puts',
+      ],
+      answer: 0,
+      why: 'Index skew makes downside puts rich and upside calls cheap. The seagull is long the rich side and short the cheap side, so skew works against it.',
+    },
+  ]}
+/>
+
+<BookRef />

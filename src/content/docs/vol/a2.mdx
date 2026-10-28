@@ -1,0 +1,214 @@
+---
+title: Exercise, assignment & settlement
+description: Know exactly what happens to an option position at and before expiration, including automatic exercise, share delivery versus cash settlement, random assignment and pin risk.
+lessonId: A2
+prereqs: [A1]
+minutes: 20
+---
+
+import ExpirationSimulator from '../../../components/widgets/a/ExpirationSimulator.tsx';
+import ExpiryTimeline from '../../../components/widgets/a/ExpiryTimeline.tsx';
+import PinRisk from '../../../components/widgets/a/PinRisk.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+An option is a promise about the future. This lesson is about the moment the promise comes due: who decides, what changes hands, and why a short option that finishes a few cents from its strike can still ruin a weekend.
+
+## Exercise and assignment
+
+<Plain>
+
+The deposit that holds a price only matters if someone **uses** it. Using it has a name:
+
+- **Exercise:** the buyer says "I'll take the deal." A call holder buys 100 shares at the strike; a put holder sells 100 shares at the strike.
+- **Assignment:** the seller is told "someone used it, you must deliver." The seller has no say in this.
+
+Buyers almost never need to exercise before the last day. If the option is still worth more than the deal it locks in, selling the option back in the market gets you more money than using it.
+
+</Plain>
+
+<Pro>
+
+Exercise converts the option into a stock trade at the strike:
+
+| Position exercised / assigned | Stock trade at $$K$$ | Resulting stock position |
+| --- | --- | --- |
+| Long call exercised | buy 100 | +100 shares |
+| Long put exercised | sell 100 | −100 shares (or 100 fewer) |
+| Short call assigned | sell 100 | −100 shares (or 100 fewer) |
+| Short put assigned | buy 100 | +100 shares |
+
+Exercising early is usually a mistake because it gives up the option's remaining **time value**. On October 27 the 750 call traded at $28.74 with SPY at 769.66. Exercising would lock in only $19.66 of intrinsic value, throwing away **$9.08 per share, $908 per contract**. Selling the call and buying the shares in the market does strictly better. The exceptions involve dividends (calls) and interest (deep puts) and get their own lesson ([F6](/vol/f6/)).
+
+</Pro>
+
+## What happens at expiration
+
+<Plain>
+
+On the last day you don't have to do anything. If the option is **in the money by at least one cent** at the close, it is used automatically. If it isn't, it expires worthless and disappears from your account.
+
+That automatic step catches people out: a small call position that finishes in the money turns into **100 shares per contract**, and you need the cash to pay for them. Ten SPY calls exercised at 770 means buying 1,000 shares for $770,000.
+
+</Plain>
+
+<Pro>
+
+The OCC's **exercise-by-exception** procedure exercises every expiring equity option that is in the money by $0.01 or more at the official close, unless the holder (through their broker) submits **contrary instructions**. Holders have until **5:30 p.m. ET** on expiration day to submit exercise or do-not-exercise instructions; brokers can set earlier internal cut-offs. The default uses SPY's official 4:00 p.m. closing price. SPY options are among the ETF options with a 4:15 p.m. late close, so check your broker's rules for when the expiring series stop trading; the price that decides their fate may already be known.
+
+The November 27, 2026 expiry falls on the day after Thanksgiving, an early-close session: stocks stop trading at 1:00 p.m. ET, so that close sets the default. Exercised positions settle like a stock trade, **T+1**: the following business day. Retail brokers often liquidate expiring positions ahead of the close if exercise would breach the account's buying power, so "auto-exercise" can quietly become "broker sold it at 3:45."
+
+</Pro>
+
+<ExpirationSimulator client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, mid prices as premiums" />
+
+Start with the defaults: one long 770 call, SPY closing at 775. The call is $5 in the money, so it is auto-exercised: you pay $77,000 for 100 shares worth $77,500. Your total P/L is still **−$890**, because you paid $1,390 for the call. Exercise and profit are separate questions.
+
+Now press **770.01**, then **770.00**. One cent flips the outcome from "you own 100 shares" to "nothing happens." Switch to **SPX-style: cash** to see the same position settle as a single cash payment with no shares.
+
+## Physical delivery versus cash settlement
+
+<Plain>
+
+SPY options deliver **actual shares**. Index options such as SPX can't, because you can't hand someone "the S&P 500." They settle in **cash**: the loser pays the winner the difference between the strike and the final index level, times 100, and that's it.
+
+Cash settlement is cleaner. No one wakes up Monday owning shares they didn't plan for.
+
+</Plain>
+
+<Pro>
+
+| | SPY options | SPX options |
+| --- | --- | --- |
+| Underlying | ETF shares | S&P 500 index (≈ 10× SPY: 7,722.6 vs 769.66 at the snapshot) |
+| Style | American | European (exercise only at expiry) |
+| Settlement | 100 shares per contract | Cash: $$100 \times (S_T - K)^+$$ for calls |
+| Settlement price | 4:00 p.m. close of SPY | Standard monthlies: special opening quotation on expiry morning (AM-settled). Weeklies and dailies (SPXW): the 4:00 p.m. close (PM-settled) |
+| Early assignment | Possible | Not possible |
+
+European style removes early-assignment risk; cash settlement removes delivery and weekend gap risk on the resulting shares. AM settlement introduces its own gap: trading in AM-settled monthlies stops the day before, so the settlement price is set by the next morning's opening prints. US index options also receive 60/40 tax treatment under Section 1256, which matters to some traders but is outside this course.
+
+</Pro>
+
+## Who gets assigned, and when
+
+Behind each expiry is a timeline that matters more to sellers than to buyers.
+
+<ExpiryTimeline client:visible />
+
+<Plain>
+
+When a buyer exercises, the clearinghouse picks a seller **at random** to fulfill it. If you sold options, you won't know until the next morning whether you were picked. Before expiration, early assignment is possible on SPY options but uncommon, because exercising early usually throws money away. It becomes likely when the option has almost no time value left: deep in the money, near expiry, or the day before SPY goes ex-dividend.
+
+</Plain>
+
+<Pro>
+
+The OCC allocates exercises to clearing members **randomly**; each member then allocates to customer accounts by a method it must disclose (random or first-in-first-out). There is no queue position you can influence. A short is at meaningful risk of early assignment when the option's **extrinsic value is smaller than what the holder gains by exercising**:
+
+- **Short calls before an ex-dividend date:** if the dividend exceeds the call's remaining time value (roughly, the same-strike put's value plus the interest on the strike), holders exercise the night before ex-date to capture it.
+- **Deep in-the-money short puts:** exercising early lets the holder receive the strike now and earn interest on it; when that interest exceeds the put's remaining time value, early exercise is rational.
+
+The 800 put on the snapshot illustrates the second case: it traded at $30.41 with $30.34 of intrinsic value, so only **$0.07** of time value was left with a month to go. That is the profile of an option the holder could reasonably exercise early. [Lesson F6](/vol/f6/) works through both cases.
+
+</Pro>
+
+## Pin risk
+
+The trickiest moment is when SPY closes **right at** a strike where you are short. The default rule says one thing, the after-hours market may say another, and every holder decides for themselves.
+
+<PinRisk client:visible />
+
+Set the close to 770.03 and the after-hours move to −0.60. The default says **exercise** (3 cents in the money), but by 5:30 p.m. SPY is at 769.43, and a holder who is paying attention would rather not buy at 770. Some will override, some won't. You might wake up short 1,000 shares, or flat, or somewhere in between. If you are short 1,000 shares and SPY opens $5 higher on Monday, that is a $5,000 loss on a position you didn't know you had.
+
+<Plain>
+
+Pin risk is **not knowing what you own** over a weekend. The fix is boring: if you're short an option that is near the money on the last afternoon, buy it back. With minutes left it usually costs very little, and it removes the guesswork.
+
+</Plain>
+
+<Pro>
+
+Pin risk peaks when the close is within a few cents of the strike and there is after-hours news, because the holder population splits on the exercise decision. It is symmetric in uncertainty but not in hedging: a market maker who is short calls and long stock against them (a typical hedge) ends the weekend either flat (assigned, stock delivered) or **naked long stock** (not assigned). Desks manage it by closing near-the-money shorts before 4:00 p.m., or by trading out the stock hedge in proportion to the assignment probability. Cash-settled, European index options carry no pin risk in this sense.
+
+</Pro>
+
+## Common mistakes
+
+- **Letting a small long option auto-exercise without the cash.** One in-the-money SPY call becomes a $77,000 stock purchase; the broker will either liquidate it or issue a margin call.
+- **Exercising early to "lock in" a gain.** Selling the option almost always captures more, because it keeps the time value.
+- **Assuming out-of-the-money shorts are safe at 4:00 p.m.** The holder can still exercise until 5:30 p.m. if after-hours trading moves the stock.
+- **Mixing up SPY and SPX mechanics.** SPY delivers shares and allows early assignment; SPX settles in cash, and only at expiration.
+
+<Takeaway>
+
+- Exercise is the holder using the right; assignment is the seller being told to deliver. Sellers never choose.
+- At expiration, options in the money by $0.01 or more are exercised automatically unless the holder instructs otherwise by 5:30 p.m. ET.
+- SPY options settle in shares (100 per contract, T+1). SPX options are European and settle in cash.
+- Assignment is random. Early assignment is likely only when an option has almost no time value left, typically deep in the money or before an ex-dividend date.
+- Pin risk is not knowing whether you'll be assigned when the close is near your strike; the usual cure is to close the position before the final bell.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="A2"
+  questions={[
+    {
+      q: 'You are long one SPY 770 put. SPY closes at 769.99 on expiration day and you do nothing. What happens?',
+      options: [
+        'It expires worthless because it is less than $1 in the money',
+        'It is exercised automatically: you sell 100 shares at $770',
+        'You receive $1 in cash',
+        'Your broker must call you first',
+      ],
+      answer: 1,
+      why: 'The put is in the money by $0.01, which meets the exercise-by-exception threshold. You sell 100 SPY at 770; if you had no shares, you are now short 100.',
+    },
+    {
+      q: 'You are short one 760 put. SPY closes at 750. What do you hold on Monday?',
+      options: ['Nothing', 'Short 100 SPY at 760', 'Long 100 SPY with a 760 cost basis', '$1,000 in cash'],
+      answer: 2,
+      why: 'A short put assigned obliges you to buy 100 shares at the strike. You paid $76,000 for shares worth $75,000.',
+    },
+    {
+      q: 'Why do SPX options carry no early-assignment or share-delivery risk?',
+      options: [
+        'They are European style and cash-settled',
+        'They have smaller contracts',
+        'Market makers cannot sell them',
+        'They expire on Thursdays',
+      ],
+      answer: 0,
+      why: 'European style means exercise only at expiration; cash settlement means only the intrinsic value changes hands, never shares.',
+    },
+    {
+      q: 'You are short ten 770 calls. SPY closes at 770.02, then drops to 769 after hours on bad news. What is your main risk?',
+      options: [
+        'None, the calls are out of the money after hours',
+        'Certain assignment on all ten',
+        'Uncertain assignment: you may or may not be short 1,000 shares on Monday',
+        'You will be forced to buy the calls back at 5:30 p.m.',
+      ],
+      answer: 2,
+      why: 'By default the calls are exercised (in the money at the close), but holders watching the after-hours price may decline. You cannot know how many are exercised until assignment notices arrive. That is pin risk.',
+    },
+    {
+      q: 'The 750 call trades at $28.74 with SPY at 769.66. Why is exercising it today usually worse than selling it?',
+      options: [
+        'Exercise is not allowed before expiration',
+        'Exercise captures only $19.66 of intrinsic value and gives up $9.08 of time value',
+        'Exercise costs a large fee',
+        'You would have to deliver shares',
+      ],
+      answer: 1,
+      why: 'SPY options are American, so exercise is allowed, but it locks in only intrinsic value. Selling the call keeps the full $28.74.',
+    },
+  ]}
+/>

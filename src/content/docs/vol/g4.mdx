@@ -1,0 +1,176 @@
+---
+title: Butterflies & condors
+description: Build call, put and iron butterflies and condors from real SPY strikes, and understand wing width, cost versus payoff, odds and pin behavior.
+lessonId: G4
+prereqs: [G3]
+minutes: 25
+---
+
+import G4FlyBuilder from '../../../components/widgets/g/G4_FlyBuilder.tsx';
+import G4FlyDecay from '../../../components/widgets/g/G4_FlyDecay.tsx';
+import G4CondorTradeoff from '../../../components/widgets/g/G4_CondorTradeoff.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+A short straddle wants SPY to sit still, but its losses have no floor. Buy cheap options further out and the losses stop at a known level. That is a butterfly. Spread the middle strikes apart and it becomes a condor. This lesson shows how the pieces trade off: cost, maximum payoff, the odds of a profit, and the strange way these positions come alive only in the final days.
+
+## Anatomy of a butterfly
+
+<Plain>
+
+A **long call butterfly** has three strikes, evenly spaced. Buy one call at the low strike, sell two at the middle, buy one at the high strike. With the 760, 770 and 780 calls on November 27 that costs **$1.38** per share.
+
+It pays the most, $10 minus what you paid, if SPY finishes **exactly at the middle strike**, and nothing if SPY ends below 760 or above 780. Picture a tent pitched over 770: you want SPY to end up under the peak.
+
+A **long condor** is the same idea with a flat roof: two different middle strikes, so SPY can land anywhere between them for the full payoff. Wider roof, higher price.
+
+</Plain>
+
+<Pro>
+
+For strikes $$K_1 < K_2 < K_3$$ with $$K_2 - K_1 = K_3 - K_2 = w$$, the long call butterfly pays at expiry
+
+$$
+(S_T - K_1)^+ - 2(S_T - K_2)^+ + (S_T - K_3)^+ \in [0, w]
+$$
+
+so its price must lie between 0 and the discounted wing width. The same shape can be built three ways:
+
+- **Call fly**: $$+C_{K_1} - 2C_{K_2} + C_{K_3}$$, paid as a debit.
+- **Put fly**: $$+P_{K_1} - 2P_{K_2} + P_{K_3}$$, also a debit. By put-call parity it equals the call fly in theory.
+- **Iron fly**: buy the $$K_1$$ put, sell the $$K_2$$ put and call, buy the $$K_3$$ call: a short straddle with long wings, taken in as a **credit**. Its credit plus the call fly's debit equals the discounted wing width (a box).
+
+On the snapshot the 760/770/780 call fly costs $1.38, the put fly $1.43 and the iron fly collects $8.71; $$1.38 + 8.71 = 10.09$$ against a theoretical $$10e^{-rT} = 9.96$$, the gap being the quoted marks rather than an arbitrage after costs. All three have the same Greeks to within a few cents.
+
+</Pro>
+
+<G4FlyBuilder client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry at mid; odds from a lognormal at 14.1% ATM IV" />
+
+Change the wing width around a 770 center and watch three things move together:
+
+| Call fly | Cost | Max gain | Breakevens | Odds of ending between |
+| --- | --- | --- | --- | --- |
+| 765/770/775 | $38 | $462 | 765.38 / 774.62 | 12% |
+| 760/770/780 | $138 | $862 | 761.38 / 778.62 | 21% |
+| 750/770/790 | $538 | $1,462 | 755.38 / 784.62 | 36% |
+| 740/770/800 | $1,211 | $1,789 | 752.11 / 787.89 | 43% |
+
+Narrow wings are cheap lottery tickets with a 12:1 payoff and small odds. Wide wings cost more, pay less per dollar risked, and win more often. None is "better": in a fairly priced market the reward-to-risk and the odds offset each other.
+
+## A butterfly ripens late
+
+Butterflies are slow at first. Their value barely changes in the first weeks, then jumps as expiry nears, if SPY is near the center.
+
+<G4FlyDecay client:visible />
+<SnapshotNote detail="Nov 27, 2026 calls, implied volatilities held constant" />
+
+For the 750/770/790 fly with SPY parked at 769.66: today it shows essentially zero P/L; with 14 days left it is up about **$194**; with 3 days left about **$700**; at expiry **$1,428**, just short of the $1,462 maximum that needs SPY exactly at 770. One day it is a gentle hill; at the end it is a spike.
+
+<Plain>
+
+This is the **melting ice** working for you. You sold two options at the middle strike, and those melt fastest. But the ice only turns into money if SPY is standing near the middle when it finishes melting. Drift 10 dollars away in the last few days and most of the gain disappears.
+
+That makes butterflies a bet with two parts: **where** SPY ends (near the middle) and **when** you judge it (the payoff arrives mostly in the final week).
+
+</Plain>
+
+<Pro>
+
+Near the body the long fly is short gamma and short vega with positive theta: −0.43 shares per $1, −$30 per vol point and +$6.62 a day for the 750/770/790 at the snapshot. As expiry approaches with SPY at the body, gamma becomes sharply negative at the peak and sharply positive at the wings: the payoff is a tent, so its curvature concentrates at the three strikes.
+
+**Pin behavior.** Large open interest at a strike can pull the underlying toward it into expiry because dealers who are long that strike's options hedge by selling rallies and buying dips. A fly centered on a heavily traded strike is a direct bet on that pin. It is also why a trader still long a fly into expiry faces *pin risk*: with SPY near 770 on the final afternoon, they cannot know whether their two short 770 calls will be assigned, leaving a possible unhedged stock position over the weekend.
+
+The fly's price also has a meaning beyond trading: divided by the wing width, a narrow butterfly's price approximates the risk-neutral probability of finishing near the body. The $0.38 for a $5-wide fly centered at 770 implies roughly a 7–8% chance of finishing within $2.50 of 770.
+
+</Pro>
+
+## Iron condors and the width trade-off
+
+The **iron condor** is the retail favorite: sell an out-of-the-money put and call, buy further out-of-the-money options as protection, and collect a credit. Two choices define it: where the short strikes sit, and how wide the wings are.
+
+<G4CondorTradeoff client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry at mid; only listed strikes" />
+
+The chart answers "what do wider wings buy me?"
+
+- **More credit, but with diminishing returns.** With shorts at 760/780, $10 wings collect $605, $20 wings $985, $40 wings $1,334, and $60 wings $1,458. Doubling from 20 to 40 adds only a third more credit.
+- **Much more risk.** The maximum loss is the width minus the credit: $395 at $10 wide, $4,542 at $60 wide.
+- **Credit as a share of width falls.** Switch the metric: 60% of the width at $10 wide, 24% at $60. Wider condors look like "higher odds" trades because you collect a smaller fraction of what you can lose.
+
+Moving the short strikes further out does the same: the 740/800 condor with $20 wings collects only $349 but keeps the full credit about 66% of the time under the model, against 25% for 760/780.
+
+<Plain>
+
+An iron condor is like selling insurance with a deductible. You take a payment up front and promise to cover losses if SPY makes a big move, but only up to a limit (the wings). The further away you set the trigger points, the more often you keep the payment, and the smaller the payment is. Wider wings mean you are on the hook for more before the protection kicks in.
+
+</Plain>
+
+<Pro>
+
+An iron condor with short strikes $$K_p < K_c$$ and wing width $$w$$ is the sum of a short put vertical and a short call vertical. Its credit $$c$$ satisfies $$0 < c < w e^{-rT}$$, and in a fair market $$c/w$$ approximates the risk-neutral probability of finishing beyond a short strike, weighted toward the shorts. That is why "high probability" condors carry small credits relative to risk: the expected value is set by the price, not the win rate. Skew matters here too. On the snapshot the 750 put trades at 16.5% IV while the 790 call trades at 12.2%, so the put side of a symmetric condor contributes more of the credit and more of the tail risk.
+
+</Pro>
+
+## Common mistakes
+
+- **Judging condors by win rate.** A 66% chance of keeping $349 against a 34% chance of losing up to $1,651 is not a free edge; the prices balance.
+- **Expecting a butterfly to pay early.** Most of the value arrives in the last week, and only if SPY is near the body.
+- **Treating the iron fly as a different trade from the call fly.** They are the same exposure; the iron version is a credit because it is a short box plus a call fly.
+- **Ignoring pin and assignment risk** on short strikes that finish near the money on expiry day.
+
+<Takeaway>
+
+- A butterfly is long the wings, short the body twice: a capped, cheap short-volatility position centered on one price.
+- Call, put and iron flies at the same strikes have the same payoff shape and Greeks; only the cash flow differs.
+- Narrow wings: cheap, high payoff ratio, low odds. Wide wings: costlier, lower ratio, higher odds.
+- Butterflies ripen late: P/L stays small for weeks, then concentrates around the body in the final days.
+- Iron condor credit grows with wing width at a falling rate, while maximum loss grows almost linearly.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="G4"
+  questions={[
+    {
+      q: 'The 760/770/780 call butterfly costs $1.38. What is its maximum gain per contract at expiry?',
+      options: ['$138', '$862', '$1,000', '$2,000'],
+      answer: 1,
+      why: 'Wing width $10 minus $1.38 cost = $8.62 per share, $862 per contract, earned only with SPY exactly at 770.',
+    },
+    {
+      q: 'You collect $8.71 for the 760/770/780 iron butterfly. What is its maximum loss per share?',
+      options: ['$8.71', '$1.29', '$10.00', 'Unlimited'],
+      answer: 1,
+      why: 'The wings are $10 wide, so the worst case is $10 − $8.71 = $1.29 per share, close to the call fly\'s $1.38 debit.',
+    },
+    {
+      q: 'Moving an iron condor\'s short strikes further from the money does what?',
+      options: [
+        'Raises both the credit and the odds of keeping it',
+        'Raises the odds of keeping the credit and lowers the credit',
+        'Lowers both',
+        'Has no effect on the credit',
+      ],
+      answer: 1,
+      why: 'Further out-of-the-money options are cheaper, so the credit shrinks while the range SPY can stay inside widens.',
+    },
+    {
+      q: 'With SPY at 770 and 14 days left, a 750/770/790 call butterfly bought for $5.38 is up about $1.94 per share. What explains most of the remaining gain to its $14.62 maximum?',
+      options: [
+        'A rise in implied volatility',
+        'Time decay of the two short 770 calls in the final two weeks',
+        'Delta from a rally',
+        'Dividends',
+      ],
+      answer: 1,
+      why: 'The fly is short vega and positive theta. With SPY at the body, the short options decay fastest in the final days, and that is where most of the value arrives.',
+    },
+  ]}
+/>

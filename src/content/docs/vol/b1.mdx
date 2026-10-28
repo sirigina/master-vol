@@ -1,0 +1,200 @@
+---
+title: Expected value & fair price
+description: Value any bet, then any option, as a probability-weighted average payoff, and see how close that gets to the real price of the SPY 770 call.
+lessonId: B1
+prereqs: [A5, C1]
+minutes: 25
+bookRef: the chapter on theoretical pricing and expected value
+---
+
+import DiceGame from '../../../components/widgets/b/DiceGame.tsx';
+import ExpectedValueCall from '../../../components/widgets/b/ExpectedValueCall.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+The SPY 770 call expiring November 27 traded at **$13.90** at the October 27 close. Is that cheap, expensive, or fair? To answer, you need a number to compare it with. This lesson builds that number from the simplest idea in probability: the average outcome of a bet.
+
+## What a bet is worth
+
+<Plain>
+
+Suppose someone offers you a game: roll one die and collect $10 for every pip that shows. Roll a 1, get $10; roll a 6, get $60. How much would you pay to play?
+
+If you played thousands of times, each face would come up about one time in six, and your average collection would settle at **$35**. That average is the game's **expected value**. Pay less than $35 per play and, over many plays, you come out ahead. Pay more and you lose slowly but surely.
+
+Notice that $35 is not a payoff you can actually roll. Expected value is not a prediction of the next roll; it is what the game pays *on average* over many tries.
+
+</Plain>
+
+<Pro>
+
+For a game with outcomes $$x_i$$ occurring with probabilities $$p_i$$, the expected value is
+
+$$
+\mathbb{E}[X] = \sum_i p_i\, x_i
+$$
+
+For the die, $$\mathbb{E}[X] = \tfrac{1}{6}(10 + 20 + \dots + 60) = 35$$. A price $$P$$ for the game gives the player an **edge** of $$\mathbb{E}[X] - P$$ per play. By the law of large numbers, the average result of $$n$$ independent plays converges to the edge, with a standard error that shrinks like $$1/\sqrt{n}$$. The edge is what you are paid; the variance is what you endure while collecting it.
+
+</Pro>
+
+## Turn the game into an option
+
+Now change the rules: you collect $10 for every pip **above 3**, and nothing otherwise. A 4 pays $10, a 5 pays $20, a 6 pays $30, and 1 through 3 pay zero. That is a call option on a die with a strike of 3: you profit only from the part of the outcome beyond the strike, and you never pay out on the downside.
+
+<DiceGame client:visible />
+
+The call on a die is worth **$10**: three faces pay nothing, and the other three add up to $60, so the average over all six faces is 60 ÷ 6. At the default price of $12, the buyer gives up $2 per play. Press "Roll a new batch" a few times. With 20 plays the running average swings wildly and the buyer often comes out ahead; with 2,000 plays it hugs the −$2 line. Move the strike up and watch the expected value fall: a higher strike means fewer winning faces and smaller wins on each.
+
+<Plain>
+
+An option is a **deposit that holds a price** for you. The call on a die is a deposit that holds the price "3 pips". If the roll beats it, you collect the difference. If not, you simply walk away. Because you can walk away, the bad outcomes are cut off at zero, and the fair deposit is the average of what is left.
+
+</Plain>
+
+<Pro>
+
+The option payoff is $$\max(X - K, 0)$$, so its expected value is
+
+$$
+\mathbb{E}[\max(X-K,0)] = \sum_{x_i > K} p_i\,(x_i - K)
+$$
+
+Two features carry straight over to real options. First, only outcomes beyond the strike contribute. Second, the value depends on the *whole distribution* beyond the strike, not just the chance of finishing there: a die with the same probabilities but larger faces would be worth more. That second point is why volatility, the width of the distribution, ends up being the input that matters most.
+
+</Pro>
+
+## The SPY 770 call as an expected value
+
+A real option works the same way, except that SPY can finish at any price, not just six. So instead of six faces we need a smooth curve of probabilities for where SPY might be on November 27. The standard choice is the **lognormal distribution** ([lesson C3](/vol/c3/)), whose width is set by volatility.
+
+<ExpectedValueCall client:visible />
+<SnapshotNote detail="770 call, Nov 27, 2026 expiry, 31 days; rate 4.6% implied from the chain" />
+
+At **14% volatility**, the probability-weighted average payoff of the 770 call is about **$13.94**. Discount it for the month you wait to collect, and the fair value today is **$13.88**, two cents below the market's $13.90. The two numbers match this closely because 14% is very near the volatility the market is using. The last tile shows exactly which volatility makes them match: **14.02%**. That reverse calculation is implied volatility, the subject of [lesson B6](/vol/b6/).
+
+Hover the chart to see each piece of the sum. Prices just above 770 are likely but pay little; prices far above 770 pay a lot but are rare. The green area, payoff times probability, is what adds up to the option's value. Drag volatility to 20% and the curve spreads: the fair value jumps to $19.23 even though the most likely outcome has hardly changed.
+
+<Plain>
+
+The fair price of an option is the **average payoff over all the ways the future could turn out**, weighted by how likely each one is, then reduced a little because you get paid later rather than now.
+
+The weather forecast for price swings, volatility, decides how wide that range of futures is. A wider forecast means more chance of a big payoff, and since the call can't lose more than its deposit, wider always means more valuable.
+
+</Plain>
+
+<Pro>
+
+With a continuous distribution the sum becomes an integral. Writing $$f(s)$$ for the density of $$S_T$$, the value of a call is
+
+$$
+C = e^{-rT}\int_K^\infty (s - K)\, f(s)\, ds
+$$
+
+The widget evaluates this integral numerically on a $0.25 grid. Two modelling choices are hidden in $$f$$:
+
+- **Width.** The lognormal's log-standard-deviation is $$\sigma\sqrt{T}$$; that is where volatility enters.
+- **Centre.** The density is centred so that $$\mathbb{E}[S_T] = S_0 e^{rT}$$, the forward price (about 772.67 here). This "risk-neutral" choice is not a forecast that SPY will rise 4.6% a year. It comes from a hedging argument ([lessons B4](/vol/b4/) and [B5](/vol/b5/)): a trader can lock in the forward by buying SPY with borrowed money, so any other centre would let someone profit with no risk.
+
+Toggle "Zero drift" to see why it matters: centring the distribution at today's price instead of the forward lowers the fair value to about $12.31, which is wrong by more than $1.50. Getting the centre right is lesson [B3](/vol/b3/).
+
+</Pro>
+
+## Theoretical value, price, and edge
+
+The market price is what you can trade at. The theoretical value is what your model says the option is worth, given *your* inputs. Their difference is your **edge**, and it is only as good as those inputs.
+
+<Plain>
+
+Think back to the die. If the game is priced at $12 and you are sure the die is fair, you know you are overpaying by $2. But if you suspected the die was loaded toward sixes, $12 might be a bargain. Your "fair price" is only as good as your knowledge of the die.
+
+With options, the die is the future price of SPY, and nobody knows exactly how loaded it is. Every input except one can be looked up. The exception is volatility, which you have to estimate. That is why option traders spend most of their time arguing about volatility.
+
+</Plain>
+
+<Pro>
+
+Desk practice reduces this to one line:
+
+$$
+\text{edge} = \text{theoretical value} - \text{market price}
+$$
+
+A theoretical value of $15.66 (16% vol) against a $13.90 price is $1.76 of edge per share, or $176 per contract, *if* 16% turns out to be right. Three cautions:
+
+- **Edge is a long-run average**, exactly like the die. A single option position is one roll. Professionals realize edge by trading many positions and hedging the rest away ([module E](/vol/e1/)).
+- **The bid/ask spread comes first.** The 770 call was 13.87 bid, 13.93 ask; buying at the ask costs 3 cents of the edge immediately.
+- **Model risk.** The lognormal is a convenient approximation. Real returns have fatter tails ([lesson C2](/vol/c2/)), which is why the market charges different volatilities at different strikes ([lesson C8](/vol/c8/)).
+
+</Pro>
+
+## Common mistakes
+
+- **Treating expected value as the likely outcome.** The 770 call's most likely payoff is zero (it finishes worthless about 48% of the time); $13.88 is an average across all outcomes.
+- **Forgetting to discount.** The payoff arrives on November 27. Paying the undiscounted average today overpays by the interest, about 5 cents here, more for long-dated options.
+- **Centring the distribution on today's price.** The fair-value distribution is centred on the forward, not the spot. Skipping that mistake is worth more than $1.50 on this option.
+- **Confusing a model value with a free lunch.** Edge exists only relative to your volatility estimate. Change the estimate and the edge can change sign.
+
+<Takeaway>
+
+- Expected value is the probability-weighted average payoff; for the die game it is $35, for the call on a die $10.
+- An option's fair value is its expected payoff at expiry, discounted to today.
+- For the SPY 770 call, a lognormal at 14% volatility gives $13.88, against a market price of $13.90.
+- The distribution is centred on the forward price, not today's price: the risk-neutral convention.
+- Edge = theoretical value − market price, and it depends almost entirely on the volatility you assume.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="B1"
+  questions={[
+    {
+      q: 'A game pays $10 per pip above 4 on one fair die (so a 5 pays $10, a 6 pays $20). What is its expected value?',
+      options: ['$5.00', '$15.00', '$30.00', '$10.00'],
+      answer: 0,
+      why: 'Only faces 5 and 6 pay: (10 + 20) ÷ 6 = $5.00. The other four faces contribute zero.',
+    },
+    {
+      q: 'You value the 770 call at $15.66 using 16% volatility. It trades at $13.90. What is your edge per contract, and what does it depend on?',
+      options: [
+        '$1.76, guaranteed on every trade',
+        '$176, on average, if 16% volatility proves right',
+        '$13.90, the premium',
+        'Zero, because markets are efficient',
+      ],
+      answer: 1,
+      why: '15.66 − 13.90 = $1.76 per share, × 100 = $176 per contract. It is a long-run average that exists only if your volatility estimate is correct.',
+    },
+    {
+      q: 'Raising volatility from 14% to 20% raises the 770 call from about $13.88 to $19.23. Why does a wider distribution increase the value?',
+      options: [
+        'It makes SPY more likely to rise',
+        'It moves the forward price higher',
+        'Bigger upside outcomes add value while extra downside outcomes are cut off at zero',
+        'It reduces the discount factor',
+      ],
+      answer: 2,
+      why: 'The payoff is max(S − K, 0). Spreading the distribution adds large payoffs on the right; the extra left-side outcomes all pay zero, so they cost nothing.',
+    },
+    {
+      q: 'Why is the fair-value distribution centred on the forward price (about 772.67) rather than on today\'s 769.66?',
+      options: [
+        'Because analysts expect SPY to rise',
+        'Because a trader can lock in the forward by buying SPY with borrowed money, so any other centre allows riskless profit',
+        'Because options expire in the future',
+        'Because of the dividend',
+      ],
+      answer: 1,
+      why: 'This is the risk-neutral argument. The forward is a price you can lock in today; centring elsewhere would misprice the option relative to a hedge in the stock.',
+    },
+  ]}
+/>
+
+<BookRef />

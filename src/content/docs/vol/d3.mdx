@@ -1,0 +1,180 @@
+---
+title: Theta (and 0DTE)
+description: Read theta as the daily cost of holding an option, see why at-the-money decay accelerates into expiry, and understand what 0DTE options really trade.
+lessonId: D3
+prereqs: [D1]
+minutes: 25
+---
+
+import DecayCurves from '../../../components/widgets/d/DecayCurves.tsx';
+import StraddleTerm from '../../../components/widgets/d/StraddleTerm.tsx';
+import ZeroDte from '../../../components/widgets/d/ZeroDte.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+Every option loses value as time passes, if nothing else changes. Theta measures how much per day. It is the rent an option buyer pays and the income an option seller collects, and its shape explains why the last weeks before expiry behave so differently from the first.
+
+## Theta: the daily melt
+
+<Plain>
+
+Theta is **melting ice**. An option's time value is a block of ice that shrinks every day; at expiry, only the intrinsic value is left (whatever the option would pay if exercised right now).
+
+The SPY 770 call expiring November 27 is worth $13.90 with 31 days left, and its theta is about **−0.25**. If SPY and volatility stay exactly where they are, it loses about 25 cents a day, or **$25 a day per contract**. The matching put shows −0.17.
+
+Buyers pay this melt in exchange for the chance of a big move. Sellers collect it in exchange for taking that risk.
+
+</Plain>
+
+<Pro>
+
+Theta is the rate of change of value with respect to the passage of time (the negative of the derivative with respect to time to expiry $$T$$). For a call, per year:
+
+$$
+\Theta_{\text{call}} = -\frac{S\,e^{-qT}\,n(d_1)\,\sigma}{2\sqrt{T}} \;-\; rK e^{-rT} N(d_2) \;+\; qS e^{-qT} N(d_1)
+$$
+
+Screens divide by 365 (calendar days) or 252 (trading days); this site uses calendar days, like most retail platforms. The first term, the **volatility decay**, dominates near the money and is the part linked to gamma ([lesson D7](/vol/d7/)). The second is the **carry** term: a call buyer effectively defers paying the strike, and that financing benefit shrinks as time passes. For puts the sign of the carry term flips, which is why the 770 put's theta (−0.17) is smaller than the call's (−0.25) at the same strike: at a 4.6% rate the carry on $770 is about $0.10 a day, and roughly that much separates the two thetas.
+
+</Pro>
+
+## Decay accelerates for at-the-money options
+
+The melt is not steady. Hold SPY at 769.66 and volatility at 14.1%, and watch three calls run down to expiry.
+
+<DecayCurves client:visible />
+
+- **At the money (770): decay speeds up.** Theta is −0.25 at 31 days, −0.41 at 10 days, −0.55 at 5 days and −1.18 on the last full day. Over the final 10 days the call loses $7.46, more than half of its value.
+- **Out of the money (800): most of the value goes early.** It is worth $3.54 at 31 days but only $0.42 at 10 days, and its theta *shrinks* from −0.16 toward zero. With little time left there is not much to melt.
+- **In the money (740): the time value is small and fades steadily.** Toggle to "Full option value": its $29.66 of intrinsic value never decays, only the $5.20 of time value on top.
+
+<Plain>
+
+Picture three ice cubes. The at-the-money one is the biggest block of time value, and it melts faster and faster as the deadline nears, because a small move in the final days can still decide whether it pays off. The out-of-the-money one is a long shot: as time runs out, the market gives up on it early, so most of its melting happens weeks before expiry. The in-the-money one is mostly solid value that does not melt at all.
+
+</Plain>
+
+<Pro>
+
+At the money the volatility term behaves like $$-S\sigma\,n(0)/(2\sqrt{T})$$, so theta grows as $$1/\sqrt{T}$$ while the option's value shrinks as $$\sqrt{T}$$. For an OTM strike, $$n(d_1)$$ collapses as $$T \to 0$$ because $$|d_1| \propto \ln(S/K)/(\sigma\sqrt{T})$$ grows; theta peaks earlier and then fades. That is why selling short-dated ATM premium carries the highest theta per day, and the highest gamma per day too: the two come as a pair.
+
+</Pro>
+
+## The square-root rule in real prices
+
+If ATM value grows with $$\sqrt{T}$$, then halving the time left should cut the price by about 30%, not 50%. The real term structure of the 770 straddle lets you check.
+
+<StraddleTerm client:visible />
+<SnapshotNote detail="770 straddle mids across expiries from Nov 6, 2026 to Dec 17, 2027" />
+
+The November 6 straddle (10 days) trades at **$14.76** and the November 27 straddle (31 days) at **$25.14**. Their ratio is 0.587. The square-root rule predicts $$\sqrt{10/31} = 0.568$$, which would price the 10-day straddle at $14.28. The real one is 48 cents richer, and most of that is volatility: the 10-day ATM IV is 14.7% against 14.1% for 31 days.
+
+Toggle to all expiries and the longer dates sit increasingly above the curve: by December 2027 the straddle is $122.67 against $92.09 for the √t extrapolation. The term structure slopes upward (18.1% IV at 416 days), and with interest rates the call is also worth more for carry reasons. Time alone does not set option prices; volatility by expiry matters as much ([lesson C7](/vol/c7/)).
+
+<Plain>
+
+Time works like the square root, not a straight line. A month-long option is not three times a 10-day option; it is about 1.8 times. That is why the last days before expiry are so expensive per day: the option sheds a much larger share of its value per day at the end than at the start.
+
+</Plain>
+
+<Pro>
+
+The ATM straddle approximation $$\text{Straddle} \approx 0.8\,S\sigma\sqrt{t}$$ ([lesson C2](/vol/c2/)) makes the ratio between two expiries $$\sigma_1\sqrt{t_1}/(\sigma_2\sqrt{t_2})$$. Inverting the ratio of straddles gives a quick read on the forward volatility between the two dates, the basis of calendar spreads ([lesson G6](/vol/g6/)).
+
+</Pro>
+
+## Weekends, holidays and which clock to use
+
+Theta per "day" hides a question: which days? Markets are closed on weekends and holidays, yet the calendar keeps running.
+
+<Plain>
+
+On a calendar-day model, the 770 call loses about $0.77 between Friday's close and Monday's close (three days of melt) but only $0.27 between Monday and Tuesday. In practice, traders know the weekend is coming. Market makers lower their prices gradually during the week, especially on Friday afternoon, so the weekend decay is mostly gone before Monday's open. Selling options on Friday to "collect" the weekend, or waiting until Monday to buy them cheaper, rarely works.
+
+</Plain>
+
+<Pro>
+
+Two clocks are in use. **Calendar time** (365 days) is standard for pricing models and most screens. **Trading time** (252 days) is how realized volatility is measured. A consistent desk approach is to count variance by business day: weekends and holidays get a small fraction of a weekday's variance (often 0 to 0.3 of a day), events get extra. The theta you see then depends on the volatility clock, not the calendar. Comparing theta numbers across platforms requires knowing which convention each uses, and the price on a Friday already reflects most of the weekend.
+
+</Pro>
+
+## 0DTE: zero days to expiration
+
+SPY has options expiring every trading day. On expiry day, the near-the-money options are pure time value measured in hours. Here is the 770 call during its last session.
+
+<ZeroDte client:visible />
+
+On a calendar-time clock with SPY at 769.66 and 14.1% volatility, the 770 call opens its last 6.5-hour session worth about **$1.03**, against $13.93 with 31 days left. Its gamma is **0.135**, about eleven times the 31-day gamma. With one hour left the call is worth $0.31 and gamma is 0.331; a $1 move shifts delta by a third.
+
+Switch SPY to 765. Five dollars out of the money at the open, the same call is worth about 5 cents: a lottery ticket.
+
+<Plain>
+
+0DTE options are the **last ice cube in the sun**: small, cheap, and melting by the minute. The low price is what attracts traders. But that small premium hides a huge accelerator (gamma). With an hour left, a $3 rise in SPY makes the 770 call worth about $2.67, more than eight times its $0.31; a $3 fall leaves it worth almost nothing. Buyers can lose 100% very quickly; sellers can collect a little all day and then lose many times that in a single move.
+
+</Plain>
+
+<Pro>
+
+With $$T$$ measured in hours, the ATM value scales with $$\sqrt{T}$$ and gamma with $$1/\sqrt{T}$$, so the $$\Gamma/V$$ ratio grows as $$1/T$$. Intraday the calendar clock understates reality: realized variance is concentrated at the open, the close and around scheduled data releases, so desks price 0DTE on an event-weighted intraday clock. The model's smooth decay (about 10 cents in the first hour, accelerating to the full remaining value in the last hour) is the shape, not a tradable schedule. Short 0DTE premium is a pure short-gamma position: positive expected carry with severe tail risk and little time to rehedge.
+
+</Pro>
+
+## Common mistakes
+
+- **Assuming theta is constant.** At the money it accelerates as $$1/\sqrt{T}$$; out of the money it fades. One day's theta is not a forecast of next week's.
+- **Treating theta as free income.** Theta is the other side of gamma. A seller earns the melt only if the moves stay smaller than the market priced ([lesson D7](/vol/d7/)).
+- **Expecting the weekend to show up on Monday.** Prices anticipate it; most weekend decay is priced in before Friday's close.
+- **Judging 0DTE options by their low price.** The premium is small, but gamma and theta per hour are the largest anywhere on the chain.
+
+<Takeaway>
+
+- Theta is the daily loss of value from time passing, all else equal. The 770 call melts about $25 a day per contract at 31 days.
+- ATM options decay faster as expiry nears (≈ 1/√T); OTM options lose most of their value early; ITM options decay only their time value.
+- ATM option value scales with √time: the 10-day straddle ($14.76) is about 0.59 of the 31-day ($25.14), close to √(10/31) = 0.57.
+- Weekends and holidays are priced in advance; know whether a screen uses calendar or trading days.
+- 0DTE options have tiny premiums but the largest gamma and per-hour theta on the board.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="D3"
+  questions={[
+    {
+      q: 'An ATM option has 36 days left and is worth $12. Ignoring rates and volatility changes, roughly what is it worth with 9 days left?',
+      options: ['$3', '$6', '$9', '$12'],
+      answer: 1,
+      why: 'ATM value scales with √time: √(9/36) = 0.5, so about $6.',
+    },
+    {
+      q: 'With 5 days left, which call has the largest theta (most negative)?',
+      options: ['Deep in the money', 'At the money', 'Far out of the money', 'They are all equal'],
+      answer: 1,
+      why: 'Near expiry, theta concentrates at the money. Deep ITM options have little time value left, and far OTM options are already nearly worthless.',
+    },
+    {
+      q: 'The 770 call has theta −0.25 and the 770 put −0.17 at the same expiry. What mainly explains the difference?',
+      options: ['Different gammas', 'The interest-rate (carry) term', 'The call is more liquid', 'The put has higher vega'],
+      answer: 1,
+      why: 'Call and put gamma and the volatility part of theta are nearly equal. The carry term has opposite signs: positive rates add decay to the call and subtract it from the put.',
+    },
+    {
+      q: 'Why are 0DTE options attractive to buyers and dangerous to sellers?',
+      options: [
+        'They have no theta',
+        'Small premium with very high gamma',
+        'They cannot lose more than the premium for either side',
+        'Their implied volatility is always low',
+      ],
+      answer: 1,
+      why: 'A cheap premium gives buyers large percentage payoffs from small moves; the same high gamma means a seller can lose many times the premium collected.',
+    },
+  ]}
+/>

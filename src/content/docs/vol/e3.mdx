@@ -1,0 +1,193 @@
+---
+title: Adjusting the hedge
+description: Choose how often to rebalance a delta hedge by weighing the spread of outcomes against trading costs, and compare time-based, delta-band and price-move rules.
+lessonId: E3
+prereqs: [E2]
+minutes: 25
+bookRef: the chapters on dynamic hedging
+---
+
+import HedgeRuleDistribution from '../../../components/widgets/e/HedgeRuleDistribution.tsx';
+import HedgeRuleTimeline from '../../../components/widgets/e/HedgeRuleTimeline.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+[Lesson E2](/vol/e2/) rehedged once a day. Why daily? Why not every minute, or once a week? The answer is a trade-off every options desk manages: hedging more often makes the result more predictable, and costs more. This lesson puts numbers on both sides.
+
+## What rehedging buys you
+
+<Plain>
+
+Between hedges, the position has a direction again: the **accelerator** (gamma) has pushed the **speedometer** (delta) away from zero, and for a while you are simply long or short SPY. Whether that accidental exposure helps or hurts is luck.
+
+Hedge rarely, and luck has a lot of room to work: the final result can land far from what your volatility edge says it should. Hedge often, and the luck is squeezed out, so the result sits close to the edge. But every hedge is a trade, and every trade costs a little.
+
+</Plain>
+
+<Pro>
+
+With continuous hedging and constant volatility, a hedged option's P/L is a deterministic function of realized variance along the path. Discrete hedging adds a **hedging error** with mean near zero and variance that grows with the interval between hedges. For hedges every $$\Delta t$$, the standard deviation of the error over the life of an at-the-money option scales roughly as
+
+$$
+\text{SD}(\text{error}) \;\approx\; \mathcal{V}\,\sigma \sqrt{\frac{\pi}{4}\,\frac{\Delta t}{T}}
+$$
+
+where $$\mathcal{V}$$ is vega per unit of volatility (100 times the per-point figure). For the 10 straddles below, $$\mathcal{V} \approx 179{,}000$$ and $$\sigma = 0.1406$$, so daily hedging over 22 sessions predicts about $4,750 and weekly about $10,600; the simulation gives $4,970 and $9,890. So halving the interval cuts the noise by about $$1/\sqrt{2}$$; the number of trades doubles, and the shares traded (and so the cost) rise by about $$\sqrt{2}$$, because each trade is smaller. Weekly to daily is a fivefold change: the noise falls by about $$\sqrt{5} \approx 2.2$$ times and shares traded rise by about the same factor (1,331 to 2,902). Gamma is what makes the hedge go stale; the larger $$\Gamma$$, the faster the exposure accumulates between rebalances.
+
+</Pro>
+
+## Four hedging rules on 200 paths
+
+Each panel is one rule, applied to the same 200 random paths for 10 long November 27 770 straddles bought at 14.06%. The paths are simulated every half hour, so rules that watch the market intraday can react between closes.
+
+- **Weekly:** rehedge at every fifth close.
+- **Daily:** rehedge at every close, as in E2.
+- **Delta band ±100 shares:** check every half hour; rehedge whenever the net delta drifts beyond ±100 shares.
+- **$4 move:** check every half hour; rehedge whenever SPY has moved $4 from the price of the last hedge.
+
+<HedgeRuleDistribution client:visible />
+
+Start with realized volatility equal to implied and the cost at 5 cents per share. The average outcome barely changes by rule: everything is within a few hundred dollars of zero, because the edge is zero. What changes is the **spread**:
+
+| Rule | Std dev of P/L | Shares traded | Cost at 5¢ |
+| --- | --- | --- | --- |
+| Weekly | $9,889 | 1,331 | $67 |
+| Daily | $4,972 | 2,902 | $145 |
+| $4 move | $2,493 | 4,696 | $235 |
+| Delta band ±100 | $1,972 | 5,626 | $281 |
+
+Going from weekly to daily halves the standard deviation for about $80 of extra cost. Going from daily to the delta band cuts it by more than half again for about $140 more. Now drag the cost to 50 cents per share (a wide market, or a hedge in a less liquid underlying): the band costs about $2,810 on average, and the weekly rule's $670 starts to look tempting if you can stomach the swings.
+
+<Plain>
+
+Think of a 10-dollar edge spread over a week of weather. If you check the forecast once, you might be lucky or unlucky by 50 dollars. Check every hour and luck mostly cancels, but now you are paying for about 30 checks, one per trading hour.
+
+There is no free rule. Each one is a point on a menu: **more trades, less luck, more cost**. Which point is right depends on how big your edge is, how expensive trading is, and how much uncertainty you (or your risk manager) can live with.
+
+</Plain>
+
+<Pro>
+
+This is the classic hedging frontier. With proportional cost $$k$$ per share, expected cost is roughly $$k \times$$ shares traded, and shares traded scale like $$\Gamma S \sigma \sqrt{T/\Delta t}$$ times a constant, so cost grows with $$1/\sqrt{\Delta t}$$ while hedging error shrinks with $$\sqrt{\Delta t}$$. The optimum minimizes something like $$\mathbb{E}[\text{cost}] + \lambda\,\text{Var}(\text{P/L})$$ for a chosen risk aversion $$\lambda$$. Two practical consequences:
+
+- **Edge sets the budget.** At 16% realized the long straddle's average P/L after 5-cent costs runs from about +$2,900 (the $4-move rule) to +$3,600 (weekly), so every rule keeps most of the edge. At 12% the trade loses roughly $3,600 to $4,000 on average whatever you do; hedging well only makes the loss more certain.
+- **Costs depend on the side.** For long gamma, each hedge locks in a small gain, so overhedging mostly wastes costs. For short gamma, each hedge locks in a small loss, and a wide band lets a position run unhedged into a big move. Short-gamma desks usually hedge more tightly than long-gamma desks.
+
+</Pro>
+
+## When each rule trades
+
+Averages hide the mechanics. Here is one path at the market's own volatility, with every hedge trade marked under it.
+
+<HedgeRuleTimeline client:visible />
+
+On path 2, the daily rule loses about **$8,800**, the weekly rule $6,500, the $4-move rule $3,000. Same path, same options, same average edge (zero), and the outcome is decided by when each rule happened to trade. Look at the lanes:
+
+- **Weekly** trades 4 times. It is blind for days at a time.
+- **Daily** trades around 20 times, always at the close, whatever happened in between.
+- **Delta band** clusters its trades where SPY is moving fast and near the strike, and goes quiet when SPY drifts away from 770. On path 2 it trades 55 times.
+- **$4 move** trades whenever SPY covers $4, so its trade count follows the path's realized movement, not the clock.
+
+<Plain>
+
+A clock-based rule checks the **speedometer** at fixed times, whatever the road is doing. A band-based rule watches the speedometer and acts only when it drifts too far. On a quiet stretch the band rule sits still and saves trades; on a twisty stretch near the strike it corrects often, which is exactly when an uncorrected drift would cost the most.
+
+</Plain>
+
+<Pro>
+
+With the edge at zero, each rule's P/L on a single path is almost entirely hedging error: the gap between the variance the rule actually captured, at the prices where it rebalanced, and the implied variance it paid for. That error depends on the ordering of moves relative to rebalance times, so rules rank differently path by path (on path 3 the daily rule makes about $9,860 while the band rule is flat). Rule choice is judged on the distribution in the previous figure, never on one path.
+
+</Pro>
+
+## Bands scaled to gamma
+
+<Plain>
+
+A delta band and a price band sound similar, but they behave differently as expiry approaches. Near expiry, an at-the-money straddle's **accelerator** gets much stronger: a small move changes delta a lot.
+
+- A **delta band** (rehedge when exposure exceeds 100 shares) automatically trades more often as the accelerator strengthens, because it takes a smaller move to cross the band.
+- A **price band** (rehedge every $4) keeps the same trigger, so near expiry it lets more exposure build up before it acts.
+
+At entry the two are nearly the same rule: with gamma of about 25 shares per dollar, a $4 move changes delta by about 101 shares.
+
+</Plain>
+
+<Pro>
+
+Delta drift after a move $$\delta S$$ is $$\Gamma\,\delta S$$, so a delta band of $$\pm B$$ shares is a price band of $$\pm B/\Gamma$$. For 10 at-the-money 770 straddles at 14.06%, $$\Gamma$$ per dollar rises from **25.3** shares at 22 sessions to **53.1** at 5 sessions and **83.9** at 2 sessions; the equivalent price band shrinks from $3.95 to $1.88 to $1.19.
+
+A common desk refinement scales the band with gamma and costs directly. Asymptotic results for proportional costs (Whalley and Wilmott style) put the optimal no-trade band in delta at roughly
+
+$$
+B^{*} \;\approx\; \left(\frac{3}{2}\,\frac{k\,S\,\Gamma^{2}}{\lambda}\right)^{1/3}
+$$
+
+with $$k$$ the proportional cost and $$\lambda$$ risk aversion: the band widens with the cube root of cost and the two-thirds power of gamma, so doubling either widens it by far less than double. In practice desks combine a delta band, a time trigger (at least once a day) and event triggers (before the close, around data releases) rather than a single rule.
+
+</Pro>
+
+## Common mistakes
+
+- **Hedging as often as possible by default.** At realistic costs the tightest rule can cost thousands more than it saves in variance; costs scale with the square root of frequency.
+- **Judging a rule on one path.** On path 2 the daily rule did worst; on path 3 it did best. Only the distribution tells you about the rule.
+- **Using a fixed price trigger into expiry.** Gamma rises sharply in the final days; a $4 trigger that was right at 22 sessions lets far more delta build up at 2 sessions.
+- **Forgetting that tight hedging cannot create edge.** At 12% realized every rule loses about the same amount on average. Hedging changes how sure you are of the result, not what the result is.
+
+<Takeaway>
+
+- Rebalancing frequency trades variance of outcome against transaction costs.
+- Halving the time between hedges cuts the standard deviation of P/L by about 30% and adds about 40% to costs (both √2 effects).
+- Delta bands react to the market; time rules react to the clock. Bands trade more when gamma is high and the market moves.
+- A delta band is a price band divided by gamma, so it tightens automatically as at-the-money options near expiry.
+- Hedging precision does not change the average P/L; only the volatility edge does.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="E3"
+  questions={[
+    {
+      q: 'You switch from hedging weekly to hedging daily. What mainly happens?',
+      options: [
+        'The average P/L rises',
+        'The spread of outcomes narrows and transaction costs rise',
+        'The position stops being affected by realized volatility',
+        'Gamma falls',
+      ],
+      answer: 1,
+      why: 'More frequent hedging reduces the hedging error (variance) but means more shares traded. In the simulator the standard deviation roughly halves while shares traded roughly double.',
+    },
+    {
+      q: 'A position has gamma of 50 shares per dollar. A delta band of ±100 shares is equivalent to a price band of about…',
+      options: ['±$0.50', '±$2', '±$5', '±$50'],
+      answer: 1,
+      why: 'Delta changes by Γ × move, so 100 / 50 = $2.',
+    },
+    {
+      q: 'Realized volatility is 12% against 14.06% implied. Which hedging rule turns the long straddle into a profit on average?',
+      options: ['Weekly', 'Daily', 'Delta band', 'None of them'],
+      answer: 3,
+      why: 'Hedging frequency changes the spread of outcomes, not the average. With realized below implied the long straddle loses roughly $3,600 to $4,000 on average under every rule.',
+    },
+    {
+      q: 'Why do short-gamma traders often hedge more tightly than long-gamma traders?',
+      options: [
+        'Short gamma has lower transaction costs',
+        'Each hedge locks in a small loss for short gamma, and a wide band leaves them exposed to large moves that hurt them',
+        'Exchanges require it',
+        'Short-gamma positions have no theta',
+      ],
+      answer: 1,
+      why: 'A short-gamma hedger buys high and sells low. Waiting longer between hedges lets losses run in exactly the moves that hurt, so they usually accept higher costs for tighter control.',
+    },
+  ]}
+/>
+
+<BookRef />

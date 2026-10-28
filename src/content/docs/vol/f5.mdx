@@ -1,0 +1,183 @@
+---
+title: Arbitrage risks
+description: Recognize the ways a "riskless" conversion, reversal or box can still lose money (pin, early assignment, dividends, rates, execution and settlement) and size each one.
+lessonId: F5
+prereqs: [F3, A2]
+minutes: 25
+bookRef: the chapter on option arbitrage
+---
+
+import PinRisk from '../../../components/widgets/f/PinRisk.tsx';
+import DividendRisk from '../../../components/widgets/f/DividendRisk.tsx';
+import RiskMatrix from '../../../components/widgets/f/RiskMatrix.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+Conversions, reversals and boxes have flat payoff diagrams ([lessons F3](/vol/f3/) and [F4](/vol/f4/)). The diagrams assume every option is exercised exactly when it should be, the dividend is what you expected, and every leg fills at once. Real trades break those assumptions in a handful of well-known ways. Each one is small most days and expensive on the day it happens.
+
+## Pin risk: the strike on expiration day
+
+<Plain>
+
+You hold a 770 conversion: long 1,000 SPY, short ten 770 calls, long ten 770 puts. On Friday afternoon SPY is trading at 770.30.
+
+- If SPY closes **above** 770, you expect the call holders to exercise and take your shares at 770. Your puts expire worthless. You end flat.
+- If SPY closes **below** 770, you exercise your puts and deliver your shares at 770. The calls expire. Flat again.
+
+The trouble is a close **right at 770**. Will the call holders exercise? They decide after the close, using after-hours prices and their own reasons. You don't find out until the weekend. Guess wrong and on Monday you own 1,000 shares you thought you'd sold, or you're short 1,000 you thought you'd delivered. That's $770,000 of stock nobody planned to hold over a weekend.
+
+</Plain>
+
+<PinRisk client:visible />
+
+<Pro>
+
+The figure models the close as normal around the current price with volatility scaled to the minutes left, and the call holders' decision as a function of where SPY trades after hours (their exercise cutoff is later than the close). Two failure modes:
+
+- **Close below the strike, calls exercised anyway.** You exercised the puts and delivered stock; the assignment then makes you deliver again. Surprise **short 1,000**.
+- **Close above the strike, calls not exercised.** You kept the shares expecting assignment. Surprise **long 1,000**.
+
+With an hour to go at 770.30 and 14% volatility, the close lands within 50 cents of the strike about **15%** of the time, and each failure mode has about a **3.5%** chance. A one-day 1-standard-deviation move on $770,000 of SPY is about **$6,800**; over a weekend with news, more. Desks handle pin risk by closing or rolling the near-strike legs before the close (paying the spread), by trading out the residual stock Monday, or by holding positions split across strikes so no single pin matters. Cash-settled index options (SPX) have no pin risk in this sense: there is no stock to deliver.
+
+</Pro>
+
+## Early assignment
+
+<Plain>
+
+American options can be exercised any day, not just at expiry. Holders usually don't, because exercising throws away the option's remaining time value. There are two exceptions, and an arbitrageur needs to know both:
+
+- **Deep in-the-money puts**, when the interest you'd earn on the strike money is worth more than the put's leftover insurance value. If you're short such a put (in a reversal or a box), it can be assigned early.
+- **In-the-money calls just before an ex-dividend date**, when the dividend is bigger than what the call has left in time value. If you're short such a call (in a conversion), it can be assigned the night before the ex-date.
+
+</Plain>
+
+<Pro>
+
+Early assignment is not a loss in itself: you receive or deliver stock at the strike, and the option you were short is gone. The damage is to the **plan**. A reversal assigned early on its short put becomes a flat stock position plus a long call; the interest it was going to earn on the short-sale proceeds stops, and that interest was the whole trade. A box whose short put is assigned turns into stock plus a vertical spread that now carries market risk. The binomial early-exercise values in [lesson F4](/vol/f4/) (about $1.36 for the 700/800 box) are the market's price for that risk. When and why holders exercise is the subject of [lesson F6](/vol/f6/).
+
+</Pro>
+
+## Dividend risk
+
+The December ex-date is the classic trap. A conversion is long stock and counts on receiving the dividend. If the short call is exercised the night before the ex-date, the stock is gone and so is the dividend.
+
+<DividendRisk client:visible />
+
+<Plain>
+
+The test a call holder runs the evening before the ex-date is simple: **is the dividend bigger than what I'd give up by exercising?** What they give up is the call's leftover time value, which equals the matching put's value plus the interest on the strike until expiry.
+
+With the December dividend at $2.10 and SPY's options expiring right after the ex-date, almost nothing is left to give up: every call **up to the 765 strike** is worth exercising. Slide the option life to 7 days and the cutoff falls to 748; at 14 days, 729; beyond about **22 days**, interest on a strike near 770 alone is worth more than $2.10, so only deep in-the-money calls still qualify, and past about 25 days none in the chart do.
+
+</Plain>
+
+<Pro>
+
+The decision rule, for a call with strike $$K$$, dividend $$D$$, and $$\tau$$ years left after the ex-date:
+
+$$
+\text{Exercise if } D > P(S - D, K, \tau) + K\left(1 - e^{-r\tau}\right)
+$$
+
+where $$P$$ is the put value on the ex-dividend stock price. The second term caps the strikes that can ever qualify: at 4.6%, $$770\,(1-e^{-0.046\tau}) = 2.10$$ at $$\tau \approx 21.6$$ days.
+
+For the conversion trader the risk is **not** that exercise happens; it is being wrong about it. If you priced the conversion assuming calls would be exercised and they aren't, you collect the dividend you didn't count on. If you priced it assuming you'd keep the dividend and the calls are exercised, you lose $$D$$ per share. Desks track every short in-the-money call before an ex-date, and many traders who are long such calls exercise them as a matter of routine. Holders who forget are a known source of profit for the short side.
+
+</Pro>
+
+## Interest-rate, execution and settlement risk
+
+<Plain>
+
+The rest are quieter but real:
+
+- **Interest rates.** A conversion is a loan. If your financing cost rises after you trade, the loan you locked in is worth less. Over a month the effect is small: a 0.1-point rate move on a 770 conversion is about 7 cents a share.
+- **Execution (legging).** Three or four legs rarely fill at once. Fill the stock, then watch the options move before you finish, and the "riskless" edge is gone.
+- **Settlement and borrow.** A reversal needs borrowed stock; if the lender recalls it, you're forced to buy back early. Exercise and assignment produce stock that has to be paid for or delivered on time.
+
+</Plain>
+
+<Pro>
+
+Sizing: conversion rate sensitivity per share is roughly $$K\,T$$ per unit of rate, $$770 \times 31/365 \approx 65$$ dollars per 100% move, or $0.065 per 10 basis points. Boxes and jelly rolls are the same exposure without the stock, and a 1-year box is a 1-year zero-coupon bond. Execution risk is managed by trading packages (the exchange's complex order book quotes conversions, boxes and rolls as single instruments) and by legging only into the most liquid leg first. Settlement risk shows up at expiry weekends, at ex-dates, and in hard-to-borrow names, where reversals carry a recall risk and a fee that can change daily.
+
+</Pro>
+
+## Putting it together
+
+<RiskMatrix client:visible />
+
+Click through the grid. Two patterns: pin and early-assignment risk come from being **short American options near or in the money**; dividend and rate risk come from the **financing** that every arbitrage position really is.
+
+<Plain>
+
+Think of each arbitrage as a loan with some small print. The grid shows which clauses matter for which loan. For a conversion, the dangerous clauses are the strike on expiration day and the dividend. For a reversal or a box, they are the strike and early assignment. For a jelly roll, the dividend that falls between its two expiries.
+
+</Plain>
+
+<Pro>
+
+Put sizes on the cells for a 10-lot 770 conversion (1,000 shares). A pin surprise leaves about $770,000 of unplanned stock, with a one-day 1-SD move of about **$6,800**. A missed dividend costs **$2,100**. A 10 basis point rate move costs about **$65**. Against that, the whole edge is measured in cents per share: crossing the spreads on the 770 conversion alone costs about $73 on the 10-lot. So the high cells are event risks one to two orders of magnitude larger than the edge, and they are managed by procedure (closing near-strike legs, tracking ex-dates, trading packages), not by sizing.
+
+</Pro>
+
+## Common mistakes
+
+- **Treating a flat payoff diagram as no risk.** The diagram assumes exercise happens exactly as theory says.
+- **Leaving a near-the-money short option open into the close on expiration day.** That is pin risk by choice.
+- **Forgetting the ex-date.** Short in-the-money calls the night before an ex-date are the most predictable early assignments in the market.
+- **Legging into a conversion in a fast market.** The edge is cents; one leg moving costs dollars.
+
+<Takeaway>
+
+- Pin risk: if SPY closes at the strike, you can't know whether your short options will be assigned, and may hold unplanned stock over a weekend.
+- Early assignment hits short deep in-the-money puts (interest) and short in-the-money calls before ex-dates (dividends).
+- A call is worth exercising before the ex-date when the dividend exceeds the put's value plus interest on the strike until expiry.
+- With SPY's dividend going ex on December expiry day, every in-the-money December call up to about the 765 strike qualifies.
+- Rate, execution and settlement risks are small per trade but are the reason arbitrage edges are measured in cents.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="F5"
+  questions={[
+    {
+      q: 'You hold a 770 conversion and SPY closes at exactly 770.02 on expiration day. What is the risk?',
+      options: [
+        'None, the position is flat',
+        'The calls may not be exercised, leaving you long stock you expected to deliver',
+        'The puts will be assigned',
+        'Volatility will rise',
+      ],
+      answer: 1,
+      why: 'Just above the strike, you rely on the call holders exercising. If they don\'t (because SPY drops after hours, or they forget), you keep 100 shares per contract over the weekend.',
+    },
+    {
+      q: 'A call with strike 740 expires 1 day after the ex-date. The dividend is $2.10, the put is worth $0.00 and interest on 740 for the day is about $0.09. Will a rational holder exercise before the ex-date?',
+      options: ['Yes', 'No', 'Only if volatility is high', 'Only if the call is out of the money'],
+      answer: 0,
+      why: 'Dividend ($2.10) exceeds the put value plus interest ($0.09), so exercising and collecting the dividend beats holding the call.',
+    },
+    {
+      q: 'Which position is most exposed to early assignment of a short deep in-the-money put?',
+      options: ['A conversion', 'A reversal', 'A long call', 'A long stock position'],
+      answer: 1,
+      why: 'A reversal is short stock, long call, short put. A deep in-the-money short put can be assigned early when interest on the strike exceeds its time value.',
+    },
+    {
+      q: 'At 4.6%, beyond roughly how many days of remaining life is a 770-strike call never worth exercising for a $2.10 dividend?',
+      options: ['About 5 days', 'About 22 days', 'About 60 days', 'There is no limit'],
+      answer: 1,
+      why: 'Interest on the strike alone is 770 × (1 − e^(−0.046τ)), which reaches $2.10 at about 21.6 days. Beyond that, holding beats exercising even for a call with no put value.',
+    },
+  ]}
+/>
+
+<BookRef />

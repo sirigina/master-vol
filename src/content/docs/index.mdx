@@ -1,0 +1,42 @@
+---
+title: Learn options like a volatility trader
+description: Interactive lessons on options pricing, volatility, and the Greeks, with real market data and explanations at two levels.
+template: splash
+hero:
+  tagline: Interactive lessons on pricing, volatility, and the Greeks. Every concept explained twice, in plain English and at the professional level, with real SPY market data you can play with.
+  actions:
+    - text: Start with the course map
+      link: /vol/
+      icon: right-arrow
+    - text: Try a lesson (C2 Volatility)
+      link: /vol/c2/
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import PayoffBuilder from '../../components/widgets/PayoffBuilder.tsx';
+import SnapshotNote from '../../components/SnapshotNote.astro';
+
+## Play first, read second
+
+This is a real position on real prices. Change the strategy, edit the legs, and hover the chart.
+
+<PayoffBuilder client:visible initial="straddle" />
+<SnapshotNote detail="SPY Nov 27, 2026 options" />
+
+## What makes this different
+
+<CardGrid>
+  <Card title="Two levels, one page" icon="open-book">
+    Plain-English analogies for building intuition, professional detail for building skill. Toggle either off.
+  </Card>
+  <Card title="Real market snapshots" icon="seti:json">
+    Examples use actual SPY prices, implied volatilities, and Greeks, frozen on one date so every lesson agrees.
+  </Card>
+  <Card title="Charts you can move" icon="random">
+    Sliders, presets, and hover readouts on every figure. One shared pricing engine powers all of them.
+  </Card>
+  <Card title="Jump anywhere" icon="list-format">
+    Alphanumeric lesson IDs (A1 to J4) with prerequisites listed, so reviewing is one click.
+  </Card>
+</CardGrid>

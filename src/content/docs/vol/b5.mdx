@@ -1,0 +1,197 @@
+---
+title: The binomial model
+description: Price an option by copying it with stock and borrowing, build a multi-step tree, watch it converge to Black-Scholes, and see where early exercise pays.
+lessonId: B5
+prereqs: [B4]
+minutes: 30
+---
+
+import Replication from '../../../components/widgets/b/Replication.tsx';
+import BinomialTree from '../../../components/widgets/b/BinomialTree.tsx';
+import BinomialConvergence from '../../../components/widgets/b/BinomialConvergence.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+Black-Scholes ([lesson B4](/vol/b4/)) gives a price in one formula but hides the reasoning inside calculus. The binomial model shows the reasoning step by step, with nothing more than arithmetic. It also handles something Black-Scholes can't: American options that may be exercised early.
+
+## One step: copy the option
+
+<Plain>
+
+Imagine SPY can do only one of two things by November 27: rise to 800 or fall to 740. The 770 call then pays either $30 or nothing.
+
+Here's the trick. Buy **half a share** of SPY and borrow enough money that you owe exactly $370 at expiry:
+
+- If SPY goes to 800, your half share is worth $400. Repay $370, keep **$30**.
+- If SPY goes to 740, your half share is worth $370. Repay $370, keep **$0**.
+
+That's the call's payoff in both cases. Two things that pay the same in every outcome must cost the same today. The half share costs $384.83 and the loan brings in $368.56, so the copy costs **$16.27**, and so must the call.
+
+Notice what never came up: how likely SPY is to go up. You didn't need a forecast at all.
+
+</Plain>
+
+<Pro>
+
+Let the stock move from $$S$$ to $$S_u$$ or $$S_d$$ over a period $$\Delta t$$, with option payoffs $$C_u$$, $$C_d$$. Choose $$\Delta$$ shares and borrow $$B$$ so that
+
+$$
+\Delta S_u - B e^{r\Delta t} = C_u, \qquad \Delta S_d - B e^{r\Delta t} = C_d
+$$
+
+which gives
+
+$$
+\Delta = \frac{C_u - C_d}{S_u - S_d}, \qquad C = \Delta S - B = e^{-r\Delta t}\big[q\,C_u + (1-q)\,C_d\big], \qquad q = \frac{S e^{r\Delta t} - S_d}{S_u - S_d}
+$$
+
+$$q$$ is the **risk-neutral probability**: the up-probability that makes the stock earn exactly the risk-free rate on average. In the example, $$q = 54.5\%$$, and $$e^{-rT}(0.545 \times 30) = 16.27$$, the same as the replication cost. Two other points: $$\Delta$$ is the option's delta, the hedge ratio from [lesson D1](/vol/d1/); and no-arbitrage requires $$S_d < Se^{r\Delta t} < S_u$$, or $$q$$ falls outside $$[0,1]$$.
+
+</Pro>
+
+<Replication client:visible />
+
+Drag the up and down prices apart: the share count barely moves, but the copy (and so the call) gets more expensive. A wider spread of outcomes, or more volatility, makes the option worth more, for exactly the reason [lesson B1](/vol/b1/) gave. Move the strike above the up price and the copy needs zero shares: the call pays nothing in either state and is worth nothing.
+
+## Many steps: a tree
+
+<Plain>
+
+Two outcomes is too crude for a real month. So split the month into several small steps, each with its own up-or-down move. After a few steps the possible prices fan out like the branches of a tree.
+
+Work backward from the end. At expiry, each branch tip is worth whatever the option pays there. One step earlier, each point is worth the "copy" of the two tips it leads to, the same calculation as above. Repeat until you reach today. The number at the root is the option's price.
+
+</Plain>
+
+<Pro>
+
+The standard Cox-Ross-Rubinstein (CRR) tree sets
+
+$$
+u = e^{\sigma\sqrt{\Delta t}}, \qquad d = 1/u, \qquad q = \frac{e^{(r-q_{\text{div}})\Delta t} - d}{u - d}
+$$
+
+so the tree has the right variance per step and recombines (an up then a down returns to the same price). After $$n$$ steps there are $$n+1$$ terminal prices $$S u^j d^{n-j}$$. Values roll back by
+
+$$
+V_{i,j} = e^{-r\Delta t}\big[q\,V_{i+1,j+1} + (1-q)\,V_{i+1,j}\big]
+$$
+
+For an **American** option, each node also checks exercise: $$V_{i,j} = \max\big(\text{rolled-back value},\ \text{intrinsic}\big)$$. The tree below uses the site's shared CRR implementation.
+
+</Pro>
+
+<BinomialTree client:visible />
+
+The default is an **800 put, American, 4 steps, 14% volatility**. Each step moves SPY by a factor of 1.0206 up or down, with a risk-neutral up-probability of 51.9%. Five nodes turn orange: at those points SPY has fallen far enough that exercising immediately (collecting 800 minus the price now) is worth more than holding the put. The American tree prices the put at **$31.50**; switch to European and it falls to **$30.21**. That $1.28 is the value of the right to exercise early, in this coarse tree.
+
+Switch to a **call**. With no dividend, no node ever turns orange: exercising a call early throws away its time value and pays the strike sooner than necessary. American and European calls on a non-dividend stock are worth the same.
+
+<Plain title="Why exercise a put early?">
+
+Exercising a put means selling SPY at the strike and getting the cash **now**. If the put is deep in the money, there's little chance of it getting much more valuable, but the cash you'd receive earns interest every day you wait. At some point the interest beats the remaining insurance value, and cashing in wins. For a call, exercising means *paying* the strike now, which costs you interest, so there's no reason to rush (unless a dividend is about to be paid, [lesson F6](/vol/f6/)).
+
+</Plain>
+
+## Convergence to Black-Scholes
+
+<Plain>
+
+The more steps, the more realistic the tree. With one step SPY can only end at two prices; with 200 steps, at 201. As the steps get finer, the tree's answer settles onto the Black-Scholes price. The binomial model and Black-Scholes are the same idea, one done in steps and one done all at once.
+
+</Plain>
+
+<Pro>
+
+As $$n \to \infty$$ the CRR terminal distribution converges to the lognormal, and the European tree price converges to Black-Scholes with error of order $$1/n$$. The convergence oscillates: the error depends on where the strike falls between terminal nodes, which alternates between odd and even $$n$$. Practitioners smooth this by averaging consecutive $$n$$, by placing the strike on a node, or by replacing the last step with the Black-Scholes formula.
+
+For American puts the tree is the workhorse, because there is no closed form. The early-exercise premium converges to a stable value as $$n$$ grows.
+
+</Pro>
+
+<BinomialConvergence client:visible />
+
+For the 770 call at 14.1% volatility, Black-Scholes gives **$13.97**. One step gives **$17.10**; 10 steps **$13.70**; 100 steps **$13.95**; 200 steps **$13.96**. The zigzag between odd and even step counts is clear on the log axis. Switch to the **American put**: the line settles near **$11.54**, about **$0.24** above the European Black-Scholes value of $11.31. That gap is the early-exercise premium for this at-the-money put with 31 days left.
+
+## What the binomial model adds
+
+<Plain>
+
+The binomial model teaches three things that matter for everything after it:
+
+- **Prices come from copying, not forecasting.** You never needed to know whether SPY will go up.
+- **The copy changes as the price moves.** The share count is different at every point of the tree. Keeping the copy accurate means trading continuously, which is what market makers do ([lesson E1](/vol/e1/)).
+- **It handles choices.** Early exercise, or any decision during the option's life, fits naturally into the backward walk.
+
+</Plain>
+
+<Pro>
+
+On a desk, trees are used for American exercise, discrete dividends (shift the nodes at ex-dates), and products with path-dependent decisions. They also make the hedging argument concrete: $$\Delta_{i,j}$$ at each node is the replicating share count, and the cost of the replicating portfolio matching the option at every node is exactly why the drift drops out.
+
+The limits are the same as Black-Scholes: constant $$\sigma$$ and costless rebalancing. Trees can be bent to fit the market's smile (implied trees) but that is a specialist topic. For pricing American SPY puts, a few hundred CRR steps with each strike's own implied volatility is standard.
+
+</Pro>
+
+## Common mistakes
+
+- **Using real-world probabilities in the tree.** The up-probability is the risk-neutral one, set by the rate, not by your outlook.
+- **Expecting monotonic convergence.** Tree prices zigzag as steps increase; compare a few step counts or average neighbours.
+- **Exercising American calls early on non-dividend stocks.** It is never optimal; you lose time value and pay the strike early.
+- **Treating a coarse tree's early-exercise premium as exact.** With 4 steps at 14% the 800 put shows $1.28; 500 steps at its own 11.7% implied volatility give $1.37. Use enough steps and the right volatility.
+
+<Takeaway>
+
+- A one-step option can be copied with shares plus borrowing; the copy's cost is the option's price.
+- The risk-neutral probability q makes the stock earn the risk-free rate; it is a pricing device, not a forecast.
+- Multi-step trees roll values back from expiry; American options also check early exercise at each node.
+- European tree prices converge to Black-Scholes as steps increase (the 770 call: $17.10 at 1 step, $13.96 at 200, BS $13.97).
+- Early exercise matters for deep in-the-money puts, never for calls on non-dividend stocks.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="B5"
+  questions={[
+    {
+      q: 'In one step, SPY goes to 800 or 740. How many shares replicate a 770 call that pays $30 or $0?',
+      options: ['0.25', '0.50', '1.00', '0.54'],
+      answer: 1,
+      why: 'Δ = (Cu − Cd) / (Su − Sd) = (30 − 0) / (800 − 740) = 0.5.',
+    },
+    {
+      q: 'What does the risk-neutral up-probability depend on?',
+      options: [
+        'Analysts\' forecasts',
+        'The up and down prices and the interest rate only',
+        'The option strike',
+        'The stock\'s historical return',
+      ],
+      answer: 1,
+      why: 'q = (S·e^(rΔt) − Sd) / (Su − Sd). No forecast enters; it is the probability that makes the stock earn the risk-free rate.',
+    },
+    {
+      q: 'In the tree, why do no nodes show early exercise for a call on SPY with no dividend before expiry?',
+      options: [
+        'Calls cannot be exercised early',
+        'Exercising pays the strike early and forfeits time value, so holding is always worth more',
+        'The tree has too few steps',
+        'Calls are European by definition',
+      ],
+      answer: 1,
+      why: 'An American call on a non-dividend stock is worth at least S − K·e^(−rT) > S − K, so early exercise is never optimal.',
+    },
+    {
+      q: 'The 770 American put converges to about $11.54 while European Black-Scholes gives $11.31. What is the $0.24 difference?',
+      options: ['Model error', 'The early-exercise premium', 'The bid/ask spread', 'Dividend value'],
+      answer: 1,
+      why: 'Puts can be worth exercising early to collect the strike and earn interest on it; the tree values that right, Black-Scholes does not.',
+    },
+  ]}
+/>

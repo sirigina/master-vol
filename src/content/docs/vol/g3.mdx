@@ -1,0 +1,163 @@
+---
+title: Straddles & strangles
+description: Price, read and manage long and short straddles and strangles with real SPY quotes, including breakevens, the expected move, time decay and IV changes.
+lessonId: G3
+prereqs: [G2, C2]
+minutes: 25
+---
+
+import G3StraddleBuilder from '../../../components/widgets/g/G3_StraddleBuilder.tsx';
+import G3BreakevenMove from '../../../components/widgets/g/G3_BreakevenMove.tsx';
+import G3PnlHeatmap from '../../../components/widgets/g/G3_PnlHeatmap.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+The straddle is the purest volatility trade there is: buy a call and a put at the same strike and you no longer care which way SPY goes, only how far. Its cousin, the strangle, does the same with two different strikes. This lesson prices both from the November 27 chain and shows what actually drives their P/L.
+
+## The structures
+
+<Plain>
+
+A **long straddle** buys both deposits at the same price: the right to buy SPY at 770 (the call, $13.90) and the insurance to sell it at 770 (the put, $11.24). Total: **$25.14**. If SPY ends far from 770 in either direction, one side pays off more than the whole cost. If SPY ends near 770, both expire nearly worthless.
+
+A **long strangle** buys the deposits at two different prices, say the 750 put ($5.94) and the 790 call ($4.44), for **$10.38**. Much cheaper, but SPY has to travel further before either side pays.
+
+The **short** versions are the other side of the same trade: you collect the payment up front and hope SPY stays quiet.
+
+</Plain>
+
+<Pro>
+
+Per share, at expiry:
+
+$$
+\text{Straddle}_K = |S_T - K| - (C_K + P_K), \qquad
+\text{Strangle}_{K_1,K_2} = (K_1 - S_T)^+ + (S_T - K_2)^+ - (P_{K_1} + C_{K_2})
+$$
+
+Breakevens sit one premium beyond the strikes: $$770 \pm 25.14$$ gives **744.86 and 795.14** for the straddle; $$750 - 10.38 = 739.62$$ and $$790 + 10.38 = 800.38$$ for the strangle. Near the money, a straddle is almost delta-neutral (model delta +0.08 per share at 769.66: SPY sits 34 cents below the strike, but the forward price, about 772.67 after a month of carry, sits above it, which tilts the call's delta upward) and carries the most gamma and vega of any single-strike structure. A strangle carries less of each but more per dollar spent: per $1,000 of premium, the 750/790 strangle has $142 of vega against $71 for the straddle.
+
+</Pro>
+
+<G3StraddleBuilder client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry at mid; ±1 SD at 14.1% ATM IV over 22 trading days" />
+
+Start with the long 770 straddle and 14 days. The dashed curve is the position's value in two weeks if every IV stays put: at an unchanged SPY it is down about **$650**, and it needs SPY near 748 or 788 just to break even. Now slide IV up 2 points: the curve lifts by about $264 at the middle. Time and volatility both push on the same curve, in opposite directions.
+
+## Breakevens against the expected move
+
+How likely is SPY to reach the breakevens? Compare them with the move the market itself implies. From lesson [C2](/vol/c2/), 14.1% volatility over 22 trading days gives a one-standard-deviation move of about **±$32**, roughly 738 to 802.
+
+<G3BreakevenMove client:visible />
+<SnapshotNote detail="lognormal odds at the 14.1% ATM implied volatility" />
+
+<Plain>
+
+The straddle's breakevens (744.86 and 795.14) sit **inside** the one-standard-deviation band. That sounds like an easy win, but it isn't: the straddle price is the market's estimate of the *average* move, and the breakevens are exactly one average move away. Roughly 43% of the time SPY ends beyond them, and when it does, it usually isn't by much. The many small losses and the fewer big wins are priced to balance out.
+
+Cheaper strangles have wider breakevens. The 740/800 strangle costs only $658, but SPY finishes outside its breakevens only about a quarter of the time.
+
+</Plain>
+
+<Pro>
+
+The ATM straddle approximates $$\sqrt{2/\pi}\,S\sigma\sqrt{t} \approx 0.80\,S\sigma\sqrt{t}$$, the expected absolute move under the model. With $$S\sigma\sqrt{t} = 31.96$$ that is $25.50 against the $25.14 quote. So at fair implied volatility the long straddle has zero expected P/L by construction; the question is only whether *realized* volatility through expiry exceeds the 14.1% you paid. Inverting, $$\sigma \approx 25.14 / (0.80 \times 769.66 \times \sqrt{31/365}) = 14.0\%$$. The "% finish outside" column is a lognormal probability at flat ATM IV; the real put skew puts more weight on the downside breakeven than this shows. A higher probability of finishing outside does not make a strangle "better": the payoff per outcome is smaller, and the price reflects that.
+
+</Pro>
+
+## Time, volatility and the P/L surface
+
+The heatmap shows the same long or short position across both price and time, with IVs frozen at the snapshot. Hover any cell.
+
+<G3PnlHeatmap client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry; implied volatilities held constant" />
+
+What to notice for the long straddle:
+
+- **The losing diamond.** On day 0 every cell is close to zero: you just paid fair value. The red region in the middle then deepens and widens. By day 21 an unchanged SPY costs about $1,085, and a move to about 745 or 792 only breaks even.
+- **Decay accelerates.** At an unchanged SPY the straddle loses about $41 a day at first, $55 a day at two weeks, and $130 a day with three days left.
+- **The short straddle is the mirror image.** Switch sides: its best cell is SPY at 770 on expiry day (+$2,514), and its worst cells grow without limit at the edges.
+
+<Plain>
+
+The long straddle is a race between the **melting ice** and the **storm**. Every quiet day melts a little more of what you paid. A big move can win the race at any time, but the later it comes, the bigger it has to be. The short straddle is the ice seller: it collects the melt and hopes the storm never arrives.
+
+Changes in the **forecast** matter too. If traders start expecting rougher weather (implied volatility rises), the straddle gains even if SPY hasn't moved yet. That is vega: about $178 per volatility point for the 770 straddle today.
+
+</Plain>
+
+<Pro>
+
+Near the money, the straddle's daily P/L decomposes as
+
+$$
+d\text{P/L} \approx \tfrac{1}{2}\Gamma\,(\Delta S)^2 + \Theta\,\Delta t + \mathcal{V}\,\Delta\sigma
+$$
+
+with gamma 2.52 shares per $1, theta −$41 a day and vega +$178 per point per straddle at the snapshot. Setting the first two terms equal gives the daily move needed to cover decay: $$\Delta S = \sqrt{2 \times 41 / 2.52} \approx 5.70$$ dollars, which matches $$S\sigma/\sqrt{365} \approx 5.66$$ dollars per calendar day. The long straddle owner needs realized volatility above the 14% implied; at the snapshot SPY had realized only 10% over the previous 20 days (lesson [C2](/vol/c2/)). Note also that vega shrinks as expiry nears ($132 at day 14, $56 at day 28) while gamma grows: a straddle bought for an IV view should be held for weeks, not to the last day.
+
+</Pro>
+
+## Common mistakes
+
+- **Treating the breakevens as the only hurdle.** A long straddle can be right on direction-free movement and still lose if the move comes late or IV falls.
+- **Calling the strangle "cheaper and therefore better".** It is cheaper because it pays less often. Compare per dollar of premium, not per contract.
+- **Selling straddles for "income".** The short straddle's average profit is the volatility risk premium, small and steady, paid for by rare large losses. On a 2-standard-deviation day the short 770 straddle can give back weeks of decay.
+- **Ignoring the skew.** The flat-IV odds understate how often SPY falls through the lower breakeven; the market prices that in the higher put IVs.
+
+<Takeaway>
+
+- A straddle is a call plus a put at one strike; a strangle uses two strikes. Long = long volatility, short = short volatility.
+- The 770 straddle costs $25.14 with breakevens 744.86 and 795.14; the 750/790 strangle costs $10.38 with breakevens 739.62 and 800.38.
+- The ATM straddle ≈ 0.8 × the one-standard-deviation move: it is the market's average absolute move to expiry.
+- Long straddles pay accelerating time decay; they need realized volatility above implied, or rising implied volatility.
+- Vega dominates early, gamma dominates late.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="G3"
+  questions={[
+    {
+      q: 'The 770 straddle costs $25.14. Where are its breakevens at expiry?',
+      options: ['757.43 and 782.57', '744.86 and 795.14', '738 and 802', '760 and 780'],
+      answer: 1,
+      why: 'Strike ± total premium: 770 − 25.14 = 744.86 and 770 + 25.14 = 795.14.',
+    },
+    {
+      q: 'Why is the 770 straddle price ($25.14) smaller than the one-standard-deviation move (about $32)?',
+      options: [
+        'The straddle is mispriced',
+        'The straddle prices the average absolute move, about 0.8 standard deviations',
+        'Straddles ignore the put',
+        'Because of the interest rate',
+      ],
+      answer: 1,
+      why: 'For a normal distribution the mean absolute deviation is √(2/π) ≈ 0.80 of the standard deviation: 0.80 × 31.96 ≈ $25.50.',
+    },
+    {
+      q: 'You are long the 770 straddle. SPY is unchanged after two weeks and IV is unchanged. Roughly what is your P/L per straddle?',
+      options: ['About +$650', 'About $0', 'About −$650', 'About −$2,514'],
+      answer: 2,
+      why: 'At unchanged SPY and IV the model value after 14 days is $6.50 per share lower: about −$650 per straddle. That is time decay.',
+    },
+    {
+      q: 'Which change helps a long strangle most, all else equal?',
+      options: ['A quiet week', 'A drop in implied volatility', 'A large move plus a rise in implied volatility', 'Time passing'],
+      answer: 2,
+      why: 'A long strangle is long gamma and long vega: it benefits from realized movement and from rising implied volatility, and loses to time and falling IV.',
+    },
+    {
+      q: 'Per $1,000 of premium, which has more vega: the 770 straddle or the 750/790 strangle?',
+      options: ['The straddle', 'The strangle', 'They are equal', 'Neither has vega'],
+      answer: 1,
+      why: 'The strangle has about $147 of vega for $1,038 of premium ($142 per $1,000) against $178 for $2,514 for the straddle ($71 per $1,000). Out-of-the-money options carry more vega per dollar.',
+    },
+  ]}
+/>

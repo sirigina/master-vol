@@ -1,0 +1,177 @@
+---
+title: Term structure & earnings crush
+description: Read the volatility term structure, compute forward volatility between two expiries, back out an earnings move from the option chain, and see what the post-earnings crush does to a long straddle.
+lessonId: C7
+prereqs: [C5]
+minutes: 30
+---
+
+import TermStructure from '../../../components/widgets/c/TermStructure.tsx';
+import EarningsSolver from '../../../components/widgets/c/EarningsSolver.tsx';
+import CrushSim from '../../../components/widgets/c/CrushSim.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+On October 27, 2026, Microsoft options expiring three days later were priced at **75%** implied volatility, while the same strike a month and a half out was priced at 30%. Both describe the same stock. The difference is one day: earnings. This lesson explains how implied volatility varies across expiries, how to split it into pieces, and why buying options into earnings so often disappoints.
+
+## The term structure
+
+<Plain>
+
+Implied volatility is a weather forecast, and every expiry carries its own forecast for the period up to that date. Line them up by date and you get the **term structure**.
+
+- **Upward sloping** (normal): near-term options are priced calmer than long-term ones. Today is quiet, but over a year anything can happen.
+- **Inverted**: near-term options are priced *stormier* than long-term ones. That happens when a storm is already here (a selloff) or is scheduled (an earnings report, an election, a central-bank decision).
+
+</Plain>
+
+<Pro>
+
+The term structure is the map $$T \mapsto \sigma_{\text{ATM}}(T)$$. In calm markets equity index term structures slope upward because short-dated implied vol sits near the currently low realized vol while long-dated vol is anchored near the long-run mean plus a term premium. In stressed markets they invert: front-month implied vol jumps with realized vol, while mean reversion ([lesson C6](/vol/c6/)) keeps long-dated vol from following. VIX futures curves (contango vs backwardation) show the same pattern in tradeable form.
+
+</Pro>
+
+<TermStructure client:visible />
+<SnapshotNote detail="ATM IV = average of the 770 call and put IV per expiry" />
+
+SPY's term structure on the snapshot is a textbook upward slope beyond the first month: **14.06%** for November 27 (31 days), **14.74%** for December 18, **15.86%** for March 19, and **18.09%** for December 2027 (416 days). The front few expiries are flat around 14% to 15%.
+
+## Forward volatility
+
+<Plain>
+
+If you know the forecast for the next month and the forecast for the next two months, you can work out the forecast for *the second month alone*. That number is **forward volatility**: the storm the market is pricing for a future window.
+
+The key idea: what adds up over time is not volatility but **variance** (volatility squared, times time), just like the coin-flip walks in [lesson C1](/vol/c1/). So you add and subtract variance, then convert back.
+
+</Plain>
+
+<Pro>
+
+Total implied variance to expiry $$T_i$$ is $$\sigma_i^2T_i$$. Variance over disjoint periods adds, so the variance between $$T_1$$ and $$T_2$$ is the difference, and
+
+$$
+\sigma_{1\to2} = \sqrt{\frac{\sigma_2^2T_2 - \sigma_1^2T_1}{T_2 - T_1}}
+$$
+
+From November 27 (31 days, 14.06%) to December 18 (52 days, 14.74%): $$\sqrt{(0.1474^2 \times 52 - 0.1406^2 \times 31)/21} = 15.69\%$$. The December options are pricing the three weeks after November 27 at almost 16%, higher than either quoted IV. A forward variance below zero would be an arbitrage (a calendar spread with negative cost), so total variance must increase with $$T$$. The calculation above uses calendar days, matching how the IVs were quoted; desks often weight days instead, giving weekends and holidays less variance than trading days.
+
+</Pro>
+
+Pick November 20 and November 27 in the calculator. The forward vol for that week is only **12.8%**, a dip. The gap contains Thanksgiving (November 26) and the half-day after it, and quoted IVs count every calendar day equally. Fewer trading sessions, less variance to price. This is the simplest example of uneven variance across days.
+
+## Events concentrate variance
+
+Now the main event. MSFT reports earnings on October 28 after the close. The stock will absorb a quarter's worth of news in one session.
+
+<Plain>
+
+Think of the October 30 options as a three-day forecast in which one of the days is a hurricane. Spread over three days, that hurricane makes the whole forecast look extreme: **75%** volatility. The November 6 options contain the same hurricane but spread over ten days, so they show 45%. December 18 spreads it over 52 days: 30%.
+
+The straddle gives the quick read. The October 30 530 straddle costs **$27.07**, or **5.1%** of MSFT's price. Traders call that the **implied move**: the market expects MSFT to move about 5% either way on the report.
+
+</Plain>
+
+<Pro>
+
+Model each expiry's total variance as $$n-1$$ ordinary days plus one event day:
+
+$$
+\sigma_i^2\,\frac{T_i}{365} = \sigma_n^2\,\frac{T_i - 1}{365} + m^2
+$$
+
+where $$\sigma_n$$ is the normal-day (ex-earnings) vol and $$m$$ the standard deviation of the event-day return. With the front expiry alone and an assumed $$\sigma_n = 25\%$$: $$m = \sqrt{0.748^2 \times 3/365 - 0.25^2 \times 2/365} = 6.52\%$$. A least-squares fit across all four expiries solves for both unknowns: $$\sigma_n = 25.3\%$$ and $$m = 6.42\%$$. The expected absolute move is $$\sqrt{2/\pi}\,m \approx 0.8m$$, about 5.1% to 5.2%, consistent with the straddle's 5.1%. One earnings day carries roughly **24 normal days** of variance ($$m^2 / (\sigma_n^2/365) \approx 23.6$$ at the fitted values).
+
+</Pro>
+
+<EarningsSolver client:visible />
+<SnapshotNote detail="MSFT 531.33; 530-strike straddles for four expiries; IV = average of call and put" />
+
+Drag the normal-day volatility. Between 20% and 30% the earnings move from the front expiry barely changes: it stays between **±6.4% and ±6.6%**, because the event dominates a three-day option. The later expiries are far more sensitive to that assumption: near 25% all four expiries agree on a move of about **6.4% to 6.6%**, which is why the fit lands there. Push to 30% and the December expiry can only fit a 2.3% move; the four expiries stop telling a consistent story.
+
+## The crush
+
+Once earnings are out, the hurricane is gone. Implied volatility collapses overnight to something like the normal-day level. That is the **IV crush**, and it is why buying a straddle into earnings needs a big move just to break even.
+
+<CrushSim client:visible />
+<SnapshotNote detail="MSFT Oct 30 530 straddle at 27.07; P/L uses the pricing model at the Oct 29 close with the IV you choose" />
+
+<Plain>
+
+Buy the October 30 straddle for $27.07 ($2,707 per contract). Suppose MSFT reports and **doesn't move**, and implied vol drops to 30%. At the close on October 29, the day after the report, the straddle is worth about $6.74; you've lost **$2,033**, three quarters of what you paid. If vol had stayed at 75% the loss would have been only about $1,046: the crush is responsible for roughly half the damage, and two days of time decay plus the passing of the event for the rest.
+
+To make money, MSFT has to move more than the market expected. At 30% post-earnings IV the breakevens are about **−5.4% and +4.8%**. A 3% rise, which sounds big, still loses about **$961** (a 3% fall loses about $1,228). An 8% rise makes about **$1,683**.
+
+Buying options before earnings is a bet that the move will be bigger than the implied move, not just a bet on "a big move".
+
+</Plain>
+
+<Pro>
+
+The long straddle is long the event variance $$m^2$$ priced at 6.4%-6.5%, and long normal-day variance priced near 25%. After the announcement only the normal-day variance remains, so the straddle reprices from 75% to roughly $$\sigma_n$$ almost regardless of the outcome. The P/L decomposes as
+
+$$
+\text{P/L} \approx \underbrace{\tfrac12\Gamma\,(\Delta S)^2}_{\text{realized event move}} \;+\; \underbrace{\text{Vega}\times\Delta\sigma}_{\text{crush},\ \Delta\sigma<0} \;+\; \underbrace{\Theta\,\Delta t}_{\text{decay},\ \Theta<0}
+$$
+
+and the trade has positive expectation only if the realized event move exceeds the implied $$m$$ by enough to cover the crush. Notice the breakevens are **asymmetric** (−5.4% vs +4.8%): the 530 strike sits below spot, so the call is in the money and gains on an up move start from a higher base. The post-earnings IV slider matters less than you might expect for large moves (deep ITM options carry little vega) and most at small moves. Desks trade this with **calendar spreads** (short the event expiry, long the next) that isolate the event variance from normal-day variance ([lesson G6](/vol/g6/)).
+
+</Pro>
+
+## Common mistakes
+
+- **Averaging volatilities across expiries.** Variance adds, volatility doesn't. Use $$\sigma^2T$$ to combine or split periods.
+- **Reading a 75% front-week IV as "MSFT is a 75% vol stock".** It is one big day spread across three. The normal-day vol is closer to 25%.
+- **Buying straddles because "earnings will move it".** The market already prices the move. You need a move bigger than about 5% just to break even here.
+- **Ignoring holidays and weekends in short-dated forward vol.** A gap with fewer sessions prices less variance.
+
+<Takeaway>
+
+- The term structure is implied vol by expiry. SPY's slopes upward: 14.06% at 31 days to 18.09% at 416 days.
+- Forward volatility comes from variance additivity: subtract total variances and divide by the time between.
+- A scheduled event concentrates variance on one day and inflates short-dated IV the most.
+- MSFT's chain implies an earnings-day move of about ±6.4% (one SD), about 24 normal days of variance; the straddle prices about a 5.1% move.
+- After the event IV crushes toward the normal-day level. A long straddle needs a move bigger than the implied move to profit.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="C7"
+  questions={[
+    {
+      q: 'A 30-day option has 20% IV and a 60-day option has 20% IV. What is the forward volatility from day 30 to day 60?',
+      options: ['0%', '10%', '20%', '28%'],
+      answer: 2,
+      why: 'Total variance is 0.04 × 30 and 0.04 × 60; the difference is 0.04 × 30, so the forward vol over those 30 days is also 20%. A flat term structure implies flat forwards.',
+    },
+    {
+      q: 'Which situation typically produces an inverted term structure in a single stock?',
+      options: ['A quiet market', 'An earnings report before the front expiry', 'A dividend increase', 'Higher interest rates'],
+      answer: 1,
+      why: 'A scheduled event adds a large amount of variance to every expiry after it, but spread over fewer days it inflates the front expiry the most.',
+    },
+    {
+      q: 'The MSFT 3-day straddle costs 5.1% of the stock price. What does that represent?',
+      options: [
+        'The maximum MSFT can move',
+        'Roughly the expected size of the move through expiry, dominated by earnings',
+        'The annual volatility',
+        'The dividend yield',
+      ],
+      answer: 1,
+      why: 'An ATM straddle prices roughly the expected absolute move to expiry. With earnings inside, that is mostly the earnings move.',
+    },
+    {
+      q: 'You buy the MSFT straddle before earnings and the stock moves 3%. Implied vol falls from 75% to 30%. What is the likely outcome?',
+      options: ['A large profit', 'Roughly breakeven', 'A substantial loss', 'Exactly the premium lost'],
+      answer: 2,
+      why: 'The market priced about a 5% move. A 3% move is not enough to offset the crush and decay; the widget shows a loss of about $961 per contract on a 3% rise and about $1,228 on a 3% fall.',
+    },
+  ]}
+/>

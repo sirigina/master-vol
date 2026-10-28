@@ -1,0 +1,192 @@
+---
+title: The five volatilities
+description: Tell future, historical, forecast, implied and seasonal volatility apart, see how they relate on real SPY data, and know which one decides an option trade.
+lessonId: C4
+prereqs: [C2]
+minutes: 25
+bookRef: the chapter on volatility
+---
+
+import HistVolWindows from '../../../components/widgets/c/HistVolWindows.tsx';
+import VixVsForward from '../../../components/widgets/c/VixVsForward.tsx';
+import FiveVolDashboard from '../../../components/widgets/c/FiveVolDashboard.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+When a trader says "vol is 14", the first question back should be: *which* vol? There are five different things called volatility, and confusing them is one of the most expensive mistakes in options. [Lesson C2](/vol/c2/) introduced two of them, realized and implied. This lesson lines up all five and shows which one actually settles the score.
+
+## Future volatility: the one that decides
+
+<Plain>
+
+Volatility is a weather forecast for price swings. The **future volatility** is the weather that actually arrives between now and the day your option expires.
+
+It is the only one that determines whether an option was a good buy. If you pay for a stormy month and the month turns out calm, you overpaid, no matter how sensible the forecast looked at the time. The trouble is obvious: nobody knows it in advance. Every other volatility in this lesson is an attempt to estimate it.
+
+</Plain>
+
+<Pro>
+
+Future volatility is the realized standard deviation of log returns over the option's remaining life, annualized:
+
+$$
+\sigma_{\text{future}} = \sqrt{\frac{252}{n-1}\sum_{i=1}^{n}\left(r_i - \bar r\right)^2}, \qquad r_i = \ln\frac{S_i}{S_{i-1}}, \quad i \text{ over the days to expiry}
+$$
+
+A delta-hedged option position earns, approximately, the difference between the gamma-weighted realized variance and the implied variance it was bought at (lessons [E1](/vol/e1/) and [D7](/vol/d7/)). That is why the theoretical value of an option, and the outcome of any volatility trade, depend on this one number. Desks therefore spend their effort on estimating it; the other four volatilities are inputs to that estimate.
+
+</Pro>
+
+## Historical volatility: what already happened
+
+<Plain>
+
+**Historical volatility** is the same calculation pointed backwards: how much SPY swung over the last 10, 20, 60 days. It is the weather record. It is precise and anyone can compute it, but it answers a question about the past, and the answer depends heavily on how far back you look.
+
+</Plain>
+
+<Pro>
+
+The estimator is the formula above applied to a trailing window. Choices that change the number:
+
+- **Window length.** Short windows react quickly but are noisy; a 10-day estimate has only 10 observations, so its standard error is roughly $$\sigma/\sqrt{2n} \approx 22\%$$ of its own value.
+- **Mean.** Many desks set $$\bar r = 0$$; for daily data the difference is negligible.
+- **Data.** Close-to-close is standard. Range-based estimators (Parkinson, Garman-Klass, Yang-Zhang) use highs, lows and opens and are more efficient, but they need intraday data and are biased by gaps.
+
+</Pro>
+
+<HistVolWindows client:visible />
+<SnapshotNote detail="close-to-close, 252-day annualization" />
+
+At the snapshot, the windows disagree: **12.4%** over 10 days, **10.0%** over 20 and 60 days, **12.0%** over 120 days, and **12.7%** over the full year. Toggle the 10-day line on its own and watch it lurch from about 6% to 24%. The 120-day line barely moves. Neither is "right"; they answer different questions. Notice how every window jumped in March 2026, when SPY sold off to 631.97.
+
+## Implied volatility: the market's forecast
+
+<Plain>
+
+**Implied volatility** is the forecast built into option prices. Take an option's market price, run the pricing model backwards, and ask: what volatility would make the model's answer equal the price? That number is implied volatility ([lesson B6](/vol/b6/)).
+
+It is the market's consensus forecast plus a fee. Option sellers carry the risk of a storm, so they charge for it, and the forecast usually comes in a bit high.
+
+</Plain>
+
+<Pro>
+
+Implied volatility is the $$\sigma$$ that solves $$V_{\text{model}}(S,K,T,r,q,\sigma) = V_{\text{market}}$$. It is a price, quoted in volatility units, not a pure forecast: it embeds a **volatility risk premium** (compensation for the negative skewness of short-vol payoffs and for crash insurance demand) plus supply and demand at each strike. Index implied vol exceeds subsequently realized vol most of the time, as the next chart shows. VIX is a model-free 30-day implied measure for the S&P 500 built from a strip of options ([lesson C5](/vol/c5/)).
+
+</Pro>
+
+<VixVsForward client:visible />
+<SnapshotNote detail="VIX close each day vs SPY realized vol over the following 21 sessions; 236 days have a full window" />
+
+On **229 of 236 days (97%)**, VIX was above the volatility SPY went on to realize over the next 21 trading days. On average VIX read 18.1 while the following month realized 12.5%, a gap of **+5.6 points**. That is the premium in action.
+
+Now switch to **The gap** and look for the red. The forecast fell short only on **7 days, May 27 to June 4, 2026**: VIX sat near 15 to 16 just before the June 5 drop of 2.6%, SPY's worst day of the year. The premium protects sellers most of the time; it fails precisely when a calm market gets surprised.
+
+## Forecast volatility: your own estimate
+
+<Plain>
+
+A **forecast** is your own guess at future volatility, built from whatever you think matters: recent weather, long-run averages, upcoming events, what the market is pricing. Trading options is, at its core, comparing your forecast to the market's (implied) and acting when they differ by enough.
+
+</Plain>
+
+<Pro>
+
+Forecasts range from simple blends of historical windows to GARCH-family models that exploit volatility clustering and mean reversion ([lesson C6](/vol/c6/)). The trade decision is the comparison $$\sigma_{\text{forecast}}$$ vs $$\sigma_{\text{implied}}$$, net of the risk premium you require and of hedging costs. Because forecasts are noisy, desks size positions to the confidence of the forecast, not just its sign.
+
+</Pro>
+
+## Seasonal volatility
+
+<Plain>
+
+Some markets have stormy seasons on a calendar. Corn and soybeans swing most during the summer growing season; natural gas around winter; electricity around heat waves. A single stock has its own season every quarter: earnings day. Ignoring a known season is like booking a beach holiday without checking for hurricane season.
+
+</Plain>
+
+<Pro>
+
+Seasonality enters by weighting the variance of each calendar day differently. Total variance to expiry becomes a sum, $$\sigma^2_{\text{total}}T = \sum_i \sigma_i^2\,\Delta t_i$$, rather than a single $$\sigma^2T$$. The same algebra handles scheduled events: one earnings day can carry as much variance as weeks of ordinary trading ([lesson C7](/vol/c7/)). For a broad index over a month the effect is small, though weekends, holidays and macro announcements (CPI, FOMC) still create measurable day-to-day differences.
+
+</Pro>
+
+## All five on one screen
+
+<FiveVolDashboard client:visible />
+<SnapshotNote detail="historical from closes, implied from the 770 strike (Nov 27), VIX close" />
+
+<Plain>
+
+Here is the picture a trader saw on October 27, 2026. Recent weather was calm (**10.0%** over 20 days, **12.7%** over the year). The options market was forecasting **14.06%** for the month ahead, and VIX said **17.52**. A simple blend of the three gives a forecast of **12.2%**.
+
+So options were priced above every measure of recent history. That could mean they were expensive, or that the market expected something the past year didn't show. The grey band is the honest answer about the future: over the past year, 20-day realized vol landed between **10.3% and 14.2%** half the time.
+
+</Plain>
+
+<Pro>
+
+Reading the dashboard: implied (14.06%) sits near the 75th percentile of the 1-year distribution of 20-day realized vol, above the median of 12.1%. VIX exceeds ATM implied by about 3.5 points because it is a variance-swap-style measure that loads on the OTM put wing ([lesson C8](/vol/c8/)) and is computed on SPX rather than SPY. A short-vol view here rests on the premium being larger than the expected jump risk over the period; a long-vol view needs a catalyst the history doesn't contain.
+
+</Pro>
+
+## Common mistakes
+
+- **Calling historical volatility "the volatility".** It is a record of the past, and its value depends on the window.
+- **Treating implied as a pure forecast.** It includes a risk premium; for indexes it has run above realized most of the time.
+- **Comparing mismatched horizons.** Match a 30-day implied with a forward 21-trading-day realized, not with a 1-year number.
+- **Ignoring scheduled events.** A single earnings or macro day can dominate the variance of a short-dated option.
+
+<Takeaway>
+
+- Future volatility is the only one that settles an option's value, and it is unknown in advance.
+- Historical volatility measures the past; the window you choose changes the answer.
+- Implied volatility is the market's forecast plus a risk premium. Over this year VIX exceeded what followed on 97% of days, by 5.6 points on average.
+- Forecast volatility is your own estimate; trading means comparing it to implied.
+- Seasonal and event volatility make variance uneven across days, which matters most for commodities and earnings.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="C4"
+  questions={[
+    {
+      q: 'Which volatility ultimately determines whether a long option position, delta-hedged, made or lost money?',
+      options: ['Historical', 'Implied at the time of purchase', 'Future (realized over the option\'s life)', 'Seasonal'],
+      answer: 2,
+      why: 'The hedged position earns roughly the difference between what was realized over its life and the implied vol paid. Only future volatility settles that.',
+    },
+    {
+      q: 'SPY\'s 10-day historical vol is 12.4% while its 60-day is 10.0%. What is the best interpretation?',
+      options: [
+        'One of the calculations is wrong',
+        'The last two weeks were a bit more active than the last three months on average',
+        'Implied volatility must be 12.4%',
+        'Volatility will rise to 12.4%',
+      ],
+      answer: 1,
+      why: 'Different windows describe different stretches of the past. Short windows react faster and are noisier.',
+    },
+    {
+      q: 'Over the past year VIX exceeded subsequently realized SPY volatility on 97% of days. What does this mostly reflect?',
+      options: ['A data error', 'The volatility risk premium', 'Seasonal volatility', 'Dividends'],
+      answer: 1,
+      why: 'Index option buyers pay for protection, so implied volatility tends to sit above what is realized. The premium is the sellers\' compensation for tail risk.',
+    },
+    {
+      q: 'A stock reports earnings in three days. Which type of volatility explains why its front-week options carry a much higher IV than later months?',
+      options: ['Historical', 'Seasonal (event) volatility', 'Forecast', 'None; it is a mispricing'],
+      answer: 1,
+      why: 'A known event concentrates variance on one day. Spread over only a few days to expiry, it lifts the annualized IV of the front expiry far more than later ones.',
+    },
+  ]}
+/>
+
+<BookRef />

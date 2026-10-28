@@ -1,0 +1,171 @@
+---
+title: Conversions & reversals
+description: Build a conversion and a reversal from real SPY quotes, compute the locked-in result after spreads and financing, and see how market makers use them to lay off risk.
+lessonId: F3
+prereqs: [F2]
+minutes: 25
+bookRef: the chapter on option arbitrage
+---
+
+import ConversionCalc from '../../../components/widgets/f/ConversionCalc.tsx';
+import ConversionPayoff from '../../../components/widgets/f/ConversionPayoff.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+Put-call parity ([lesson F2](/vol/f2/)) says what the call and put *should* cost relative to the stock. A conversion and a reversal are the trades that enforce it: buy the cheap side, sell the expensive side, and hold a position whose outcome is known on day one.
+
+## Two mirror-image trades
+
+<Plain>
+
+A **conversion** has three parts at one strike and expiry:
+
+- **Buy** the stock.
+- **Sell** a call (you are taking someone's deposit).
+- **Buy** a put (you are buying insurance).
+
+The short call and long put together are a synthetic *short* stock ([lesson F1](/vol/f1/)), so you are long the real shares and short the copy. At expiry one of the options will be exercised and **your shares are sold at the strike, whatever the price**. You know today exactly what you'll get.
+
+A **reversal** (or reverse conversion) is the opposite: short the stock, buy the call, sell the put. At expiry you buy the shares back at the strike, whatever the price.
+
+</Plain>
+
+<Pro>
+
+Per share, a conversion opened at stock price $$S$$, call $$C$$ and put $$P$$ pays $$K$$ at expiry for a net outlay of $$S - C + P$$ today. Its value is therefore
+
+$$
+\text{Conversion P/L} = K - (S - C + P)\,e^{rT}
+$$
+
+and the reversal is its negative (with $$r$$ replaced by the rate earned on short-sale proceeds, net of any borrow fee). Put-call parity is the statement that both are zero. A conversion is profitable when $$C - P$$ is *rich* relative to $$S - Ke^{-rT}$$; a reversal when it is cheap. Before expiry the position has delta $$1 - (\Delta_C - \Delta_P) = 0$$, no gamma, no vega: it is pure financing.
+
+</Pro>
+
+## The flat line
+
+Each leg slopes; together they are flat. Hover to read each leg and the total at any SPY price.
+
+<ConversionPayoff client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, 770 strike, mid prices" />
+
+The 770 conversion at mid costs $769.66 − $13.90 + $11.24 = **$767.00** and delivers $770 at expiry: **+$3.00** at every price. Owning $767 of stock for 31 days at 4.6% costs **$3.00** in interest. Net: zero, to within a cent. That is parity holding, seen as a trade.
+
+<Plain>
+
+A conversion is a loan in disguise. You hand over $767 today and get $770 back on November 27, whatever SPY does. Each leg is a bet on direction, but the three bets cancel so completely that the interest is all that's left.
+
+</Plain>
+
+<Pro>
+
+The implied lending rate is $$\ln(770/767)\times 365/31 = 4.60\%$$, the chain's parity rate. The vendor deltas net to $$1 - 0.541 - 0.465 = -0.006$$ per share, and gamma and vega cancel to within the gap between the call and put Greeks at one strike. The flat line assumes two things: the options are exercised exactly as theory says at expiry, and nothing is assigned before then. Those assumptions are where the residual risks live: pin, early assignment and dividends ([lesson F5](/vol/f5/)).
+
+</Pro>
+
+## The calculator: no free lunch after spreads
+
+The real test is not mid prices; it's what you'd pay to actually trade. Pick a strike and switch between *mid* and *natural* (buying at the ask, selling at the bid on every leg).
+
+<ConversionCalc client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, bid/ask as quoted; SPY quote assumed 769.65 / 769.67" />
+
+<Plain>
+
+At the 770 strike the conversion is worth **−$0.002** per share at mid: essentially exactly zero. Cross the spreads and it costs **−$0.07** per share, or $73 on a 10-lot (1,000 shares). The reversal at the same strike is worse, **−$0.23** at natural, because the 0.25% fee to borrow the stock eats into the interest you earn on the short sale.
+
+Look around the chain. Some strikes show a small positive number at mid (760 conversion +$0.13) and others the reverse (800 reversal +$0.88). Switch to natural prices: most of the gains shrink or vanish. The one sizable survivor, the 800 reversal at +$0.61, comes from an American put worth more than the European formula, which is not free money ([lesson F6](/vol/f6/)). Spreads are what keep the market honest: any gap bigger than the bid/ask gets traded away in seconds.
+
+</Plain>
+
+<Pro>
+
+Three points about the numbers:
+
+1. **Value at mid vs natural.** The difference at 770 is $0.07 per share: one cent on the stock, three cents on each option. On the widest strikes (700, 720) it's about $1.40. Desks measure a conversion's edge against the natural price, or against where they can realistically work the order.
+2. **The deep strikes' "edge" is early exercise.** The 800 reversal shows +$0.88 at mid because it sells an American put worth about $1.37 more than its European value. The reversal trader is *short* that early-exercise right: the put may be assigned early, ending the trade before the interest is earned ([lesson F5](/vol/f5/)).
+3. **Financing is the real variable.** Slide the rate. At 770, every 0.1 point of financing is worth about $0.07 per share over 31 days. A firm that funds at 4.5% and one that funds at 5.0% will disagree about the fair price of every conversion, and each will trade the side that suits its balance sheet.
+
+</Pro>
+
+## How market makers use them
+
+<Plain>
+
+A market maker's job is to buy at the bid and sell at the ask all day, but customers don't arrive in neat matching pairs. Suppose customers keep buying 770 calls. The market maker ends up short calls with risk they don't want.
+
+They can neutralize it without finding a call seller: **buy stock and buy the 770 put**. Short call + long put + long stock is a conversion. The price risk is gone; what's left is a small, known financing result. The trader has turned unwanted call risk into a locked-in loan.
+
+</Plain>
+
+<Pro>
+
+On a desk, conversions and reversals are the plumbing that moves risk between strikes and between calls and puts:
+
+- **Laying off.** A short call position (from customer flow) becomes a conversion by buying stock and puts. Customers selling puts become a reversal by shorting stock and buying calls.
+- **Equivalent inventory.** Because a conversion is flat, a trader long calls and short puts at one strike is "long the synthetic"; adding short stock turns it into a reversal. Risk systems net calls, puts and stock through these identities.
+- **Financing desks.** Firms with cheap funding do conversions (they lend cash through the options market); firms with spare stock to lend, or cheap borrow, do reversals. The rate implied in conversions is a real funding market.
+- **Borrow costs.** When a stock is hard to borrow, reversals are expensive, so puts trade rich to calls. Put-call parity then implies a lower rate, sometimes a negative one, and the shortfall is really the borrow fee.
+
+</Pro>
+
+## Common mistakes
+
+- **Valuing at mid.** A conversion that looks like +$0.13 at mid may be −$0.03 after spreads. Always price at what you can trade.
+- **Forgetting financing.** The $3.00 "profit" at expiry on the 770 conversion is exactly the interest cost; without it the trade looks like free money.
+- **Treating a reversal like a conversion in reverse with the same rate.** The short-sale proceeds earn less than the funding rate once borrow fees are counted.
+- **Ignoring American exercise.** Edges that show up only at deep in-the-money strikes usually mean you're selling an early-exercise right.
+
+<Takeaway>
+
+- Conversion = long stock + short call + long put (same strike, expiry). Reversal = the opposite.
+- Both lock in a known result at expiry: the strike minus the net cost, minus financing.
+- At SPY's 770 strike the conversion is worth −$0.002 at mid and −$0.07 per share after crossing spreads: no free lunch.
+- Market makers use conversions and reversals to lay off call or put inventory without finding the opposite option.
+- The live variables are financing rate, borrow cost, and the early-exercise and pin risks of the next lesson.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="F3"
+  questions={[
+    {
+      q: 'Which position is a reversal?',
+      options: ['Long stock, short call, long put', 'Short stock, long call, short put', 'Long call, long put', 'Long stock, long put'],
+      answer: 1,
+      why: 'A reversal is short stock plus a synthetic long (long call, short put) at the same strike. At expiry you buy the stock back at the strike.',
+    },
+    {
+      q: 'A 770 conversion costs $767.00 per share and delivers $770 in 31 days. With financing at 4.6%, its value is about…',
+      options: ['+$3.00', '$0', '−$3.00', '+$0.07'],
+      answer: 1,
+      why: 'Interest on $767 for 31 days at 4.6% is about $3.00, which offsets the $3.00 gain at expiry. Parity holds.',
+    },
+    {
+      q: 'Customers have bought 50 of your 770 calls. Which trade turns your position into a conversion?',
+      options: ['Sell 5,000 shares and buy 50 puts', 'Buy 5,000 shares and buy 50 puts', 'Buy 5,000 shares and sell 50 puts', 'Buy 50 calls back'],
+      answer: 1,
+      why: 'Short call + long put + long stock is a conversion. Buying 5,000 shares and 50 puts neutralizes the price risk of the short calls.',
+    },
+    {
+      q: 'The 800 reversal shows +$0.88 per share at mid prices. The best explanation is…',
+      options: [
+        'A riskless arbitrage',
+        'The reversal sells an American put whose early-exercise value is not in the European parity formula',
+        'The call is mispriced',
+        'The stock borrow fee',
+      ],
+      answer: 1,
+      why: 'The deep in-the-money 800 put is worth about $1.37 more than its European value. The reversal is short that put and so short the right to exercise early; the apparent edge is payment for that risk.',
+    },
+  ]}
+/>
+
+<BookRef />

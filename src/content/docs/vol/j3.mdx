@@ -1,0 +1,181 @@
+---
+title: Intermarket spreading
+description: Compare the volatility of one market against another, read implied correlation from single-stock and index vol, and frame relative-value volatility trades.
+lessonId: J3
+prereqs: [J2, C7]
+minutes: 25
+bookRef: the chapter on intermarket spreading
+---
+
+import Dispersion from '../../../components/widgets/j/Dispersion.tsx';
+import TermCompare from '../../../components/widgets/j/TermCompare.tsx';
+import BasketSim from '../../../components/widgets/j/BasketSim.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+At the snapshot, Microsoft's December options were priced at **30.3%** implied volatility and SPY's at **14.7%**. Is MSFT "expensive"? On its own the question has no answer. Compared with SPY, with its own history, and with what correlation implies, it does. Intermarket spreading is the practice of pricing one market's volatility against another's.
+
+## Why index vol sits below its members
+
+<Plain>
+
+A single stock's weather can be stormy while the index is calm, because the storms do not all hit at once. When one stock falls on bad news, another rises on good news, and in the average they partly cancel.
+
+How much they cancel depends on how much the stocks **move together**. If every stock moved in lockstep, the index would be as volatile as any one of them. If they moved completely independently, the index of 500 stocks would barely move at all. Real markets sit in between: on the snapshot, an index made of 500 stocks each as volatile as MSFT would match SPY's volatility if their **correlation** (how closely they move together, from 0 for no connection to 1 for lockstep) averaged only about 0.23.
+
+</Plain>
+
+<Pro>
+
+For an equal-weight basket of $$N$$ stocks with common volatility $$\sigma$$ and average pairwise correlation $$\bar\rho$$:
+
+$$
+\sigma_{\text{index}}^2 = \sigma^2\left(\bar\rho + \frac{1-\bar\rho}{N}\right) \;\xrightarrow{N\ \text{large}}\; \bar\rho\,\sigma^2
+$$
+
+so index vol is roughly $$\sigma\sqrt{\bar\rho}$$. Turned around, the **implied correlation** is
+
+$$
+\bar\rho_{\text{impl}} \approx \left(\frac{\sigma_{\text{index}}}{\sigma}\right)^2 = \left(\frac{14.74}{30.31}\right)^2 = 0.24
+$$
+
+(0.23 with the $$N = 500$$ correction), using SPY and MSFT December implied vols as stand-ins. A proper calculation uses index weights and each member's own implied vol: $$\sigma_I^2 = \sum_i w_i^2\sigma_i^2 + \bar\rho\sum_{i\ne j} w_i w_j \sigma_i\sigma_j$$. CBOE publishes implied-correlation indices built this way.
+
+</Pro>
+
+<Dispersion client:visible />
+<SnapshotNote detail="Dec 18, 2026 ATM implied vol: MSFT 530 strike 30.3%, SPY 770 strike 14.7%" />
+
+Drag correlation to 1 and the index vol rises to the member vol: no diversification. Drag it toward 0 and index vol collapses. At the default 0.23 the curve passes almost exactly through SPY's 14.7%. In selloffs, correlations jump toward 0.5 or higher, which by this formula pushes index vol up even if single-stock vols do not move: at 0.5 correlation the same 30.3% members give a 21.5% index.
+
+## Comparing term structures: the earnings bump
+
+<Plain>
+
+Comparing two markets' volatility is only fair when they face the same weather. MSFT reports earnings on October 28 after the close. Its options expiring that week carry the whole earnings move in a few days, so their implied volatility is enormous (about **75%** for the October 30 expiry). By December the earnings day is diluted across 52 days and the number falls to 30.3%.
+
+SPY has no single earnings day, so its curve is nearly flat around 14% to 15%. Putting the two side by side shows how much of MSFT's premium is "event" and how much is everyday volatility.
+
+</Plain>
+
+<Pro>
+
+Model total variance to expiry as a base diffusive vol plus one jump on the event day:
+
+$$
+\sigma_{\text{impl}}^2(T)\,T = \sigma_{\text{base}}^2\,T + E^2
+$$
+
+Solving from the 10-day (45.2%) and 52-day (30.3%) MSFT points gives $$\sigma_{\text{base}} = 25.5\%$$ and an earnings move $$E = 6.2\%$$, about **±$33** on $531.33. The fit reproduces the 24-day point (35.1% vs 35.1% quoted) and slightly under-states the 3-day (72.7% vs 74.8%), as expected when the event dominates and the very front also carries a wider short-dated smile.
+
+The cross-market ratio changes meaning by expiry: MSFT/SPY is 2.06× in December, but **1.73×** on base volatility alone. A trader comparing MSFT and SPY vol for a relative-value view uses the event-stripped number, otherwise any comparison done before earnings looks like MSFT is far too rich.
+
+</Pro>
+
+<TermCompare client:visible />
+<SnapshotNote detail="MSFT 530-strike and SPY 770-strike ATM implied vols by expiry" />
+
+## Seeing diversification happen
+
+The formula says a basket is less volatile than its members. Here is the same idea with two simulated stocks: change the correlation and watch the thick basket line calm down.
+
+<BasketSim client:visible />
+
+At correlation 1, the basket and both stocks move together and the basket's realized vol matches theirs. At 0.30, two 30% stocks make a basket of about 24%. At 0, about 21%. At −0.50 it falls to 15%. Each draw is noisy (click **New paths**), but the basket's realized vol tracks the formula $$\sqrt{\tfrac14\sigma_A^2 + \tfrac14\sigma_B^2 + \tfrac12\rho\,\sigma_A\sigma_B}$$ closely.
+
+<Plain>
+
+Each stock keeps its own stormy weather. The basket is calmer only because on many days one zigs while the other zags. The less they move together, the more their swings cancel, and at negative correlation they actively offset each other. Nothing about either stock changed; only how they line up.
+
+</Plain>
+
+<Pro>
+
+With equal weights and equal vols the formula reduces to $$\sigma_B = \sigma\sqrt{(1+\rho)/2}$$: 30% × √0.65 = 24.2% at ρ = 0.30. Two names cannot reach the large-basket limit $$\sigma\sqrt{\rho}$$: at ρ = 0 the floor is $$\sigma/\sqrt2$$ = 21.2%, not zero, because the $$(1-\bar\rho)/N$$ term is still a half. The scatter between draws is sampling error: a one-year realized vol from 252 daily returns has a standard error of about $$\sigma/\sqrt{2n}$$, roughly 1.1 points for a 24% basket. Dispersion trades settle on realized correlation, which is just as noisy.
+
+</Pro>
+
+## Relative-value thinking
+
+<Plain>
+
+An intermarket volatility spread buys the volatility of one market and sells another's, betting on the **relationship** rather than on either level. Examples:
+
+- **Single stock vs index.** Buy MSFT straddles, sell SPY straddles, if you think MSFT will move more than its usual multiple of the market.
+- **Dispersion.** Sell index options and buy options on the members. It profits when stocks move a lot individually but cancel in the index, which happens when correlation is low.
+- **VIX vs SPY options.** VIX options and futures are bets on future SPY implied volatility. A trader might own VIX calls against short SPY puts, or the reverse, depending on which product prices a volatility spike more cheaply.
+
+None of these is a free hedge. Each one swaps outright volatility risk for a **correlation** or **basis** risk.
+
+</Plain>
+
+<Pro>
+
+Three working points for cross-market vol trades:
+
+- **Vega-weight, do not contract-weight.** One SPY December straddle has about 2.29 vega (1.146 + 1.141 per vol point); size the other leg so that vega exposures, not notional, match the view. The vega ratio should also reflect how far each leg's implied vol tends to move when the other's does (its vol beta), which is rarely one point for one point.
+- **Dispersion is short correlation.** Long member vol, short index vol is approximately short implied correlation; it earns when realized correlation comes in below the 0.23-ish implied level and suffers in sell-offs, when correlation spikes and index vol outruns the members. The persistent tendency for index implied correlation to exceed realized is the correlation risk premium, a relative of the index volatility risk premium in [lesson C2](/vol/c2/).
+- **VIX is not SPY's volatility.** VIX is a 30-day model-free implied variance measure on SPX (17.52 at the snapshot, above the 14.1% ATM vol because it includes the expensive downside wings). VIX options price the volatility of that forecast, so a VIX-vs-SPY trade is a bet on the skew and the vol-of-vol, not just on the level ([lesson C5](/vol/c5/)).
+
+</Pro>
+
+## Common mistakes
+
+- **Comparing implied vols across an event.** MSFT's 75% front-week vol is mostly earnings; compare base vols or the same post-event expiry.
+- **Hedging a single-stock vol position with index vol one-for-one.** The legs have different vega, different vol betas, and an unhedged correlation exposure.
+- **Assuming correlation is stable.** It spikes in selloffs, which is exactly when short-correlation trades lose most.
+- **Treating VIX as SPY ATM implied vol.** VIX includes the skew and is usually several points higher.
+
+<Takeaway>
+
+- Index vol ≈ average member vol × √(average correlation): diversification is why SPY at 14.7% sits far below MSFT at 30.3%.
+- Implied correlation backed out from these two December vols is about 0.23 to 0.24.
+- Strip events before comparing: MSFT's base vol is about 25.5% with a ±6.2% earnings move; the base ratio to SPY is 1.73×, not 2.06×.
+- Intermarket and dispersion spreads swap outright vega for correlation and basis risk; size legs by vega.
+- VIX is a model-free 30-day variance measure (17.52) that includes the skew, so it trades above SPY ATM vol.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="J3"
+  questions={[
+    {
+      q: 'An index has 500 members, each with 30% vol, and average pairwise correlation 0.25. Roughly what is index vol?',
+      options: ['7.5%', '15%', '22.5%', '30%'],
+      answer: 1,
+      why: 'Index vol ≈ σ√ρ = 30% × √0.25 = 15%. The (1 − ρ)/N term adds very little with 500 members.',
+    },
+    {
+      q: 'Single-stock implied vols stay the same, but index implied vol rises. What has the market raised?',
+      options: ['Dividend expectations', 'Implied correlation', 'The interest rate', 'Single-stock skew'],
+      answer: 1,
+      why: 'With member vols fixed, index vol can only rise through higher correlation: ρ ≈ (σ_index / σ)².',
+    },
+    {
+      q: 'Why compare MSFT and SPY using MSFT’s base (ex-earnings) vol rather than its front-week vol?',
+      options: [
+        'Front-week options are illiquid',
+        'The front week packs the whole earnings jump into a few days, inflating its implied vol',
+        'Base vol is always higher',
+        'SPY has no front-week options',
+      ],
+      answer: 1,
+      why: 'The 3-day MSFT option at about 75% IV is mostly pricing one earnings move. Stripping it out gives the everyday vol that can be compared to SPY.',
+    },
+    {
+      q: 'A dispersion trade (long member options, short index options) makes money most clearly when…',
+      options: ['Correlation spikes in a selloff', 'Stocks move a lot individually but offset each other in the index', 'All volatility falls together', 'Rates rise'],
+      answer: 1,
+      why: 'Dispersion is short correlation. It wins when members realize high vol but low correlation, so the index stays calm.',
+    },
+  ]}
+/>
+
+<BookRef />

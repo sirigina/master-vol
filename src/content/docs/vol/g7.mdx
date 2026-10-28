@@ -1,0 +1,168 @@
+---
+title: Choosing the right volatility spread
+description: Work through the questions that narrow a volatility view to a spread family (implied vs forecast, move size, term structure, skew, risk tolerance and direction), and compare candidates at equal theoretical edge.
+lessonId: G7
+prereqs: [G2, G3, G4, G5, G6]
+minutes: 25
+bookRef: the chapter on volatility spreads
+---
+
+import SpreadSelector from '../../../components/widgets/g/G7_SpreadSelector.tsx';
+import EdgeTable from '../../../components/widgets/g/G7_EdgeTable.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+The previous lessons built the spreads one at a time. In practice you start from a view and have to pick one. Two traders who agree that SPY options are expensive can sensibly choose a short straddle, an iron condor, a butterfly or a ratio spread. This lesson is about how that choice gets made, and how to compare candidates fairly.
+
+## Question 1: is implied cheap or rich?
+
+<Plain>
+
+Everything starts with comparing two weather forecasts: the one priced into options (implied volatility) and your own. On October 27 the November options implied about **14.0%**. SPY had moved at only about 10% over the previous 20 days and about 12.7% over the past year.
+
+- If you expect calmer weather than the options price, you want to **sell** volatility: positions that profit when SPY moves less than expected.
+- If you expect stormier weather, you want to **buy** volatility.
+- If your forecast is close to implied, there is no volatility trade. A spread chosen without an edge is just paying the bid/ask.
+
+</Plain>
+
+<Pro>
+
+The sign of $$\sigma_{\text{forecast}} - \sigma_{\text{implied}}$$ picks the side: positive vega/gamma spreads (long straddles and strangles, backspreads, long iron condors) when it is positive, negative (short straddles and strangles, ratio spreads, long butterflies, short iron condors) when negative. Its size, relative to forecast uncertainty and transaction costs, decides whether to trade at all. Lessons [C6](/vol/c6/) and [G2](/vol/g2/) cover forecasting and the classification of spreads by the sign of gamma and vega.
+
+A subtlety: a long volatility position is right if realized volatility over its life exceeds implied (gamma), or if implied rises before you exit (vega). These are different bets. A long straddle held to expiry is mostly a realized-vol bet; a long 6-month option held a week is mostly an implied-vol bet.
+
+</Pro>
+
+## Questions 2 to 6: moves, direction, skew, term and risk
+
+Once the side is known, five more questions narrow the family.
+
+<Plain>
+
+- **How will the moves come?** Steady drift and a sudden jump can produce the same overall volatility. A sudden jump is great for positions with far-out options you own (backspreads, strangles) and terrible for positions with far-out options you sold.
+- **Do you have a directional lean?** Ratio spreads and backspreads tilt a volatility trade toward one side: a call backspread does best on a big rally, a put ratio spread is happiest with a modest drop.
+- **Is one part of the price list mispriced?** If downside puts look overpriced relative to the rest (rich skew), sell them; if they look cheap, own them.
+- **Which month?** If November looks expensive relative to December, a calendar lets you sell November and own December.
+- **How much can you stand to lose?** Some positions have a known worst case (butterflies, iron condors, long options). Others don't (short straddles, ratio spreads). Writing that limit down first eliminates half the choices.
+
+</Plain>
+
+<Pro>
+
+| Question | If… | Favours |
+| --- | --- | --- |
+| Distribution of moves | jump risk, fat tails | long wings: backspreads, long strangles; avoid short wings |
+| | steady, mean-reverting | short ATM gamma: short straddles, butterflies |
+| Direction | upside bias | call backspread (long vol), call ratio spread (short vol) |
+| | downside bias | put backspread (long vol), put ratio spread (short vol) |
+| Skew | downside puts rich vs ATM | sell OTM puts: short strangle, put ratio, iron condor |
+| | downside puts cheap | own OTM puts: put backspread, long strangle |
+| Term structure | front month rich vs back | long calendar |
+| | back month rich vs front | short calendar (the snapshot's 15.7% Nov–Dec forward vol leans this way) |
+| Risk tolerance | must be capped | butterflies, condors, long options, backspreads, calendars |
+| | can carry open-ended | short straddles/strangles, ratio spreads |
+
+Some answers conflict. A short-vol trader worried about jumps should prefer a butterfly or iron condor to a short straddle even though both are short volatility; a long-vol trader who also thinks puts are rich faces a choice between owning puts that are expensive or buying a call backspread that ignores the downside. Ranking is about trade-offs, not a single right answer.
+
+</Pro>
+
+<SpreadSelector client:visible />
+<SnapshotNote detail="Nov 27 and Dec 18, 2026 expiries, mid prices; edge from the snapshot smile shifted by your forecast" />
+
+Start with the defaults (forecast 11%, steady moves, no direction, limited risk): the long butterfly and short iron condor rank first, because the forecast says sell volatility and the risk setting excludes anything open-ended. Switch risk to **Can carry open-ended** and skew to **Rich**: the short strangle and put ratio spread move up because they also sell the expensive downside puts. Now set the forecast to 17%, **Jump risk** and **Down**: the put backspread leads. Finally, set the forecast back to 14% and the term view to **Nov**: with no edge in the level of volatility, only the calendar has a reason to exist.
+
+## Comparing candidates at equal edge
+
+Two spreads with the same view can carry very different risks for the same expected payoff. The fair way to compare them is to scale each to the **same theoretical edge** and then look at what you have to carry.
+
+<Plain>
+
+Suppose your forecast says SPY options are overpriced and each candidate spread would, on average, earn you something. A short straddle earns a lot per contract but can lose a lot; a butterfly earns less per contract but its worst case is small. Comparing one contract of each is apples to oranges. Instead, ask: how many of each would I need to trade to expect the same $200, and what is the worst outcome of *that* position?
+
+</Plain>
+
+<Pro>
+
+For a spread with theoretical edge $$e$$ per unit at the forecast vol, size it at $$n = E^{*}/e$$ for a target edge $$E^{*}$$, then compare risk measures of the scaled position: here, the worst P/L on November 27 for SPY within ±2 standard deviations (≈±$63), plus Greeks. The ratio $$E^{*}/|\text{worst}|$$ is a crude edge-per-unit-risk.
+
+At an 11% forecast (3 points under implied) and $200 target edge:
+
+| Spread | Contracts | Worst ±2 SD | Edge ÷ risk | Vega |
+| --- | --- | --- | --- | --- |
+| Long butterfly 750/770/790 | 1.8 | −$942 | 0.212 | −$53 |
+| Short iron condor 740/750/790/800 | 1.8 | −$1,136 | 0.176 | −$57 |
+| Short straddle 770 | 0.4 | −$1,419 | 0.141 | −$66 |
+| Short strangle 750/790 | 0.5 | −$1,561 | 0.128 | −$70 |
+| Put ratio 770/2×750 | 1.3 | −$2,967 | 0.067 | −$74 |
+| Call ratio 770/2×790 | 1.3 | −$3,617 | 0.055 | −$78 |
+
+At 17% (3 points over), the long strangle leads at **0.437** because its worst case is the premium, followed by the long straddle (0.213) and long iron condor (0.210); the backspreads trail because their worst case sits at the long strike. Two caveats: edge here assumes your forecast applies uniformly to every strike's IV (the skew is kept, not traded), and ±2 SD hides the tail where open-ended spreads do their damage. Lesson [H1](/vol/h1/) develops this comparison with proper risk measures.
+
+</Pro>
+
+<EdgeTable client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, mid prices; ±2 SD at the 14.0% implied ATM vol" />
+
+The pattern holds across forecasts: **positions that cap the tail tend to deliver more edge per unit of worst-case risk**, but they need more contracts (more commissions and bid/ask) and earn less per day. Open-ended spreads earn their edge with fewer contracts and larger tails. Neither is better in general; the table makes the trade-off explicit.
+
+## Common mistakes
+
+- **Choosing the spread before the view.** "I like iron condors" is a habit, not a view. Start from the implied-vs-forecast gap.
+- **Comparing one contract of each.** Edge and risk scale with size; compare at equal edge or equal risk.
+- **Ignoring skew in strike selection.** Selling the 750 put and selling the 790 call are different trades at different IVs (16.5% vs 12.2% quoted).
+- **Using calendars for a level view.** A calendar is mostly a term-structure trade; a forecast that applies equally to both months moves its value far less than a straddle's ($78 vs $537 per contract for a 3-point lower forecast).
+
+<Takeaway>
+
+- The side (long or short volatility) comes from comparing your forecast with implied; no gap, no trade.
+- Move size, direction, skew, term structure and risk tolerance then narrow the family.
+- Short wings suit steady markets; long wings suit jump risk. Ratios and backspreads add a directional tilt.
+- Compare candidates at equal theoretical edge, then look at worst case, Greeks and costs.
+- Capped-risk spreads usually give more edge per unit of worst-case risk but need more contracts.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="G7"
+  questions={[
+    {
+      q: 'Your forecast is 11% against 14% implied, but you worry about a sudden gap. Which family fits best?',
+      options: ['Short straddle', 'Call ratio spread', 'Short iron condor or long butterfly', 'Long strangle'],
+      answer: 2,
+      why: 'The forecast says sell volatility; the jump worry says cap the tails. Iron condors and butterflies are short volatility with a known worst case.',
+    },
+    {
+      q: 'You expect more volatility than implied, mainly through a sharp rally. Which spread matches?',
+      options: ['Call backspread', 'Put ratio spread', 'Long calendar', 'Short strangle'],
+      answer: 0,
+      why: 'A call backspread (sell one lower call, buy two higher calls) is long volatility with its biggest gains on a large upward move.',
+    },
+    {
+      q: 'Why compare spreads at equal theoretical edge rather than one contract each?',
+      options: [
+        'Because all spreads have the same margin',
+        'Because edge and risk both scale with size, so per-contract numbers are not comparable',
+        'Because theoretical edge is always the same per contract',
+        'Because it removes the need to consider tail risk',
+      ],
+      answer: 1,
+      why: 'One short straddle and one butterfly differ in both edge and risk. Scaling to the same edge lets you see which carries less risk for the same expected profit.',
+    },
+    {
+      q: 'Downside puts look expensive relative to at-the-money options, and you are short volatility. Which choice uses that view?',
+      options: ['Long strangle', 'Short strangle or put ratio spread', 'Long straddle', 'Short calendar'],
+      answer: 1,
+      why: 'Both sell out-of-the-money puts, collecting the rich skew as well as the overall volatility premium.',
+    },
+  ]}
+/>
+
+<BookRef />

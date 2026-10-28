@@ -1,0 +1,208 @@
+---
+title: Practical risk management
+description: Set Greek limits, bucket risk by expiry, size positions from a stress loss rather than from margin, and see how a short-volatility book behaves in its left tail.
+lessonId: H4
+prereqs: [H3]
+minutes: 25
+bookRef: the chapters on risk analysis
+---
+
+import SizingCalc from '../../../components/widgets/h/SizingCalc.tsx';
+import ExpiryBuckets from '../../../components/widgets/h/ExpiryBuckets.tsx';
+import StressReplay from '../../../components/widgets/h/StressReplay.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+A theoretical edge only pays if you are still in business when it arrives. Professional option desks survive on a short list of habits: limits on each Greek, attention to *where* the risk sits, size set by what a bad day would cost, and a firm rule against tail exposure they could not survive. This lesson builds each one with SPY numbers.
+
+## Size from the stress loss
+
+<Plain>
+
+The most common way traders blow up is not a bad idea; it is a **good idea at the wrong size**.
+
+Selling a strangle on SPY collects a deposit (the premium) from other traders who want protection. Most months, nothing much happens and you keep it. But you are the insurance company, and the question that matters is: **how many policies can I write before one storm sinks me?**
+
+Work it backwards:
+
+1. Decide the most you are willing to lose in a realistic bad scenario, say **10%** of a $250,000 account: $25,000.
+2. Price the position in that scenario. If SPY drops 10% and VIX goes to 35, one short 750/790 strangle loses about **$5,330**.
+3. Divide: $25,000 ÷ $5,330 = **4 strangles**. Not 20, not "whatever margin allows".
+
+Four strangles collect only $4,152. That feels small. It is the honest price of the risk.
+
+</Plain>
+
+<Pro>
+
+Stress-based sizing replaces "how much margin do I have?" with
+
+$$
+N_{\max} = \left\lfloor \frac{L_{\text{acceptable}}}{\;-\,\Pi_{\text{stress}}\;} \right\rfloor
+$$
+
+where $$\Pi_{\text{stress}}$$ is the full-revaluation P/L of one unit in the chosen scenario. Here the scenario is an instant −10% in SPY with every strike's IV multiplied by $$35/17.52 \approx 2.0$$ (the smile keeps its shape). Results per unit, against the entry marks:
+
+| | Credit | Stress loss | Loss ÷ credit | Max units at $25k |
+| --- | --- | --- | --- | --- |
+| Short 750/790 strangle | $1,038 | $5,330 | 5.1× | 4 |
+| 720/750/790/820 iron condor | $729 | $866 | 1.2× | 28 |
+
+The condor's wings cap its expiry loss at $2,271 per unit, so it can also be sized on its absolute worst case (11 units at $25k); the strangle has no such cap. Margin rules often permit far more: portfolio margin on a strangle is itself a scenario scan, but on the exchange's assumptions, not yours.
+
+</Pro>
+
+<SizingCalc client:visible />
+<SnapshotNote detail="Nov 27, 2026 marks; stress repricing is a model, not a margin calculation" />
+
+Move the stress sliders. At −20% with VIX 50, the strangle's loss per unit grows to about $12,450; the condor's to about $1,430. The condor gives up some credit in exchange for a stress loss that grows far more slowly than the scenario.
+
+## Limits on each Greek
+
+<Plain>
+
+A desk gives each trader limits, like speed limits on a road:
+
+- **Delta limit:** how much the book can act like owning (or being short) the market. Example: no more than $500,000 of SPY exposure either way.
+- **Gamma limit:** how fast that exposure is allowed to change, so a big move cannot turn a hedged book into a large bet in a single afternoon.
+- **Vega limit:** how much the book can make or lose per point of implied volatility.
+- **Stress limit:** the worst grid scenario must stay under a fixed dollar number.
+
+The first three are about sensitivity. The last is about survival. Most experienced risk managers trust the last one most.
+
+</Plain>
+
+<Pro>
+
+Typical limit structure on an options desk:
+
+- **Dollar delta** $$|\Delta_P S| \le D$$, hedged intraday when breached.
+- **Gamma per 1% move** $$|\Gamma_P\,S/100| \le G$$ shares, the delta drift you must re-hedge after a 1% move. For the condor that is about 10 shares per unit; at 28 units, about 285 shares of SPY to trade for every 1% move.
+- **Vega** limits, both **net** and **by expiry bucket** (next section).
+- **Scenario loss** on the price × vol grid from [lesson H3](/vol/h3/), often with a separate crash scenario (−15% to −25%).
+- **Concentration** limits: share of open interest, single strike, single expiry, and liquidity (days to unwind at normal volume).
+
+Limits are set relative to capital and to each other: a book at its vega limit with a large short-gamma position is closer to its stress limit than either number shows alone.
+
+</Pro>
+
+## Concentration by expiry
+
+<Plain>
+
+Net vega can lie. Here is a sample book: short straddles and strangles in November, long straddles in December and March. Add up its vega and it is nearly **flat**: only −$406 per volatility point. Looks safe.
+
+Now split it by expiry. It is **short $3,281** of vega in the November expiries and **long $2,876** in December and March. That is not "no volatility risk". It is a bet that short-dated volatility falls *relative to* long-dated volatility. If the front month spikes (as it does in every sell-off), the short side reprices much more than the long side.
+
+Gamma tells the same story: the book's net gamma (−68 shares per dollar) sits mostly in the November 6 expiry (−42 of the −68), ten days out.
+
+</Plain>
+
+<Pro>
+
+Short-dated implied vol moves more than long-dated: the term structure flattens or inverts in stress (ATM IV here runs 14.7% at 10 days, 15.9% at 143 days; in March 2026 VIX moved more than a year-out vol would). A common correction is **weighted vega**: scale each bucket's vega by $$\sqrt{30/\text{DTE}}$$ so that one "point" means a comparable shock across expiries. On that measure the sample book is **−$2,529**, six times its raw net vega and clearly short.
+
+Desks therefore limit vega per expiry bucket and per tenor-weighted total, and they stress the term structure separately (front +8, back +3, for example). Gamma concentration in the nearest expiry is also a pin risk and liquidity risk going into expiration day (lesson [D3](/vol/d3/)).
+
+</Pro>
+
+<ExpiryBuckets client:visible />
+<SnapshotNote detail="770-strike IVs from the term structure plus the Nov 27 / Dec 18 chains" />
+
+## The left tail: a stress replay
+
+<Plain>
+
+Short volatility makes small, steady gains most of the time and occasionally gives back many months of them at once. The March 2026 drawdown is a real example: SPY fell from 695.49 in late January to **631.97** on March 30, about 9%, and VIX climbed from about 16 to **31.05**.
+
+The figure below sells a four-week strangle 5% out of the money on a chosen date and marks it to model every day.
+
+- **Sold February 27** (SPY 685.99, VIX 19.86): collected about $519. It expired on March 27, with SPY at 634.09, deep through the 650 put: a loss of **$1,072**, twice the credit.
+- **Sold March 6**, after VIX had already jumped to 29.49: the higher premium ($1,432) gave room, and it ended up keeping almost all of it.
+- **Sold March 20**: the trade then lost on the *upside* as SPY rallied nearly 10% in four weeks. The tail is not only on the downside.
+
+Same rule, four dates, very different outcomes. The rule was not wrong; the size decides whether a bad month is a lesson or the end.
+
+</Plain>
+
+<Pro>
+
+The replay is a **historical stress**, not a backtest. Each day it prices the two strikes with Black-Scholes, taking each strike's IV as the snapshot's November smile (as a ratio to VIX, by moneyness) scaled by that day's VIX close. That keeps the skew and lets the level track the market, but VIX is a 30-day SPX index, not a strike quote; treat the dollar figures as illustrative.
+
+What it shows reliably is the structure of the left tail: marks deteriorate before expiry through vega and gamma together, the worst mark tends to coincide with the VIX peak, and short-premium P/L is a **concave** function of the path. A position sized to survive the stress scenario at entry can still be forced out at the worst mark if the trader's limits are breached first, which is why desks keep a buffer between the stress limit and the capital they actually have.
+
+</Pro>
+
+<StressReplay client:visible />
+<SnapshotNote detail="SPY and VIX daily closes Feb–Apr 2026; option values are model estimates from VIX-scaled IVs" />
+
+## Common mistakes
+
+- **Sizing on margin or on credit.** Neither tells you what a bad day costs. Size from a stress loss you have chosen and priced.
+- **Trusting net vega across expiries.** Bucket it, and weight short-dated vega more heavily.
+- **Selling naked tails "because they never get there".** The 650 put is 15.5% out of the money; SPY fell 9% from peak to trough within the last year. A tail you cannot survive is not a risk you can manage.
+- **Treating the stress scenario as the worst case.** It is a chosen story. Markets can do worse, and they do not wait for you to rehedge.
+
+<Takeaway>
+
+- Size positions from the loss in a priced stress scenario, not from margin or premium.
+- Set limits on delta, gamma, vega and scenario loss; the scenario limit is the one about survival.
+- Bucket vega and gamma by expiry. A flat net vega can hide a large front-month short.
+- Short-volatility books have a concave left tail: small steady gains, rare large losses that arrive with rising VIX.
+- Defined-risk structures (wings) trade some credit for a stress loss that grows far more slowly than the scenario.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="H4"
+  questions={[
+    {
+      q: 'Your stress scenario costs $2,000 per unit and you accept at most $30,000 in that scenario. What is the maximum size?',
+      options: ['6 units', '15 units', '30 units', 'Whatever margin allows'],
+      answer: 1,
+      why: '$30,000 ÷ $2,000 = 15 units. Margin is a separate constraint and is often much looser than a stress-based limit.',
+    },
+    {
+      q: 'A book’s net vega is −$400 per point, made of −$3,300 in front-month expiries and +$2,900 in later ones. Which is the main risk?',
+      options: [
+        'Almost none: net vega is small',
+        'A rise in front-month implied vol relative to back-month vol',
+        'A parallel fall in all implied vols',
+        'Interest-rate changes',
+      ],
+      answer: 1,
+      why: 'Front-month vol moves more than back-month vol, especially in sell-offs. The book is effectively short the front of the term structure.',
+    },
+    {
+      q: 'In the sizing example, why can the iron condor be traded in much larger size than the short strangle?',
+      options: [
+        'It collects more premium',
+        'Its long wings cap the loss, so the stress loss per unit is much smaller',
+        'It has no vega',
+        'It has positive gamma',
+      ],
+      answer: 1,
+      why: 'At −10% / VIX 35 the condor loses about $866 per unit against $5,330 for the strangle. The wings cost $309 of credit but cut the tail.',
+    },
+    {
+      q: 'The strangle sold on February 27, 2026 expired with a loss of about twice its credit. What lesson does that support?',
+      options: [
+        'Never sell options',
+        'Short strangles lose money on average',
+        'Size so that a loss of several times the credit is survivable',
+        'Only sell when VIX is low',
+      ],
+      answer: 2,
+      why: 'One path says nothing about average profitability. It shows that losses of several credits happen, and sizing must make them survivable. (The March 6 trade, sold at VIX 29.49, kept nearly all its premium.)',
+    },
+  ]}
+/>
+
+<BookRef />

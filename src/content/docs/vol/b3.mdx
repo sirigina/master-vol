@@ -1,0 +1,200 @@
+---
+title: Carrying costs & the forward
+description: Compute the forward price from interest and dividends, explain why an at-the-money call is worth more than the put, and back the market's interest rate out of a call and a put.
+lessonId: B3
+prereqs: [B2]
+minutes: 25
+---
+
+import ForwardCurve from '../../../components/widgets/b/ForwardCurve.tsx';
+import ParityChain from '../../../components/widgets/b/ParityChain.tsx';
+import CarryBar from '../../../components/widgets/b/CarryBar.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+SPY closed at 769.66, so the 770 strike is almost exactly at the money. Yet the 770 call cost **$13.90** and the 770 put only **$11.24**. If volatility says nothing about direction, why is the call worth $2.66 more? The answer is the cost of carrying stock, and it leads to the single most useful identity in options.
+
+## The cost of carry
+
+<Plain>
+
+Suppose you want to own SPY on November 27, not today. You have two ways to get there:
+
+- **Buy it now.** You pay $769.66 today. That money could have sat in the bank earning about 4.6% a year, so you give up roughly **$3.01** of interest over the 31 days. In exchange you'd collect any dividends paid in that time (none before November 27 here).
+- **Agree today to buy it later.** You keep your cash in the bank until November 27, then pay an agreed price.
+
+For the two routes to be equally good, the agreed future price has to include the interest you didn't give up: about **$772.67**. That agreed price is the **forward price**. The difference from today's price, about $3.01, is the **cost of carry**.
+
+</Plain>
+
+<Pro>
+
+With a continuously compounded rate $$r$$ and dividend yield $$q$$, the forward price for delivery at $$T$$ is
+
+$$
+F = S\,e^{(r-q)T}
+$$
+
+Proof by arbitrage: if the forward traded above this, sell it, borrow $$S$$, buy the stock, and collect dividends; at $$T$$ deliver the stock and repay the loan, keeping the difference. Below it, do the reverse. For SPY on the snapshot, $$F = 769.66\,e^{0.046 \times 31/365} = 772.67$$.
+
+Dividends work in the other direction: a holder of the stock receives them and a holder of the forward does not, so they lower $$F$$. SPY yields roughly 1.1% a year, paid quarterly with ex-dates around the third Friday of March, June, September and December. None falls before November 27, so $$q = 0$$ is the right choice for this expiry; for longer ones it is not.
+
+</Pro>
+
+<ForwardCurve client:visible />
+<SnapshotNote detail="dots: forward implied by the 770 call and put of each expiry, Nov 6, 2026 to Dec 17, 2027" />
+
+The blue curve is the forward at your rate and dividend inputs. The orange dots are the forwards the option market itself implies, worked out from each expiry's 770 call and put (the method is in the next section). With the defaults (4.6%, no dividend), the dots sit on the curve through November and then fall below it. Slide the dividend yield to about **1.0%** and the long-dated dots fall close to the curve: the market is pricing SPY's dividends from December on. The November 27 dot sits right at 772.67, because that expiry is where the 4.6% rate was measured.
+
+## Put-call parity: the rate hidden in the chain
+
+<Plain>
+
+Own a call and sell a put at the same strike and expiry, and you have locked in buying SPY at 770 on November 27 no matter what. If SPY finishes above 770, you exercise your call. If below, the put you sold is exercised against you. Either way you end up paying 770 for SPY.
+
+That's the same as agreeing a forward deal at 770. Since the forward fair price is 772.67, a deal at 770 is a bargain worth about $2.67 to the buyer, so the call has to cost about $2.67 more than the put. In the real market it costs $13.90 − $11.24 = **$2.66** more. The interest you save by paying later is what makes the call more valuable.
+
+</Plain>
+
+<Pro>
+
+For European options on a non-dividend-paying underlying:
+
+$$
+C - P = S - K e^{-rT}
+$$
+
+Long call plus short put pays $$S_T - K$$ in every state, which is also the payoff of long stock financed by borrowing $$Ke^{-rT}$$. Same payoff, same price. Rearranged, the identity gives the rate the options market is using:
+
+$$
+r = -\frac{1}{T}\ln\!\left(\frac{S - (C - P)}{K}\right) = -\frac{365}{31}\ln\!\left(\frac{769.66 - 2.66}{770}\right) = 4.60\%
+$$
+
+That is where the snapshot's 4.6% comes from. Desks routinely back the rate out this way rather than looking up a Treasury yield, because the rate embedded in the options includes the actual cost of financing and borrowing SPY. With dividends, parity becomes $$C - P = Se^{-qT} - Ke^{-rT} = e^{-rT}(F - K)$$, and the same calculation recovers the forward instead.
+
+SPY options are American, so parity holds only approximately: an early-exercise premium on the in-the-money puts ([lesson F6](/vol/f6/)) breaks the equality. Near the money it is tiny.
+
+</Pro>
+
+<ParityChain client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, mid prices, strikes with both a call and a put" />
+
+Near the money the market dots sit right on the 4.6% line: the gap at 770 is under a cent. Switch to **Gap to parity** to magnify the differences. Away from the money they drift. Hover the 800 strike: the call minus put is −28.27, about **$1.05 below** the line. That is the 800 put carrying an early-exercise premium. It is deep in the money, and an American put holder would exercise it early in some scenarios to earn interest on the strike. On the call side (740 and below) the gap is noise from wider bid/ask spreads, where the call and put spreads add up to $1.66 to $2.78.
+
+## Why the call beats the put at the money
+
+<Plain>
+
+The extra value in the call has three parts:
+
+- **Where the strike sits relative to today's price.** 770 is 34 cents above 769.66, which slightly favors the put.
+- **Interest.** The call buyer doesn't pay the strike until later, and earns interest on it in the meantime: about $3.00 over 31 days.
+- **Dividends.** The call holder misses out on any dividends the shareholder gets. None before November 27, so zero here.
+
+Add them up and you get the $2.66 head start the call has over the put.
+
+</Plain>
+
+<Pro>
+
+Rewriting parity as a decomposition:
+
+$$
+C - P = \underbrace{(S - K)}_{\text{moneyness}} + \underbrace{K(1 - e^{-rT})}_{\text{interest on }K} - \underbrace{S(1 - e^{-qT})}_{\text{dividends}}
+$$
+
+At 770: $$-0.34 + 3.00 - 0 = 2.66$$, matching the market's 2.66. The interest piece is nearly constant across nearby strikes (about $2.96 at 760, $3.04 at 780); only the moneyness piece changes.
+
+The practical consequence: the strike where the call and put are worth the same is not the spot price but the **forward**, 772.67. At that strike both are worth about $12.58 at 14.06% volatility. That is why desks define "at the money" as at-the-money-forward, and why the 50-delta strike sits a little above spot.
+
+</Pro>
+
+<CarryBar client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, mid prices" />
+
+Switch strikes and the purple moneyness bar flips sign while the blue interest bar barely changes. Raise the dividend slider to see what an ex-date before expiry would do: each 1% of yield takes about $0.65 away from the call relative to the put over 31 days. Push the rate to 0% and the call's advantage vanishes; at 770 the put becomes worth 34 cents more.
+
+## The forward is the real "at the money"
+
+<Plain>
+
+Options are priced around the forward, not today's price. A call at the forward price and a put at the forward price are worth the same: the deposit that holds the forward price is a fair coin flip.
+
+So when traders say "at the money", the precise version is "at the forward". For a one-month SPY option, the difference is only about $3. For a one-year option it's over $30, and ignoring it would make calls look expensive and puts look cheap.
+
+</Plain>
+
+<Pro>
+
+Everything in the risk-neutral valuation of [lesson B1](/vol/b1/) is centred on $$F$$: the lognormal distribution has mean $$F$$, and Black-Scholes can be written entirely in forward terms (Black's formula):
+
+$$
+C = e^{-rT}\big[F\,N(d_1) - K\,N(d_2)\big], \qquad d_{1,2} = \frac{\ln(F/K) \pm \tfrac12\sigma^2 T}{\sigma\sqrt T}
+$$
+
+In that form $$r$$ appears only in the discount factor and in $$F$$. This is how desks build volatility surfaces: compute the forward per expiry from parity, then fit implied volatility against $$\ln(K/F)$$. Getting the forward wrong creates fake skew. The snapshot's term-structure data shows exactly this: the vendor model uses $$q = 0$$ for all expiries, so beyond December it sees put prices that look too high and reports put IVs above call IVs at the same strike ([lesson B6](/vol/b6/)). With the dividend in the forward, the two IVs would agree.
+
+</Pro>
+
+## Common mistakes
+
+- **Expecting an at-the-money call and put to cost the same.** They only do at the forward strike; at the spot strike the call is worth about the interest on the strike more.
+- **Using a quoted Treasury yield for $$r$$.** The rate that matters is the one embedded in the options, which you get from parity.
+- **Forgetting dividends on long-dated options.** For the December 2027 expiry, leaving out SPY's roughly 1% yield misstates the forward by about $7.50 (the options imply 803.54; with no dividend you would get 811.09).
+- **Applying parity to deep in-the-money American puts.** Early exercise breaks the identity; the 800 strike is off by about $1.
+
+<Takeaway>
+
+- Forward price: F = S·e^((r−q)T). For SPY on November 27: 772.67, about $3 above spot.
+- Put-call parity: C − P = S − K·e^(−rT). The 770 call and put (13.90 vs 11.24) imply a 4.6% rate.
+- At the spot strike, the call exceeds the put by roughly the interest on the strike; dividends work the other way.
+- The forward, not spot, is the true at-the-money point: call and put are equal there.
+- Getting the forward wrong distorts implied volatilities, as the vendor's long-dated put IVs show.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="B3"
+  questions={[
+    {
+      q: 'A stock trades at $200, rates are 5%, and there are no dividends. What is the one-year forward price (continuous compounding)?',
+      options: ['$200.00', '$205.00', '$210.25', '$190.25'],
+      answer: 2,
+      why: '200 × e^0.05 = 210.25. Simple interest gives $210.00; continuous compounding adds a little.',
+    },
+    {
+      q: 'The 770 call is $13.90 and the 770 put $11.24, with SPY at 769.66 and 31 days left. What does parity imply?',
+      options: [
+        'The market expects SPY to rise',
+        'Call − put = 2.66 ≈ S − K·e^(−rT), which implies a rate of about 4.6%',
+        'The call is overpriced by $2.66',
+        'Volatility for calls is higher than for puts',
+      ],
+      answer: 1,
+      why: 'Parity is an arbitrage identity, not a forecast. Solving 769.66 − 770·e^(−r·31/365) = 2.66 gives r ≈ 4.6%.',
+    },
+    {
+      q: 'SPY goes ex-dividend by about $2.10 before an option expires. All else equal, what happens to call minus put at the same strike?',
+      options: ['Rises by about $2.10', 'Falls by about $2.10', 'No change', 'Doubles'],
+      answer: 1,
+      why: 'Dividends lower the forward by the amount paid (in present value), and C − P = e^(−rT)(F − K), so the gap falls by roughly the dividend.',
+    },
+    {
+      q: 'Why does the 800 strike sit about $1 below the parity line on the November 27 chain?',
+      options: [
+        'A data error',
+        'The 800 put is deep in the money and American, so it carries an early-exercise premium',
+        'The 800 call has a higher implied volatility',
+        'Interest rates differ by strike',
+      ],
+      answer: 1,
+      why: 'European parity ignores early exercise. A deep ITM American put is worth more than its European counterpart, so C − P comes out lower.',
+    },
+  ]}
+/>

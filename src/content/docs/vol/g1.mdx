@@ -1,0 +1,175 @@
+---
+title: Why spreads
+description: See how combining options changes cost, maximum loss and Greek exposure, using a call, a vertical and a butterfly on real SPY prices.
+lessonId: G1
+prereqs: [A6, D1]
+minutes: 20
+---
+
+import G1SpreadCompare from '../../../components/widgets/g/G1_SpreadCompare.tsx';
+import G1GreekProfile from '../../../components/widgets/g/G1_GreekProfile.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+A single option carries every risk at once: direction, volatility and time arrive in one package. A spread lets you keep the risk you want and hand back the rest. This lesson shows what that trade-off looks like in dollars and in Greeks.
+
+## One view, three structures
+
+Suppose you think SPY, at 769.66, will drift up toward 780–790 over the next month. Here are three ways to act on that with November 27 calls:
+
+- **Long 770 call** for $13.90.
+- **770/790 bull call spread**: buy the 770 call, sell the 790 call at $4.44, for a net $9.46.
+- **770/780/790 call butterfly**: buy one 770, sell two 780s at $8.34, buy one 790, for a net $1.66.
+
+<G1SpreadCompare client:visible />
+<SnapshotNote detail="Nov 27, 2026 calls at mid, 1 contract = 100 shares" />
+
+Read the table from left to right. The call costs $1,390 and has no ceiling. The vertical costs about two-thirds as much, $946, and caps the gain at $1,054. The butterfly costs $166 and can make $834, but only if SPY lands near 780; at 770 or 790 it loses everything it cost.
+
+<Plain>
+
+Think of each option as a **deposit that holds a price**. Buying the 770 call is putting down a deposit to buy SPY at 770. In the vertical you also *sell* someone else a deposit at 790. Their payment cuts your cost, but above 790 you have promised away the extra gains.
+
+The butterfly goes further: you pay for two deposits (770 and 790) and sell two in the middle (780). You are no longer betting that SPY *goes up*; you are betting it ends up *near 780*. It is cheap because it is a precise bet.
+
+Each step trades away some upside for a lower cost and a smaller worst case.
+
+</Plain>
+
+<Pro>
+
+At expiry the three payoffs per share are
+
+$$
+\begin{aligned}
+\text{Call: } & (S_T-770)^+ - 13.90 \\
+\text{Vertical: } & (S_T-770)^+ - (S_T-790)^+ - 9.46 \\
+\text{Butterfly: } & (S_T-770)^+ - 2(S_T-780)^+ + (S_T-790)^+ - 1.66
+\end{aligned}
+$$
+
+The vertical's value is bounded between 0 and the strike width, $20, so its price divided by the width approximates the market's (risk-neutral, discounted) odds of finishing above the strikes. The butterfly is bounded between 0 and its wing width, $10, and its price divided by that width approximates the risk-neutral probability of finishing near 780; divide once more by the width and you have the density. Toggle the valuation date: at 14 days the vertical and butterfly curves are still flat versions of their expiry shapes, because their short legs offset most of the long legs' time value.
+
+</Pro>
+
+## What a spread does to the Greeks
+
+The payoff chart shows outcomes at expiry. Greeks show what the position is exposed to **today**. Spreads change the mix dramatically, and comparing per dollar of premium makes the shift obvious.
+
+<G1GreekProfile client:visible />
+<SnapshotNote detail="model Greeks, each strike at its own implied volatility" />
+
+Per $1,000 of premium:
+
+- The **call** buys 39 shares of delta, 0.90 of gamma, and **+$64 of vega**. It pays about $18 a day in decay.
+- The **vertical** buys 28 shares of delta but almost no gamma (0.04) and just $15 of vega. It is a nearly pure directional position: the short 790 call cancels most of the volatility exposure.
+- The **butterfly** is almost delta-neutral at today's price (−2.4 shares) and has **negative** gamma and **−$65 of vega**. It *earns* about $10 a day. Per dollar, it is as much a volatility position as the call, with the opposite sign.
+
+Switch to "per contract" and the butterfly's Greeks look tiny. That is the trap: they are small because the position is small. Scaled to equal capital, the butterfly is a large short-volatility bet.
+
+<Plain>
+
+Use the dashboard words. The call's **speedometer** (delta) says it moves about 54 cents per dollar of SPY. Its **sensitivity to the forecast** (vega) is large: if the weather forecast for price swings gets stormier, the call gains.
+
+The vertical keeps most of the speedometer but removes most of the forecast sensitivity. You are betting on direction, not on storms.
+
+The butterfly flips the picture. Its speedometer barely moves right now, its **melting ice** (theta) works *for* you, and a stormier forecast *hurts* it. It wins if SPY stays calm and drifts to 780.
+
+</Plain>
+
+<Pro>
+
+For a position with legs $$i$$ and quantities $$n_i$$, every Greek is additive: $$\Delta_{\text{pos}} = \sum_i n_i \Delta_i$$, and likewise for $$\Gamma$$, $$\Theta$$ and $$\mathcal{V}$$. With model values at SPY 769.66:
+
+$$
+\Gamma_{770/790} = 0.0125 - 0.0121 = 0.0004, \qquad \mathcal{V}_{770/790} = 0.890 - 0.745 \approx 0.144
+$$
+
+per share. The 790 call's gamma and vega are nearly as large as the 770's, so the vertical retains delta (0.542 − 0.273) while shedding almost all of the convexity. A desk uses verticals when it wants delta without vega; it uses butterflies when it wants to sell gamma and vega in a defined-risk package. Note the vertical's small *positive* gamma only holds near the lower strike: as SPY rises toward 790, the short call dominates and the vertical's gamma turns negative.
+
+</Pro>
+
+## Four reasons to spread
+
+<Plain>
+
+1. **Cost.** Selling an option against the one you buy lowers the cash you put up.
+2. **Defined risk.** Every structure in the chart has a known worst case. A short option on its own does not.
+3. **Isolating one bet.** A vertical is mostly about direction; a straddle is mostly about how much SPY moves; a calendar is mostly about time and the forecast. Pick the shape that matches your actual opinion.
+4. **Turning an edge into a position you can hold.** If you think one option is mispriced, buying it alone also buys direction and decay you never wanted. Pairing it with a fairly priced option hedges those away.
+
+</Plain>
+
+<Pro>
+
+Professionals frame it this way: theoretical edge (price vs value under your volatility forecast, lesson [B6](/vol/b6/)) is only useful if the risk you carry to collect it is acceptable. A naked option with $0.30 of edge might carry 54 deltas and $89 of vega per contract. Spreading converts that into a position whose dominant risk is the one you have an opinion about. The price is reduced edge: the short leg gives some back, and you pay the bid-ask spread on twice as many legs. On the snapshot the 770 and 790 calls are each about $0.04–0.06 wide, so the vertical's round-trip slippage is around $10 per spread against a $946 premium, small here but meaningful in less liquid names. Module G walks through each spread family; [G2](/vol/g2/) sorts them by what they do to gamma and vega.
+
+</Pro>
+
+## Common mistakes
+
+- **Judging a spread by its per-contract Greeks.** A butterfly's −$11 of vega looks negligible until you trade enough of them to match the capital in one call.
+- **Assuming a debit spread is "long volatility" because you paid for it.** The 770/780/790 butterfly is a debit with negative vega and gamma.
+- **Ignoring where the Greeks flip.** A vertical's gamma and vega change sign as SPY moves between the strikes. The profile above is a snapshot at 769.66.
+- **Forgetting the extra legs cost money.** Every leg pays half a bid-ask spread to enter and again to exit.
+
+<Takeaway>
+
+- A spread trades upside for lower cost and a defined worst case.
+- Greeks add across legs; the short leg cancels part of the long leg's exposure.
+- The 770/790 vertical keeps half the call's delta with a sixth of its vega: a near-pure directional bet.
+- The 770/780/790 butterfly is cheap, nearly delta-neutral, and short gamma and vega: a bet on SPY settling near 780.
+- Compare structures per dollar of premium, not per contract.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="G1"
+  questions={[
+    {
+      q: 'The 770/790 bull call spread costs $9.46. What is its maximum gain per contract at expiry?',
+      options: ['$946', '$1,054', '$2,000', 'Unlimited'],
+      answer: 1,
+      why: 'The spread is worth at most the strike width, $20. $20 − $9.46 = $10.54 per share, or $1,054 per contract.',
+    },
+    {
+      q: 'Why does the vertical have so much less vega than the long 770 call?',
+      options: [
+        'Verticals are priced with a lower implied volatility',
+        'The short 790 call has nearly as much vega as the long 770 call, so they offset',
+        'Vega only applies to at-the-money options',
+        'The vertical has less time to expiry',
+      ],
+      answer: 1,
+      why: 'Greeks add across legs. The 790 call carries about $0.75 of vega per share against $0.89 for the 770, leaving about $0.14 net.',
+    },
+    {
+      q: 'The 770/780/790 call butterfly costs $1.66. Which statement is true at the snapshot?',
+      options: [
+        'It is long gamma because you paid a debit',
+        'It is short gamma and short vega, and earns time decay',
+        'It has the most delta per dollar of the three structures',
+        'It loses money if SPY finishes at 780',
+      ],
+      answer: 1,
+      why: 'Selling two 780s outweighs the wings near the money: model gamma is −0.20 shares per $1, vega −$11 and theta +$1.70 per day per contract. Paying a debit says nothing about the sign of gamma.',
+    },
+    {
+      q: 'A trader believes the 770 call is underpriced but has no view on direction. Which is the most sensible first step?',
+      options: [
+        'Buy the call and hold it to expiry',
+        'Buy the call and hedge the direction risk, either with stock or by selling a fairly priced option',
+        'Sell the call',
+        'Buy a 770/790 vertical',
+      ],
+      answer: 1,
+      why: 'The edge is in the option\'s volatility pricing. Buying it alone also buys 54 deltas of direction; hedging isolates the exposure the trader actually has an opinion about. The vertical removes most of the vega, which is the edge itself.',
+    },
+  ]}
+/>

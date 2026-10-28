@@ -1,0 +1,69 @@
+---
+// Explanation-level switch. State lives on <html data-level> and in
+// localStorage; a head script restores it before paint (see astro.config).
+---
+
+<div class="level-toggle" role="radiogroup" aria-label="Explanation level">
+  <span class="lbl">Explain it:</span>
+  <button type="button" role="radio" data-set="both">Both</button>
+  <button type="button" role="radio" data-set="plain">Plain English</button>
+  <button type="button" role="radio" data-set="pro">Pro</button>
+</div>
+
+<script>
+  function sync() {
+    const cur = document.documentElement.dataset.level || 'both';
+    document.querySelectorAll<HTMLButtonElement>('.level-toggle button').forEach((b) => {
+      b.setAttribute('aria-checked', String(b.dataset.set === cur));
+    });
+  }
+  document.querySelectorAll<HTMLButtonElement>('.level-toggle button').forEach((b) => {
+    b.addEventListener('click', () => {
+      const v = b.dataset.set!;
+      if (v === 'both') delete document.documentElement.dataset.level;
+      else document.documentElement.dataset.level = v;
+      try {
+        if (v === 'both') localStorage.removeItem('mv-level');
+        else localStorage.setItem('mv-level', v);
+      } catch {}
+      sync();
+    });
+  });
+  sync();
+</script>
+
+<style>
+  .level-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border-radius: 0.6rem;
+    background: var(--sl-color-gray-6);
+    font-size: 0.8rem;
+  }
+  .lbl {
+    padding-inline: 0.4rem 0.2rem;
+    color: var(--sl-color-gray-3);
+  }
+  button {
+    all: unset;
+    cursor: pointer;
+    padding: 0.25rem 0.6rem;
+    border-radius: 0.45rem;
+    font-weight: 500;
+    color: var(--sl-color-gray-2);
+  }
+  button:hover {
+    color: var(--sl-color-white);
+  }
+  button[aria-checked='true'] {
+    background: var(--sl-color-bg);
+    color: var(--sl-color-white);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  }
+  button:focus-visible {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 1px;
+  }
+</style>

@@ -1,0 +1,213 @@
+---
+title: Finding edge
+description: Turn a volatility forecast into a theoretical value, measure the gap to the market in dollars and in volatility points, and see where a structural edge comes from.
+lessonId: E1
+prereqs: [B6, C4, D4]
+minutes: 25
+bookRef: the chapters on dynamic hedging
+---
+
+import EdgeCalculator from '../../../components/widgets/e/EdgeCalculator.tsx';
+import StraddleEdgeLine from '../../../components/widgets/e/StraddleEdgeLine.tsx';
+import VixVsRealized from '../../../components/widgets/e/VixVsRealized.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+A pricing model does not tell you what an option is worth. It tells you what an option is worth **if your volatility forecast is right**. Trading against the model starts here: put your forecast in, compare the answer with the market, and decide whether the gap is big enough to act on.
+
+## Theoretical value vs market price
+
+<Plain>
+
+An option is a **deposit that holds a price**, and the right deposit depends on the **weather forecast for price swings**. If you think the next month will be stormier than the market expects, the deposit is too cheap. If calmer, too expensive.
+
+So every trader carries two numbers for each option:
+
+- **Market price:** what you can actually buy or sell it for.
+- **Theoretical value:** what the model says it is worth, using *your* weather forecast.
+
+The gap between them is your **edge**. On November 27's SPY 770 straddle, the market charged $25.14. If you believed SPY would move like it did over the past year (about 12.7% volatility), your model says it is worth about $22.79. By your forecast the market is asking roughly **$2.35 too much** per share, or $235 per straddle.
+
+</Plain>
+
+<Pro>
+
+Edge is the difference between theoretical value under your forecast $$\hat\sigma$$ and the tradable market price:
+
+$$
+\text{edge}_{\text{buy}} = V(\hat\sigma) - \text{ask}, \qquad \text{edge}_{\text{sell}} = \text{bid} - V(\hat\sigma)
+$$
+
+Using the mid instead of the side you would trade overstates edge by half the spread. For the 770 straddle (call 13.90 + put 11.24 = 25.14) with $$S = 769.66$$, $$T = 31/365$$, $$r = 4.6\%$$, the single volatility that reprices both legs is **14.02%**. At a 12.7% forecast, $$V(\hat\sigma) = 22.79$$, so the straddle is 2.35 theoretically rich per share at the mid, or 2.29 against the bids (13.87 + 11.21 = 25.08) where you would actually sell.
+
+All other inputs (spot, strike, time, rate, dividends) are either observable or nearly so. Volatility is the one input traders disagree about, which is why edge is a statement about volatility.
+
+</Pro>
+
+## Edge across the chain
+
+Drag your forecast and watch every out-of-the-money option on the November 27 chain reprice. Each bar is the theoretical value at your forecast minus the market mid, per contract. Green means your value is above the **ask** (theoretically cheap); red means it is below the **bid** (theoretically rich). Grey means the edge does not clear the spread.
+
+<EdgeCalculator client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry; IVs recomputed from mids with the parity-implied rate, no dividend" />
+
+Start with the default 12.7% and "One vol, all strikes". The puts are all red, by a lot: the 740 put is about $277 rich per contract, at an implied vol of 17.8%. The 790, 800 and 820 calls turn green because they trade **below** 12.7% implied. One flat forecast makes the whole skew look like a mistake.
+
+Now switch to "Keep market skew". The forecast moves the whole smile up or down by the same amount instead of flattening it, and every strike carries the same edge in vol points (−1.3 at 12.7%). In dollars the edge is biggest near the money, where vega is biggest. This is closer to how a desk thinks: the skew is a separate bet from the level (lesson [C8](/vol/c8/)).
+
+<Plain>
+
+The market does not use one weather forecast for every strike. Insurance against a crash (the far-down puts) is priced with a stormier forecast than the at-the-money options. If you value everything with one calm forecast, every crash policy looks overpriced, but that is a disagreement about crashes, not about everyday weather.
+
+</Plain>
+
+<Pro>
+
+"Keep market skew" applies a parallel shift $$\sigma_K = \sigma^{\text{mkt}}_K + (\hat\sigma - \sigma_{\text{ATM}})$$, so edge in vol points is constant across strikes and dollar edge is roughly $$\mathcal{V}_K \times$$ the shift. Real desks forecast the level and the shape separately, and a parallel shift is only one convention: in a selloff the wings typically reprice by more than the at-the-money strike.
+
+</Pro>
+
+## Dollars or volatility points
+
+<Plain>
+
+Saying "this option is $1.18 too expensive" sounds precise, but it is hard to compare. Is $1.18 a lot on a $13.90 option? On a $0.44 option it would be enormous.
+
+Traders translate the gap into **forecast terms** instead: "the market is charging 14% weather, I expect 12.7%". That gap of about 1.3 points means the same thing on every strike and every expiry, so you can line options up and see which ones are really out of line.
+
+The translation uses **vega** (sensitivity to the forecast changing): if one point of volatility is worth about $1.78 on the straddle, a 1.32-point gap is worth about $2.35.
+
+</Plain>
+
+<Pro>
+
+To first order, edge in dollars is vega times the gap in vol points:
+
+$$
+V(\hat\sigma) - V(\sigma_{\text{imp}}) \;\approx\; \mathcal{V} \cdot (\hat\sigma - \sigma_{\text{imp}})
+$$
+
+with $$\mathcal{V}$$ per vol point. The 770 straddle has $$\mathcal{V} = 1.78$$, so at 12.7% the rule gives $$1.78 \times (12.70 - 14.02) = -2.35$$, matching the full reprice to the cent. The approximation holds well for at-the-money options because their value is almost linear in volatility; out-of-the-money options are convex in vol (positive *volga*), so for them the linear rule drifts for large forecast gaps.
+
+Desks quote edge in vol points because it is comparable across strikes, expiries and underlyings, and because P/L over the life of a hedged trade scales with the vol gap, not the premium ([lesson E2](/vol/e2/)).
+
+</Pro>
+
+<StraddleEdgeLine client:visible />
+<SnapshotNote detail="770 call and put mids, Nov 27, 2026 expiry" />
+
+The solid line is the full reprice; the dashed line is the vega rule. They are nearly on top of each other across a wide range of forecasts. Two reference points are marked: SPY realized **10.0%** over the last 20 sessions and **12.7%** over the past year. Both sit below the 14.02% implied, which is a typical state for an index.
+
+## The structural source: the volatility risk premium
+
+If implied volatility were an unbiased forecast, edge would be pure forecasting skill. For index options it is not unbiased. Here is every day in the snapshot window: VIX that day against the volatility SPY actually delivered over the next 21 sessions.
+
+<VixVsRealized client:visible />
+<SnapshotNote detail="VIX closes and SPY closes; last start date Sep 28, 2026" />
+
+<Plain>
+
+The orange line (the forecast) sits above the blue line (the weather that happened) almost all the time: on **229 of 236 days**, or 97%. On average the forecast was **5.6 points** too high.
+
+This is the same reason insurance premiums exceed average claims. Buyers of crash protection pay extra to sleep at night, and sellers demand extra because, when a storm does come, it costs them a lot at once. That extra is called the **volatility risk premium**.
+
+Part of the gap is not a premium, though. VIX blends many strikes, including the expensive out-of-the-money puts, so it reads higher than the at-the-money option. Flip the toggle to subtract today's difference (3.5 points) and the forecast still came in high on **185 of 236 days (78%)**, by about 2.2 points on average.
+
+</Plain>
+
+<Pro>
+
+The variance risk premium is $$\mathbb{E}^{\mathbb{Q}}[\sigma^2] - \mathbb{E}^{\mathbb{P}}[\sigma^2] > 0$$: risk-neutral expected variance exceeds the physical expectation. It compensates the short side for negatively skewed payoffs and for losing exactly when everything else in a portfolio is losing.
+
+Two cautions when reading the chart. First, VIX is a 30-day **variance-swap** rate built from the whole strip, so it includes skew; it ran 17.52 against a 14.06% at-the-money IV at the snapshot. The toggle subtracts that 3.46-point gap as a rough adjustment; it is not constant through time. Second, one year is a small sample with overlapping windows: 236 start dates contain only about 11 independent 21-day periods. The worst start was **June 4, 2026**, when implied 15.4 met a realized 17.8 that included the June 5 selloff.
+
+A structural premium is a reason to lean short volatility on average. It is not edge on any given trade, and it is the source of every short-vol blowup in [lesson E4](/vol/e4/).
+
+</Pro>
+
+## The forecast is the hard part
+
+<Plain>
+
+The model is the easy part. It is arithmetic. The hard part is the forecast, and there is no single right one: last month's weather, last year's weather, and the long-run average all give different answers. At the snapshot, SPY's 20-day realized was 10.0% and the one-year figure 12.7%. Use the first and the straddle looks about $715 too expensive; use the second and it looks only $235 too expensive. Same model, same market, a threefold difference in edge.
+
+Good traders are humble about this. They want a gap large enough that they still make money if their forecast is somewhat off.
+
+</Plain>
+
+<Pro>
+
+Practical forecasting blends horizons (mean reversion toward a long-run level), adjusts for known events (FOMC, CPI, earnings in the index), and compares against the implied term structure (lessons [C6](/vol/c6/) and [C7](/vol/c7/)). Realized volatility estimated from 20 daily returns has a sampling error of roughly $$\sigma/\sqrt{2n} \approx 16\%$$ of its level, so a 10% reading is really "somewhere around 8.4 to 11.6". Desks therefore require edge above a threshold (often a vol point or more on index options, after costs) and size positions by the confidence in the forecast, not by the size of the dollar edge.
+
+</Pro>
+
+## Common mistakes
+
+- **Measuring edge against the mid.** You buy at the ask and sell at the bid; on the wider strikes the half-spread can eat the whole edge.
+- **Using one flat forecast for every strike.** A flat vol makes every put look rich and some calls look cheap; that is a bet against the skew, not a view on volatility.
+- **Ranking trades by dollar edge.** Dollar edge grows with vega; compare in vol points, then size by vega.
+- **Treating the volatility risk premium as free money.** It pays on most days and gives a lot back on a few.
+
+<Takeaway>
+
+- Edge = theoretical value at your forecast minus the price you can actually trade.
+- Edge in dollars ≈ vega × (forecast − implied). On the 770 straddle, one vol point is worth about $1.78 per share.
+- Quote edge in vol points to compare across strikes and expiries.
+- Index implied vol has run above subsequent realized most of the time: 97% of days for VIX in this window, 78% after a rough skew adjustment.
+- The model is mechanical; the forecast, and its error bars, are the trade.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="E1"
+  questions={[
+    {
+      q: 'An option has vega 0.50 (per vol point) and trades at 20% implied volatility. Your forecast is 22%. Roughly what is your edge per share?',
+      options: ['+$0.10', '+$1.00', '+$2.00', '−$1.00'],
+      answer: 1,
+      why: 'Edge ≈ vega × (forecast − implied) = 0.50 × 2 = $1.00 per share, positive, so by your forecast the option is theoretically cheap.',
+    },
+    {
+      q: 'With a single 12.7% forecast for every strike, every November 27 put looks rich. What is the best interpretation?',
+      options: [
+        'All puts are mispriced',
+        'The flat forecast ignores the skew, so it is mostly a bet that the skew will flatten',
+        'Puts always have negative edge',
+        'The calculator uses the wrong rate',
+      ],
+      answer: 1,
+      why: 'OTM puts trade at higher implied vols than ATM options. A flat forecast marks them all down, which is a view on the skew, not only on the volatility level.',
+    },
+    {
+      q: 'Why do traders prefer to quote edge in volatility points rather than dollars?',
+      options: [
+        'Dollar edge is always smaller',
+        'Vol points are comparable across strikes and expiries; dollars scale with each option’s vega',
+        'Exchanges require it',
+        'Vol points include the bid-ask spread',
+      ],
+      answer: 1,
+      why: 'A one-point gap means the same thing for every option, while the dollar value of that point depends on vega.',
+    },
+    {
+      q: 'VIX exceeded subsequent 21-day SPY realized volatility on 97% of days in the window. Which statement is most accurate?',
+      options: [
+        'Selling index options is riskless',
+        'Part of that gap is skew in VIX; the rest is a volatility risk premium that is paid for bearing crash risk',
+        'VIX is a biased calculation that should be ignored',
+        'Realized volatility will catch up next year',
+      ],
+      answer: 1,
+      why: 'VIX includes expensive OTM puts, so it reads above ATM implied. After adjusting, implied still ran above realized most of the time: compensation for tail risk, not a free lunch.',
+    },
+  ]}
+/>
+
+<BookRef />

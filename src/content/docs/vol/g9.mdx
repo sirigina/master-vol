@@ -1,0 +1,203 @@
+---
+title: Adjusting & exiting
+description: Set exit rules before you trade, and compare the real cost and effect of rolling, adding wings, converting and delta hedging a short strangle as SPY moves.
+lessonId: G9
+prereqs: [G3, G8]
+minutes: 30
+bookRef: the chapter on risk considerations
+---
+
+import AdjustSim from '../../../components/widgets/g/G9_AdjustSim.tsx';
+import ExitFlow from '../../../components/widgets/g/G9_ExitFlow.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+Choosing a spread is half the job. The other half is deciding, before anything happens, what you will do when the market moves: take profits, cut the loss, or reshape the position. This lesson follows one trade, a short SPY strangle, through a rally and compares what each adjustment really changes.
+
+## The trade and the plan
+
+On October 27 a trader sells the November 27 **750 put** at $5.94 and the **790 call** at $4.44: a short strangle for a **$10.38** credit, $1,038 per contract. At expiry it keeps the full credit anywhere between 750 and 790 and breaks even at **739.62** and **800.38**. At entry it is close to delta-neutral (about −1 share per contract), short gamma, and collects about **$34 a day** of theta while losing $147 per vol point of IV increase.
+
+<Plain>
+
+Selling a strangle is like selling insurance against a big move either way. You collect the premium up front and keep it if the weather stays mild. The danger isn't a single bad day; it's a move that keeps going while you hope it turns around.
+
+So the plan comes first, written down while you are calm:
+
+- **When do I take profits?** For example, once half the premium is earned.
+- **When do I stop?** For example, if the loss reaches twice the premium.
+- **When do I leave regardless?** For example, a week before expiry, when small moves start to cost a lot.
+- **What do I do if one side is threatened?** Adjust, or simply close.
+
+</Plain>
+
+<Pro>
+
+Exit rules exist because a short-premium position's risk grows non-linearly as the underlying approaches a strike and as expiry approaches: gamma rises while the remaining theta shrinks. Three families of rule are standard:
+
+- **Profit target** as a fraction of maximum profit. With SPY unchanged, the model strangle reaches 50% of its credit by about **day 15**, when 16 of 31 days remain. Taking profit there gives up the remaining 50% in exchange for not carrying the highest-gamma part of the trade.
+- **Loss limit** as a multiple of credit, or a stop on the underlying (e.g. the short strike). At 2× the credit ($2,076 loss), the trade has spent four times what the profit target would have made; with 19 days left that happens near SPY 819 or 719.
+- **Time stop**, typically in the final week, where the ratio of theta earned to gamma risk deteriorates fastest.
+
+A risk limit is a budget set in advance (lesson [H4](/vol/h4/)). The point is not that 50% or 2× are optimal; it is that a pre-committed rule keeps the decision from being made by the P/L on the screen.
+
+</Pro>
+
+## Walking through a rally
+
+Here is one path SPY could take, priced with the snapshot IVs held fixed:
+
+| Day | SPY | Strangle P/L | Position delta (shares) | 790 call delta |
+| --- | --- | --- | --- | --- |
+| 0 | 769.66 | $0 | −1 | 0.27 |
+| 7 | 782 | +$79 | −28 | 0.42 |
+| 12 | 792 | −$125 | −51 | 0.58 |
+| 17 | 797 | −$232 | −65 | 0.68 |
+
+Notice what is happening. By day 7 the trade is still in profit, but the short call's delta has gone from 0.27 to 0.42. By day 12, SPY is through the call strike and the position behaves like being **short 51 shares**, even though the P/L is only −$125. Time decay is covering most of the price move; the risk is in the delta and gamma, not yet in the P/L.
+
+The simulator starts at day 12, SPY 792. Try each adjustment and compare the payoff at November 27 and the Greeks.
+
+<AdjustSim client:visible />
+<SnapshotNote detail="Nov 27 and Dec 18, 2026 expiries; new legs priced on the snapshot smile, IVs held unless you change them" />
+
+<Plain>
+
+A short strangle sells insurance on both sides. As SPY rallies, the call side turns into a policy that looks likely to pay out. The speedometer (delta) shows the danger before the P/L does: by day 12 the position acts like a short stock position of 51 shares, and the accelerator (gamma) makes it bigger with every further dollar SPY climbs.
+
+</Plain>
+
+<Pro>
+
+At day 12 the position has gamma −2.20 and theta +$37 per day per contract. Over one day the gamma loss $$\tfrac12|\Gamma|\,\Delta S^2$$ equals the theta at $$\Delta S = \sqrt{2 \times 37 / 2.20} \approx \$5.80$$, about 0.73% of 792 (ignoring weekends). Daily moves bigger than that lose money even before the delta grows. The table's P/L lags the risk because theta banked on the quiet early days is offsetting the move. Mark-to-market P/L describes the past; delta, gamma and that breakeven move describe the exposure going forward.
+
+</Pro>
+
+## What each adjustment does
+
+<Plain>
+
+None of these adjustments makes or saves money at the moment you do it. Each one swaps one shape of future for another. That's the part that is easy to forget when a position is going against you.
+
+- **Roll the tested side up.** Buy back the threatened call and sell one further away. You pay to do it, so you lock in part of the loss and your profit range moves up.
+- **Roll out in time.** Close the November strangle, sell the same strikes in December. You collect more premium now but stay in the trade three weeks longer.
+- **Buy wings.** Buy a cheaper put further down and call further up. Now the worst case is capped, the position is an iron condor, and you've given up part of the income.
+- **Hedge with shares.** Buy SPY shares to cancel the short exposure. The position stops caring about small moves, but you now own shares that lose if SPY falls back.
+
+</Plain>
+
+<Pro>
+
+At day 12, SPY 792, IV unchanged (per contract; "after" values from the simulator):
+
+| Adjustment | Trades | Net cash | Delta | Gamma | Theta/day | Vega | Max loss to Nov 27 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| None | – | – | −51 | −2.20 | +$37 | −$93 | open-ended |
+| Roll call up | buy 790c 10.81, sell 805c 4.07 | pay $674 | −24 | −2.08 | +$32 | −$86 | open-ended |
+| Roll out to Dec | close Nov strangle 11.63, sell Dec 750/790 19.79 | collect $816 | −44 | −1.67 | +$33 | −$161 | open-ended |
+| Buy wings 730/810 | buy 730p 0.36, 810c 2.78 | pay $314 | −31 | −0.59 | +$13 | −$27 | −$1,276 |
+| Delta hedge | buy 51 SPY | – | 0 | −2.20 | +$37 | −$93 | open-ended |
+
+Three things stand out:
+
+1. **Rolling up resets delta, not gamma.** The new 805 call has nearly the same gamma as the old 790 had at entry. It also crystallizes the loss: if SPY goes back to 760, the rolled position makes **$364** at expiry instead of $1,038. Rolls reduce risk on one side by moving it toward the other.
+2. **Rolling out adds risk while looking like income.** The $816 collected is not profit; it buys three more weeks of short gamma, and vega nearly doubles (−$161 per point). It is the adjustment most likely to turn a manageable loss into a large one.
+3. **Wings change the risk class.** Converting to an iron condor caps the loss at $1,276 and cuts gamma by almost three-quarters, at the cost of most of the theta. It is the same idea as turning a short straddle into an iron butterfly: on the snapshot, selling the 770 straddle for 25.14 and buying the 750 put and 790 call for 10.38 leaves a 14.76 credit, cuts gamma from −2.52 to −0.43 per contract, and caps the loss at $524.
+
+A one-time delta hedge neutralizes direction only at that price; with gamma unchanged, the hedge itself becomes wrong as SPY moves, so in practice it means committing to re-hedging (module E).
+
+</Pro>
+
+<Plain title="The cost nobody shows you">
+
+Every adjustment crosses a bid/ask spread. In the simulator the estimated cost is $5 to $10 per contract for one adjustment in liquid SPY options. That sounds small, and in SPY it is: three adjustments cost a few percent of a $519 profit target. In less liquid options the spreads are often ten times wider, and the same three adjustments can eat a third or more of the target. Each adjustment should be worth more than what it costs to make.
+
+</Plain>
+
+## Exit rules as a checklist
+
+The flow below checks the strangle against a fixed set of rules, in order. Move the market and see which one fires first.
+
+<ExitFlow client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry; model values at the snapshot IVs plus your IV change" />
+
+At day 12 and SPY 792, no stop has fired, but the delta check has: the position is short 51 shares against a 30-share threshold, so it is time to choose an adjustment (or close). Push SPY back to 770 and slide the days to 15: the profit-target rule fires instead. Set "implied still rich" to No and the thesis rule closes the trade wherever the P/L is.
+
+<Plain>
+
+Use it like a pilot's checklist: the same items, in the same order, every time, so the decision doesn't depend on how you feel about the trade that day. Leaving comes first; only if no exit rule fires do you ask whether to reshape the position. The "implied still rich" line asks the original question again: is the forecast you sold still stormier than the weather you now expect?
+
+</Plain>
+
+<Pro title="Ordering the rules">
+
+The order matters. Exit rules (profit, loss, time, thesis) come before adjustment rules, because an adjustment is a new trade and should be judged as one: would you open the adjusted position at today's prices, with today's IV and forecast? If not, the cleaner action is to close. This is the practical form of a principle desks repeat often: the original entry price is irrelevant to what the position should be now. Vega deserves its own check after a shock. A move down usually comes with an IV spike (try SPY 740, day 5, IV +6: the strangle shows a **−$1,319** mark even though SPY is still inside the breakevens). Whether that justifies closing depends on whether the higher IV is now rich or fair relative to your forecast, which is the question you started with.
+
+</Pro>
+
+## Common mistakes
+
+- **Adjusting to avoid realizing a loss.** A roll for a credit can feel like a fix while it adds time, gamma and vega to a losing position.
+- **No plan before entry.** Rules set after the move are set by the P/L, not by risk.
+- **Counting adjustments as free.** Each crosses a bid/ask spread and gives up some of the remaining edge; frequent small adjustments can cost more than the risk they remove.
+- **Hedging delta once and forgetting gamma.** A static share hedge on a short-gamma position is right at one price only.
+
+<Takeaway>
+
+- Decide profit target, loss limit, time stop and adjustment triggers before the trade; the 750/790 strangle reaches 50% of its credit around day 15 if SPY stands still.
+- Adjustments don't change the P/L at the moment you make them; they trade one future payoff for another, minus costs.
+- Rolling up resets delta but keeps gamma and locks in part of the loss; rolling out collects premium by adding time, gamma and vega.
+- Buying wings converts unlimited risk into a capped one (strangle to iron condor, straddle to iron butterfly) at the cost of most of the theta.
+- Treat every adjustment as a new trade: would you open the adjusted position at today's prices?
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="G9"
+  questions={[
+    {
+      q: 'At day 12 with SPY at 792 you roll the short 790 call to the 805 call, paying $674 per contract. What happens to the P/L at that moment?',
+      options: ['It improves by $674', 'It worsens by $674', 'It is roughly unchanged apart from bid/ask costs', 'It resets to zero'],
+      answer: 2,
+      why: 'Both trades happen at fair value: you pay what the 790 call is worth and receive what the 805 is worth. The P/L only changes by transaction costs; the future payoff shape is what changes.',
+    },
+    {
+      q: 'Rolling the whole strangle out to December collects a net $816. Which is the best description?',
+      options: ['A profit of $816', 'A loss-free repair', 'More premium in exchange for more time, gamma and vega risk', 'A reduction in risk'],
+      answer: 2,
+      why: 'The credit pays for a new, longer short-volatility position. Vega rises from about −$93 to −$161 per point and the trade stays open three more weeks.',
+    },
+    {
+      q: 'You buy the 730 put and 810 call against the short 750/790 strangle. The position becomes…',
+      options: ['A long straddle', 'An iron condor with capped loss', 'A calendar spread', 'Delta-neutral at every price'],
+      answer: 1,
+      why: 'Short strangle plus long further-out wings is an iron condor. The loss is capped at the wing width minus the net credit: about $1,276 per contract here.',
+    },
+    {
+      q: 'Why do exit rules usually come before adjustment rules?',
+      options: [
+        'Exits are cheaper than adjustments',
+        'An adjustment is a new trade and should only be made if you would open it fresh',
+        'Adjustments are not allowed on index options',
+        'Exit rules guarantee a profit',
+      ],
+      answer: 1,
+      why: 'If the reason for the trade is gone, or a limit is hit, reshaping the position just keeps exposure you no longer want. Adjust only when the adjusted position stands on its own.',
+    },
+    {
+      q: 'The strangle shows a loss with SPY still between the breakevens, five days in, after a sharp drop and a 6-point IV rise. The main driver of that loss is…',
+      options: ['Theta', 'Vega and delta from the move', 'Rho', 'Dividends'],
+      answer: 1,
+      why: 'The short position has negative vega (about −$147 per point at entry) and turns long delta as SPY falls toward the put. Expiry breakevens say nothing about mark-to-market losses before expiry.',
+    },
+  ]}
+/>
+
+<BookRef />

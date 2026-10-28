@@ -1,0 +1,193 @@
+---
+title: How the Greeks move
+description: Picture each Greek as a surface over price, time and volatility, and anticipate how your risks shift before the market forces you to.
+lessonId: D6
+prereqs: [D2, D3, D4]
+minutes: 25
+bookRef: the chapters on risk measurement
+---
+
+import GreekHeatmap from '../../../components/widgets/d/GreekHeatmap.tsx';
+import GreekMultiples from '../../../components/widgets/d/GreekMultiples.tsx';
+import WeekendCharm from '../../../components/widgets/d/WeekendCharm.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+Each Greek is a snapshot taken at one price, one date and one volatility. Move any of the three and every Greek changes. Traders who know the shape of those changes see tomorrow's risk today; traders who don't get surprised by a hedge that quietly went stale over the weekend.
+
+## Each Greek as a map over price and time
+
+Pick a Greek and look at it over every SPY price from 700 to 840 and every horizon from 60 days to 1 day, for the 770 call. The ring marks the snapshot: SPY at 769.66 with 31 days left.
+
+<GreekHeatmap client:visible />
+
+Step through the four maps:
+
+- **Delta** is a ramp that sharpens into a cliff at 770 as days run out ([lesson D1](/vol/d1/)).
+- **Gamma** is a ridge along the strike that grows into a spike in the last days ([lesson D2](/vol/d2/)). Away from the strike, the ridge fades as expiry approaches.
+- **Theta** has the same ridge shape as gamma: the two are tied together ([lesson D7](/vol/d7/)). Decay is fastest at the strike in the final days.
+- **Vega** is the reverse: brightest at the top (long-dated) and fading toward the bottom ([lesson D4](/vol/d4/)). Short-dated options care much less about the volatility forecast.
+
+Now raise the volatility slider. Every map spreads out sideways: at higher volatility, more strikes behave as if they were near the money.
+
+<Plain>
+
+Think of the maps as a terrain map of risk. Gamma and theta form a ridge along the strike that turns into a sharp peak at expiry: that is where the **accelerator** is most sensitive and the **ice melts fastest**. Vega is a high plateau far from expiry that slopes down toward the deadline. Your position sits at one point on each map, and both the calendar and the market keep moving you around.
+
+</Plain>
+
+<Pro>
+
+For the ATM option the closed forms make the time scaling explicit:
+
+$$
+\Gamma_{\text{ATM}} \propto \frac{1}{S\sigma\sqrt{T}}, \qquad \Theta_{\text{ATM}} \propto -\frac{S\sigma}{\sqrt{T}}, \qquad \mathcal{V}_{\text{ATM}} \propto S\sqrt{T}
+$$
+
+Volatility and time enter the moneyness term only through $$\sigma\sqrt{T}$$ (the standard deviation to expiry). So raising volatility looks a lot like adding time: both widen the distribution and spread the Greeks across strikes. Thinking in standardized moneyness, $$\ln(K/F)/(\sigma\sqrt{T})$$, makes the maps at different vols and dates nearly line up.
+
+</Pro>
+
+## Greeks across price at three volatilities
+
+The same idea, cut the other way: each panel holds time fixed and shows how a Greek varies with SPY at 10%, 14% and 25% volatility.
+
+<GreekMultiples client:visible />
+
+What to notice:
+
+- **Delta flattens as volatility rises.** At 10% volatility the curve is steep; at 25% it is gentle. An OTM call gains delta when volatility rises, and an ITM call loses it.
+- **Gamma is taller and narrower at low volatility.** Low-vol ATM options have the most gamma, but only in a narrow band of prices.
+- **Theta grows with volatility at the money.** At 31 days, the 770 call decays $0.20 a day at 10% vol, $0.25 at 14% and $0.41 at 25%. More volatility in the price means more time value to melt.
+- **Vega is wide and rounded.** It peaks near the strike regardless of volatility, but higher volatility spreads it further.
+
+Switch to 10 days left and every effect sharpens.
+
+<Plain>
+
+Volatility acts like a **zoom lens**. Low volatility zooms in: everything that matters happens close to the strike, and small moves change the picture a lot. High volatility zooms out: the same move is a smaller event, and options far from the strike still carry meaningful risk.
+
+</Plain>
+
+<Pro>
+
+These are the Greeks' sensitivities to each other. The second-order cross terms traders name:
+
+$$
+\text{Vanna} = \frac{\partial \Delta}{\partial \sigma} = \frac{\partial \mathcal{V}}{\partial S}, \qquad \text{Charm} = \frac{\partial \Delta}{\partial t}, \qquad \text{Color} = \frac{\partial \Gamma}{\partial t}, \qquad \text{Volga} = \frac{\partial \mathcal{V}}{\partial \sigma}
+$$
+
+Vanna is negative for an ITM call and positive for an OTM call (the delta panel). It matters whenever spot and volatility move together, which in SPY is most of the time: a selloff raises IV, and that alone shifts the deltas of the whole chain. Volga is near zero at the money and positive in the wings, which is why wing options are convex in volatility ([lesson D4](/vol/d4/)).
+
+</Pro>
+
+## Charm: delta drift over a weekend
+
+Theta is the part of time decay you see in the price. **Charm** is the part you see in the hedge: delta changes as time passes, even if SPY doesn't move.
+
+<WeekendCharm client:visible />
+
+Ten contracts, SPY unchanged at 769.66, 10 days left on Friday:
+
+- The **740 call (ITM)** delta rises from 0.960 to 0.981: the hedge needs about **21 more shares** short on Monday.
+- The **770 call (ATM)** delta barely moves (0.519 to 0.513), but the position loses about **$1,314** of value.
+- The **800 call (OTM)** delta falls from 0.055 to 0.027: about **29 fewer shares** needed.
+
+Set "Days left on Friday" to 4. By Monday, with one day left, the 740 and 800 deltas have snapped to 1 and 0, while the 770 delta (0.48) sits on the cliff edge, where any small move will swing it.
+
+<Plain>
+
+As time passes, options **become more decided**. An in-the-money call looks more and more like the stock itself (delta toward 1), and an out-of-the-money call looks more and more like nothing (delta toward 0). That happens over weekends and holidays too, when you can't trade. A position that was perfectly hedged on Friday can open Monday with a net long or short exposure nobody chose.
+
+</Plain>
+
+<Pro>
+
+Charm for a call (no dividend) is
+
+$$
+\frac{\partial \Delta}{\partial t} = -\,n(d_1)\,\frac{2rT - d_2\,\sigma\sqrt{T}}{2T\,\sigma\sqrt{T}}
+$$
+
+(sign conventions vary with whether $$t$$ is calendar time or time to expiry). The intuition is enough for a desk: OTM deltas decay toward zero, ITM deltas toward one, and the speed scales with $$1/T$$. Books with many short-dated wing options can carry large charm, so market makers pre-hedge the expected Monday delta on Friday afternoon. **Color**, the time decay of gamma, is the same story one level up: ATM gamma rises into expiry while OTM gamma collapses, as the heatmap's gamma ridge showed.
+
+</Pro>
+
+## Putting it together: the snapshot moves
+
+A concrete chain reaction for the 770 call, starting from the snapshot (SPY 769.66, 31 days, 14.1% volatility). Suppose SPY falls 3% over a week to about 746.57 and implied volatility jumps 4 points, the typical SPY pattern in a selloff.
+
+- **Delta** starts at 0.54. The price drop alone takes it to 0.26 (gamma). A week of time passing takes it to 0.23 (charm: the call is now out of the money). The volatility jump lifts it back to 0.28 (vanna: OTM deltas rise with volatility).
+- **Gamma** of the 770 call is now 0.0098, below the 0.0114 of the 745 strike that has become at the money.
+- **Vega** has moved with the price: 0.65 for the 770 call against 0.76 for the 745.
+- The call itself is worth $5.89, down from $13.93; the volatility jump cushioned part of the fall.
+
+<Plain>
+
+The price fell, the clock ran and the forecast turned stormier, all at once. Each change pushed the **speedometer** a different way: the fall slowed it a lot, the passing week slowed it a bit more, and the stormier forecast sped it back up a little. A trader who only watched the price would have the hedge wrong.
+
+</Plain>
+
+<Pro>
+
+Decompose the move with a Taylor expansion in all three variables and the cross terms are not small: here vanna adds back about 0.06 of delta, roughly a quarter of what remained. Because spot and implied vol are strongly negatively correlated in index options, desks often quote a "sticky" delta that includes the expected vol response to a spot move (a skew-adjusted or "shadow" delta), rather than the Black-Scholes delta at fixed volatility.
+
+</Pro>
+
+No single Greek tells you the result. A scenario reprice does ([lesson H3](/vol/h3/)). The Greeks tell you *why* the reprice looks the way it does.
+
+## Common mistakes
+
+- **Rehedging only when the price moves.** Deltas drift with time (charm) and with volatility (vanna) even on quiet days.
+- **Treating Friday's Greeks as Monday's.** Three days of decay changes delta, gamma and theta, especially in the last two weeks.
+- **Assuming higher volatility raises every option's delta.** It pushes OTM deltas up and ITM deltas down, toward 0.5.
+- **Reading one Greek in isolation.** Gamma, theta and vega move together; a change in one usually signals a change in the others.
+
+<Takeaway>
+
+- Every Greek depends on price, time and volatility; think of each as a surface, not a number.
+- Gamma and theta peak at the strike near expiry; vega peaks at the strike for long-dated options.
+- Raising volatility looks like adding time: Greeks spread across more strikes.
+- Charm: ITM deltas drift toward 1 and OTM toward 0 as time passes, so hedges go stale over weekends.
+- Vanna: volatility changes shift deltas; in SPY, spot and vol move together, so this matters every selloff.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="D6"
+  questions={[
+    {
+      q: 'You are delta-neutral with long OTM calls hedged with short stock on Friday. Over the weekend SPY does not move. On Monday you are…',
+      options: ['Still neutral', 'Net short delta', 'Net long delta', 'Long gamma only'],
+      answer: 1,
+      why: 'OTM call deltas decay toward 0 with time (charm), so the calls now offset fewer of your short shares: the position is net short.',
+    },
+    {
+      q: 'Implied volatility rises sharply with SPY unchanged. What happens to the delta of a deep ITM call?',
+      options: ['It rises toward 1', 'It falls toward 0.5', 'It is unchanged', 'It becomes negative'],
+      answer: 1,
+      why: 'Higher volatility makes it more plausible the call ends out of the money, so an ITM delta falls toward 0.5. That cross-sensitivity is vanna.',
+    },
+    {
+      q: 'Where on the price-time map is gamma largest?',
+      options: ['Far from the strike, long-dated', 'At the strike, long-dated', 'At the strike, near expiry', 'Far from the strike, near expiry'],
+      answer: 2,
+      why: 'ATM gamma scales with 1/√T and is concentrated at the strike, so it peaks there in the final days.',
+    },
+    {
+      q: 'Raising volatility from 14% to 25% does what to the gamma curve across prices?',
+      options: ['Taller and narrower', 'Lower and wider', 'Unchanged', 'Shifts to a higher strike only'],
+      answer: 1,
+      why: 'Higher volatility widens the distribution: gamma is spread across more prices, and its peak falls.',
+    },
+  ]}
+/>
+
+<BookRef />

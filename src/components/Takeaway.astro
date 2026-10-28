@@ -1,0 +1,29 @@
+---
+// One-card summary at the end of each lesson. Pass bullet points as list items.
+---
+
+<aside class="takeaway">
+  <p class="tag not-content">Key takeaways</p>
+  <slot />
+</aside>
+
+<style>
+  .takeaway {
+    margin-top: 2rem;
+    padding: 1rem 1.25rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--sl-color-hairline-shade);
+    background: var(--sl-color-gray-7, var(--sl-color-gray-6));
+  }
+  .tag {
+    margin: 0 0 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sl-color-accent-high);
+  }
+  .takeaway :global(ul) {
+    margin-top: 0;
+  }
+</style>

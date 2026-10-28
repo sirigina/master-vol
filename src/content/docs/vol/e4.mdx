@@ -1,0 +1,217 @@
+---
+title: Where edge goes wrong
+description: Recognize the ways a correctly priced, delta-hedged volatility trade still loses money, from wrong forecasts and overnight gaps to volatility moves, skew, liquidity, assignment and model risk.
+lessonId: E4
+prereqs: [E2, E3]
+minutes: 30
+bookRef: the chapters on dynamic hedging
+---
+
+import GapSimulator from '../../../components/widgets/e/GapSimulator.tsx';
+import PnlAttribution from '../../../components/widgets/e/PnlAttribution.tsx';
+import ShortVolTimeline from '../../../components/widgets/e/ShortVolTimeline.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+Lessons [E1](/vol/e1/) to [E3](/vol/e3/) built a clean machine: forecast volatility, find edge, hedge the direction away, collect the difference between realized and implied. Every step rested on assumptions. This lesson goes through the ones that fail in practice, using SPY's own year as the evidence.
+
+## The forecast was wrong
+
+<Plain>
+
+The whole trade is a bet that the real weather will differ from the forecast in a particular direction. If you sold the 770 straddle because you expected 10% weather and SPY delivers 18%, the hedging works perfectly and you still lose: valuing the straddle at 18% instead of 14.06% puts the cost at about $7,060 for 10 short straddles, and the [E2](/vol/e2/) simulator lands near that on average.
+
+The uncomfortable part is that you cannot tell a wrong forecast from bad luck on a single trade. Both look the same on the P/L.
+
+</Plain>
+
+<Pro>
+
+Forecast error is the first-order risk: expected P/L is roughly $$\mathcal{V} \times (\sigma_{\text{real}} - \sigma_{\text{imp}})$$, so every point of forecast error costs one vega. For the 10 straddles that is about **$1,790 per vol point**. Discipline here is statistical: track forecast errors over many trades, size so that a two-standard-deviation forecast miss is survivable, and demand more edge when the forecast is less certain ([lesson E1](/vol/e1/)).
+
+</Pro>
+
+## Jumps and overnight gaps
+
+Dynamic hedging assumes you can rebalance as the price moves. SPY trades thinly, if at all, while you sleep, and its largest moves this year were close-to-close: **+2.91%** on March 31, **−2.58%** on June 5 and **+2.55%** on April 8. A hedge set at the previous close sees the whole move at once.
+
+<GapSimulator client:visible />
+
+With 22 sessions left, a short position in 10 straddles that gaps −2.58% overnight loses about **$4,420**. The same move spread through the day, rehedged every half hour, would have made about **$160**, well short of the **$578** a quiet day's theta would have paid. Switch to 2 sessions to expiry: the gap now costs about **$12,140**, because at-the-money gamma has more than tripled (from 25.3 to 83.9 shares per dollar).
+
+<Plain>
+
+Hedging is like steering a car with the **accelerator** pressed: small, frequent corrections keep you on the road. A gap is a stretch where the road jumps sideways while your hands are off the wheel. No hedging rule can help with a move that happens all at once.
+
+That is why the long straddle (switch the toggle) loves gaps: it gets the whole move as profit before anyone can hedge it away.
+
+</Plain>
+
+<Pro>
+
+For a gap $$\delta S$$ with no chance to rebalance, the hedged P/L is the full convexity term $$\tfrac{1}{2}\Gamma(\delta S)^2$$ plus higher-order terms, not a sum of small squares. Spread over $$n$$ rebalances, the squared moves sum to roughly $$(\delta S)^2 / n$$ plus diffusive noise, so the same total move costs a short-gamma book about $$1/n$$ as much. Gap risk is why desks cut short gamma into weekends, earnings and macro releases, and why the Black-Scholes replication argument fails for jump processes: no continuous hedge can replicate a jump.
+
+</Pro>
+
+## Fat tails
+
+<Plain>
+
+Lesson [C2](/vol/c2/) showed that SPY has more quiet days and more extreme days than a bell curve predicts. A short-volatility position likes the quiet days and gets hurt on the extreme ones, and the extreme ones are where most of its losses come from.
+
+On average a short-volatility position can be right, and still have most of its result determined by a handful of days.
+
+</Plain>
+
+<Pro>
+
+Gamma P/L is quadratic in the move, so its distribution inherits the fourth moment of returns. With excess kurtosis, the realized-variance estimate on any window is dominated by a few observations, and the P/L of a short-gamma book is negatively skewed even when its mean is positive. The models price volatility as if it were constant and log returns normal; the skew ([lesson C8](/vol/c8/)) is the market's partial correction for both.
+
+</Pro>
+
+## Volatility changes mid-trade
+
+So far the options were marked at the volatility they were traded at. In practice the position is marked every day at the market's current implied volatility, and that number moves, often in the direction that hurts. Over the snapshot year, VIX rose about 1.5 points for every 1% SPY fell on a given day.
+
+<PnlAttribution client:visible />
+
+Take the **Selloff** scenario: SPY drops $20 (about the size of June 5) in one day and implied volatility rises 5 points. For 10 short straddles, gamma costs about **$5,060**, theta pays back about **$410**, and vega costs about **$8,950**. The total, repriced in full, is about **−$12,010**. The higher-order term (+$1,600) is partly the straddle's vega falling as SPY moves away from the strike. Vega is the biggest bar: one bad day of volatility repricing costs more than the gamma.
+
+Try **Rally, IV down**: SPY rises $8 and implied falls 2.5 points over three days. The short straddle makes about $4,520, almost all of it vega. A volatility seller's month is often made or lost on the vega line, not the gamma line the trade was built around.
+
+<Plain>
+
+A position held to expiry ends up paid by the real weather. But along the way it is valued every day at the **current forecast**, and the forecast jumps when markets fall. Sensitivity to the forecast changing (vega) can turn a trade that will eventually be right into one that has to be closed today because it is too far underwater.
+
+</Plain>
+
+<Pro>
+
+Daily P/L of a hedged option book decomposes as
+
+$$
+\text{P/L} \approx \tfrac{1}{2}\Gamma(\delta S)^2 + \Theta\,\delta t + \mathcal{V}\,\delta\sigma + \tfrac{1}{2}\,\text{Volga}\,(\delta\sigma)^2 + \text{Vanna}\,\delta S\,\delta\sigma + \dots
+$$
+
+The hold-to-expiry argument of [E2](/vol/e2/) says only the gamma and theta terms matter in the end, because $$\mathcal{V} \to 0$$ at expiry. That is only true if the position survives to expiry. With spot-vol correlation around −0.8 in this sample, a short-volatility book loses on gamma and vega together on down days, and margin, stop-loss limits and risk managers act on the mark, not on the eventual realized volatility.
+
+</Pro>
+
+## The record: when short volatility stopped paying
+
+Here is the whole year in three panels. Top, VIX, with spikes above 20 shaded. Middle, SPY's drawdown from its running high. Bottom, the result of selling an at-the-money straddle on each day, priced at the VIX level less today's skew gap, delta-hedging at every close for 21 sessions and holding to expiry.
+
+<ShortVolTimeline client:visible />
+<SnapshotNote detail="VIX and SPY daily closes; straddles priced at VIX minus 3.46 points" />
+
+The short straddle made money on **183 of 236** start dates (78%) and averaged **+1.9 vol points**. The losing dates are scattered through the year, but the two largest clusters stand out:
+
+- **May 11 to June 4, 2026.** VIX had drifted down from about 18 to 15 while SPY recovered to new highs. Implied looked cheap relative to the spring, then the June 5 drop (−2.58%, VIX from 15.4 to 21.5) arrived inside every open trade. The straddle opened May 29 was **up about $140** per straddle after four sessions and **down about $450** after June 5 at the entry volatility. Marked at the market's new implied, it was down about **$1,190** that day. It finished about $1,000 down, −5.7 vol points.
+- **July 2026.** A slow grind lower into July 29 (VIX 20.7) with no single big day; realized simply ran above a low implied.
+
+Notice what mostly did *not* lose: the start dates in March 2026, during the worst drawdown of the year (−9.1% on March 30). Only 2 of 22 lost. Implied volatility was already high, 21 to 31 on VIX, and the moves, large as they were, did not exceed it for long. The dangerous time to be short volatility was not the crisis. It was **the calm before it**, when implied was low and the edge looked thinnest. Switch to "VIX as quoted" and only 9 start dates lose, all in May and June: the skew adjustment matters for the size of the edge, not for where it fails.
+
+<Plain>
+
+Selling volatility is like selling storm insurance. When the forecast already says "storm", the premium is high and the insurer is usually paid enough. The danger is a run of sunny weeks, when premiums fall and the insurer keeps writing policies at low prices just before the weather turns.
+
+</Plain>
+
+<Pro>
+
+The backtest is crude: 21-session straddles struck at the close, priced at a constant (VIX − 3.46), hedged on closes only, no costs, overlapping windows. Its point is the conditional pattern, not the average: losses concentrate where implied was low relative to its recent range and a volatility shock followed, which is the regime where the volatility risk premium is thinnest and the vega exposure from spot-vol correlation is still fully present.
+
+</Pro>
+
+## Skew, liquidity, assignment and the model itself
+
+<Plain>
+
+A few more ways a sound trade goes wrong:
+
+- **The skew moves.** If you bought one strike and sold another, the prices of the two can move apart even when the overall forecast does not change.
+- **You cannot trade at the price on the screen.** Spreads widen exactly when markets are stressed, and size moves prices. The edge calculated at the mid may not exist at the price you get.
+- **Early assignment.** SPY options are American-style: the holder can exercise any day. A short call can be exercised before the ex-dividend date, leaving you short stock you did not plan to be short.
+- **The model is a map, not the territory.** Every number in this module came from a model that assumes constant volatility and smooth prices. Real markets have neither.
+
+</Plain>
+
+<Pro>
+
+- **Skew risk.** A vega-flat position can carry large exposure to the slope of the smile. In the November 27 chain the 700 put trades at 23.8% and the 800 call at 11.8%; a risk reversal is a bet on that 12-point gap, and selloffs steepen it.
+- **Liquidity and slippage.** The 740 call is quoted 36.96 / 38.58, a $1.62 spread on a vega of 0.65: about 2.5 vol points to cross. Edge measured at the mid is fiction for such strikes. Hedging costs also rise with realized volatility, because the hedger trades more exactly when spreads widen ([lesson E3](/vol/e3/)).
+- **Early assignment.** SPY options are American and SPY pays a quarterly dividend, with the next ex-date around the third Friday of December. Deep in-the-money short calls are at risk the day before; short puts deep in the money can be exercised when the interest on the strike exceeds the remaining time value (lesson [F6](/vol/f6/)). Assignment changes the hedge and can turn a hedged book into a directional one overnight.
+- **Model risk.** Black-Scholes deltas assume each strike's implied volatility stays put when spot moves (sticky strike). If the smile moves with spot instead (sticky delta, or the local-volatility behavior typical of index skew), the right hedge ratio differs, and a book hedged with model deltas carries residual directional exposure. Desks hedge with smile-adjusted deltas, stress-test across volatility regimes and jumps, and limit positions by scenario loss, not by Greeks alone (lessons [H1](/vol/h1/) and [H5](/vol/h5/)).
+
+</Pro>
+
+## Common mistakes
+
+- **Treating hold-to-expiry math as protection from the mark.** A trade that would be right at expiry can still be stopped out by a vega loss along the way.
+- **Hedging a short-gamma book on closes only into a weekend or event.** The gap arrives in full; a June 5-sized gap costs ten short straddles about $4,420, while the same move rehedged intraday makes about $160.
+- **Reading a high win rate as low risk.** The short straddle won 78% of the time in the record above; its losses clustered in the weeks when implied looked cheapest.
+- **Measuring edge at the mid on illiquid strikes.** Crossing a 2.5-vol-point spread erases most volatility edges.
+
+<Takeaway>
+
+- Forecast error costs one vega per vol point; it is the first risk and the one no hedge removes.
+- Gaps and jumps defeat dynamic hedging: a gap pays the full ½ Γ × move², and gamma rises sharply near expiry.
+- Implied volatility tends to rise when SPY falls, so short-volatility books lose on gamma and vega at the same time.
+- In this year's record, short volatility failed in the calm before the June selloff, not in the March crisis.
+- Skew moves, wide markets, early assignment and model assumptions each turn a theoretical edge into a smaller real one.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="E4"
+  questions={[
+    {
+      q: 'A short-gamma position experiences a 2.6% move. Why does it lose far more if the move is an overnight gap than if it happens gradually during the day?',
+      options: [
+        'Theta is larger overnight',
+        'Without the chance to rehedge, the whole move is paid as ½ Γ × move², instead of many small squared moves',
+        'Vega is zero during the day',
+        'Exchanges charge more overnight',
+      ],
+      answer: 1,
+      why: 'Splitting a move into n hedged steps cuts the sum of squared moves by roughly n. A gap gives no steps, so the short-gamma loss is the full convexity term.',
+    },
+    {
+      q: 'Ten short 770 straddles: SPY drops $20 and implied rises 5 points in one day. Which component is the largest loss?',
+      options: ['Gamma', 'Theta', 'Vega', 'Rho'],
+      answer: 2,
+      why: 'Vega of about $1,790 per point × 5 points ≈ $8,950, against about $5,060 from gamma. Theta pays a little back.',
+    },
+    {
+      q: 'In the snapshot year, when did a hedged short ATM straddle (priced at VIX less the skew gap) lose most often?',
+      options: [
+        'During the March 2026 selloff',
+        'In the calm weeks of May and early June before the June 5 drop, and during July',
+        'Every time VIX was above 25',
+        'Never, because implied usually exceeds realized',
+      ],
+      answer: 1,
+      why: 'In March implied was already high. The losing start dates clustered when implied was low and a selloff followed, and in July’s slow grind lower.',
+    },
+    {
+      q: 'Why can edge measured at the mid be misleading for the 740 call quoted 36.96 / 38.58?',
+      options: [
+        'The mid is always wrong',
+        'Crossing a $1.62 spread with vega near 0.65 costs about 2.5 vol points, which can exceed the edge',
+        'Deep in-the-money calls have no vega',
+        'The 740 call cannot be hedged',
+      ],
+      answer: 1,
+      why: 'Half the spread is $0.81, about 1.25 vol points, on each side. Buying and later selling crosses the whole spread, about 2.5 points.',
+    },
+  ]}
+/>
+
+<BookRef />

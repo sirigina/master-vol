@@ -1,0 +1,162 @@
+---
+title: Boxes & jelly rolls
+description: Price a box spread as a loan, read the interest rate it implies, and use a jelly roll to see the financing and dividend between two expiries.
+lessonId: F4
+prereqs: [F3]
+minutes: 25
+---
+
+import BoxCalc from '../../../components/widgets/f/BoxCalc.tsx';
+import JellyRoll from '../../../components/widgets/f/JellyRoll.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+A conversion uses stock. Take the stock out and combine two synthetics instead, and you get the box: four options that pay a fixed amount at expiry, no matter what. A box is a loan written in options, and its price tells you the interest rate.
+
+## The box: two synthetics that cancel
+
+<Plain>
+
+Buy the synthetic stock at a low strike (long 750 call, short 750 put) and sell it at a high strike (short 790 call, long 790 put). At expiry:
+
+- The first pair makes you **buy SPY at 750**.
+- The second pair makes you **sell SPY at 790**.
+
+The shares come and go; you keep **$40**, every time, at any price. A position that pays a guaranteed $40 in 31 days should cost a little less than $40 today, the way a savings bond does. How much less tells you the interest rate.
+
+Another way to see the same four options: a **bull call spread** (long 750 call, short 790 call) plus a **bear put spread** (long 790 put, short 750 put).
+
+</Plain>
+
+<Pro>
+
+For strikes $$K_1 < K_2$$, the long box pays $$K_2 - K_1$$ at expiry with no market risk, so for European options
+
+$$
+\text{Box} = (C_{K_1} - C_{K_2}) + (P_{K_2} - P_{K_1}) = (K_2 - K_1)\,e^{-rT}
+$$
+
+Solving for the rate gives the **box rate**,
+
+$$
+r_{\text{box}} = -\frac{1}{T}\,\ln\!\left(\frac{\text{Box price}}{K_2 - K_1}\right)
+$$
+
+No stock, no dividend, no borrow: a box isolates pure financing. Buying a box is lending (pay now, receive $$K_2-K_1$$ later); selling a box is borrowing. Exchange-listed European index boxes (SPX) are used this way as a funding market, and the box rate tracks Treasury bill rates plus a small spread.
+
+</Pro>
+
+## The box calculator
+
+Pick any two strikes on the November 27 chain. The chart confirms the flat payoff; the cards show the price and the rate it implies.
+
+<BoxCalc client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, real bid/ask; early-exercise values from a binomial tree" />
+
+<Plain>
+
+Start with 750/790. A box that pays $40 in 31 days trades at a mid price of **$40.59**: more than it pays. That would be a negative interest rate, someone paying you to lend. Something else is going on.
+
+The answer is that SPY options are **American**. The in-the-money 790 put can be exercised early, and that right is worth about **$0.70** on its own. The box buyer owns the 790 put and gets that right as a bonus, so the box costs more. Remove it and the box is worth **$39.89**, an implied rate of **3.35%**.
+
+Now try 700/800, the widest box. It trades at **$100.92** at mid, again above its $100 payoff. Strip out $1.36 of early-exercise value and the rate is **5.15%**, close to the 5.0–5.1% American-model rate from [lesson F2](/vol/f2/).
+
+</Plain>
+
+<Pro>
+
+Two lessons in the numbers:
+
+1. **Rate sensitivity scales with width.** On a $40 box over 31 days, one cent of price is 0.30 points of rate; on a $100 box it's 0.12. A narrow box is a terrible rate instrument: the 770/780 box is $9.80 bid, $10.49 ask, which spans implied rates from +24% down to −56%. Desks trade wide boxes, and in size.
+2. **American boxes are not riskless.** The early-exercise premium is real value, but it is also a risk: if you *sell* the box, the long put holder may exercise against you early, leaving you with stock instead of a clean loan ([lesson F5](/vol/f5/)). That is why boxes as funding trades use European, cash-settled index options.
+
+The natural bid/ask (what you'd pay to buy, receive to sell) brackets a range of implied rates, often negative at the buy price and well above any real rate at the sell price. No-arbitrage only requires the reference rate to fall inside that range.
+
+</Pro>
+
+## The jelly roll: financing between two expiries
+
+A box spans two strikes at one expiry. A **jelly roll** spans one strike across two expiries: long the synthetic in one month, short it in the other.
+
+<Plain>
+
+Buy the December 770 synthetic (long call, short put) and sell the November 770 synthetic. In November you are committed to *sell* SPY at 770; in December to *buy* it back at 770. Between those dates you're short the stock, holding $770 of cash.
+
+So a jelly roll is a bet on what those **21 days** between November 27 and December 18 cost. Two things happen in that window: you earn interest on the $770, and if a dividend is paid, you owe it, because you're short the shares.
+
+</Plain>
+
+<JellyRoll client:visible />
+<SnapshotNote detail="770 strike, Nov 27 and Dec 18, 2026 expiries; mid and bid/ask as quoted" />
+
+<Pro>
+
+For European options with no dividend, the roll is worth the difference in the present value of the strike between the two dates:
+
+$$
+\text{Roll} = (C - P)_{T_2} - (C - P)_{T_1} = K\left(e^{-rT_1} - e^{-rT_2}\right) - \text{PV}(D_{T_1 < t < T_2})
+$$
+
+At 4.6%, financing alone is worth **$2.03**. The market quotes the roll at **$0.95** at mid ($0.82 bid, $1.08 ask). Reading it as financing only gives a forward rate of **2.15%** between the expiries, which is nonsense: the gap is the December dividend.
+
+Subtracting the whole $2.10 dividend (present value $2.09) overshoots, to −$0.06. Because the dividend goes ex on December 18, a December call holder can exercise early to capture it, which gives back part of its value. The American model with a $2.10 dividend values the roll at **$1.14**, just above the market's $1.08 ask. Slide the dividend: at about **$2.50** the model matches the $0.95 mid. Desks use exactly this calculation in reverse: hold the rate fixed and solve the roll for the market's **implied dividend**. Here it says the market is pricing a somewhat larger December dividend than our $2.10 guess, or slightly cheaper financing over those three weeks.
+
+</Pro>
+
+## Common mistakes
+
+- **Treating an American equity box as riskless.** Its puts can be exercised early, breaking the box into stock and a spread.
+- **Trading narrow boxes for the rate.** One cent on a $5 box over a month moves the rate by more than 2 points.
+- **Reading a jelly roll as pure financing.** Any dividend between the expiries is in the price; ignore it and the implied forward rate is wrong by points.
+- **Comparing box prices at mid only.** The natural price is what you'd get, and on SPY the spread is wider than the rate edge.
+
+<Takeaway>
+
+- A box (bull call spread + bear put spread) pays K2 − K1 at expiry with no market risk; its price is a loan's price.
+- SPY's American puts add early-exercise value: the 700/800 box trades at $100.92 for a $100 payoff; removing $1.36 of early-exercise value gives a 5.15% rate.
+- Wider boxes give more stable rates; narrow ones swing wildly with each cent.
+- A jelly roll (long synthetic in one expiry, short in another) prices the financing and dividends between the two dates.
+- November vs December 770: financing alone $2.03, market $0.95, an American model with a $2.10 December dividend $1.14; the market implies a dividend nearer $2.50.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="F4"
+  questions={[
+    {
+      q: 'You buy the 750 call, sell the 790 call, buy the 790 put and sell the 750 put, same expiry. What do you receive at expiry?',
+      options: ['$40 only if SPY is above 790', 'Between $0 and $40', 'Exactly $40 at any price', 'It depends on volatility'],
+      answer: 2,
+      why: 'That is a long box: synthetic long at 750 and synthetic short at 790. You buy at 750 and sell at 790, collecting $40 whatever SPY does.',
+    },
+    {
+      q: 'A European box pays $100 in 0.5 years and costs $97.50 today. What rate does it imply (continuous)?',
+      options: ['About 2.5%', 'About 5.1%', 'About 10%', 'About 1.25%'],
+      answer: 1,
+      why: 'r = −ln(97.50/100) / 0.5 ≈ 0.0253 / 0.5 ≈ 5.1%.',
+    },
+    {
+      q: 'Why does the SPY 750/790 box trade above its $40 payoff?',
+      options: [
+        'Interest rates are negative',
+        'The long 790 put is American and its early-exercise right is worth about $0.70',
+        'The calls are mispriced',
+        'Bid/ask spreads',
+      ],
+      answer: 1,
+      why: 'The box buyer owns an in-the-money American put. The right to exercise it early has value the European box formula leaves out.',
+    },
+    {
+      q: 'The Nov/Dec 770 jelly roll trades at $0.95 while financing alone is worth $2.03. What explains most of the difference?',
+      options: ['Higher December volatility', 'SPY\'s December dividend, ex on Dec 18', 'Bid/ask spreads', 'Pin risk'],
+      answer: 1,
+      why: 'The roll leaves you short stock between the expiries, so you owe the dividend. A $2.10 dividend going ex on expiry day, reduced by the call holder\'s right to exercise early for it, accounts for the gap.',
+    },
+  ]}
+/>

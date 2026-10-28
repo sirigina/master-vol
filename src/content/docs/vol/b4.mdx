@@ -1,0 +1,194 @@
+---
+title: Black-Scholes intuition
+description: Read the Black-Scholes formula as two plain-English pieces, know what N(d1) and N(d2) mean, and see where the model fits the real SPY chain and where it does not.
+lessonId: B4
+prereqs: [B1, C3]
+minutes: 25
+---
+
+import BSDecompose from '../../../components/widgets/b/BSDecompose.tsx';
+import ItmProbability from '../../../components/widgets/b/ItmProbability.tsx';
+import ModelVsMarket from '../../../components/widgets/b/ModelVsMarket.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+The Black-Scholes formula looks intimidating, but it says something simple. [Lesson B1](/vol/b1/) priced the 770 call as an average payoff over a lognormal distribution ([lesson C3](/vol/c3/)). Black-Scholes is that same average, worked out in closed form. This lesson reads it piece by piece.
+
+## Two pieces: what you receive, what you pay
+
+<Plain>
+
+If you exercise a call, two things happen: you **receive a share of SPY** and you **pay the strike**. So a call is worth:
+
+- the value of the share you'd receive, *counting only the futures where you'd actually exercise*,
+- minus the value of the strike you'd pay, *counting only those same futures*.
+
+For the 770 call at the snapshot, the first piece is about **$417** and the second about **$403**. The call is the small difference between two big numbers: **$13.97**.
+
+You exercise only when SPY finishes above 770. So each piece is scaled down by how likely that is. The stock piece is scaled down a bit less, because in the futures where you exercise, SPY tends to be well above 770, so the shares you receive are worth more than average.
+
+</Plain>
+
+<Pro>
+
+For a non-dividend-paying underlying,
+
+$$
+C = S\,N(d_1) - K e^{-rT} N(d_2)
+$$
+
+$$
+d_1 = \frac{\ln(S/K) + (r + \tfrac12\sigma^2)T}{\sigma\sqrt{T}}, \qquad d_2 = d_1 - \sigma\sqrt{T}
+$$
+
+For the 770 call at 14.1%: $$\sigma\sqrt T = 0.0411$$, $$d_1 = 0.105$$, $$d_2 = 0.064$$, so $$N(d_1) = 0.542$$ and $$N(d_2) = 0.525$$. Then $$769.66 \times 0.542 = 416.97$$ and $$770\,e^{-rT} \times 0.525 = 403.00$$, a difference of **13.97**.
+
+Each term is a discounted expectation over the risk-neutral distribution:
+
+$$
+S\,N(d_1) = e^{-rT}\,\mathbb{E}^{Q}\!\left[S_T\,\mathbf{1}_{S_T>K}\right], \qquad K e^{-rT} N(d_2) = e^{-rT}\,K\,\mathbb{Q}(S_T > K)
+$$
+
+The first is the present value of receiving the stock only when you exercise; the second is the present value of paying $$K$$ only when you exercise. Their difference is exactly the integral from [lesson B1](/vol/b1/).
+
+</Pro>
+
+<BSDecompose client:visible />
+<SnapshotNote detail="defaults: 770 call, Nov 27, 2026 expiry, quoted IV 14.1%, rate 4.6%" />
+
+Move SPY up and both bars grow, the blue one faster: the gap is the call price. Drag the strike to 700 and the call becomes almost all stock-minus-strike, nearly intrinsic value. Drag it to 840 and both bars shrink toward zero. Lower the days to 1 and $$N(d_1)$$ and $$N(d_2)$$ converge, because there is no room left for the distribution to spread.
+
+## N(d2): the chance of finishing in the money
+
+<Plain>
+
+N(d2) is the model's chance that the call finishes in the money. For the 770 call it is **52.5%**, slightly better than a coin flip, because the forward (772.67) is a little above the strike.
+
+N(d1) is the call's **delta**, its speedometer relative to SPY ([lesson D1](/vol/d1/)). It is always a bit larger than N(d2): 0.542 versus 0.525 here, a gap of 0.016. It is small for a one-month option but grows with time and volatility.
+
+</Plain>
+
+<Pro>
+
+Under the risk-neutral measure, $$\ln S_T \sim \mathcal N\big(\ln S + (r - \tfrac12\sigma^2)T,\ \sigma^2T\big)$$, so
+
+$$
+\mathbb{Q}(S_T > K) = N(d_2)
+$$
+
+$$N(d_1)$$ is the same probability measured under a different weighting (the "stock measure", where outcomes are weighted by the stock price itself). It is also $$\partial C / \partial S$$, the delta. The two differ by the factor $$\sigma\sqrt T$$ in the argument:
+
+- 770 call, 31 days, 14.1%: $$N(d_1) - N(d_2) = 0.016$$.
+- Same option at 40% volatility: $$0.535 - 0.489 = 0.046$$.
+- Same option with 365 days: $$0.653 - 0.600 = 0.053$$.
+
+So the trader's rule "delta ≈ probability of finishing ITM" is fine for short-dated, low-volatility options and drifts the longer and wilder they get. And it is a *risk-neutral* probability: a real-world forecast would centre on expected return, not the risk-free rate.
+
+</Pro>
+
+<ItmProbability client:visible />
+<SnapshotNote detail="risk-neutral lognormal, Nov 27, 2026 expiry, rate 4.6%; quoted delta from the chain" />
+
+The shaded area is $$N(d_2)$$. Slide the strike to 800: at 14.1% the area falls to 19.3% and $$N(d_1)$$ is 0.205. Now lower volatility to 11.8%, the 800 call's own implied volatility: the area shrinks to 15.2% and $$N(d_1)$$ becomes 0.160, matching the quoted delta of 0.158. Slide volatility up and notice that the shaded share for an out-of-the-money strike *rises* while for an in-the-money strike it *falls*: more uncertainty pulls every probability toward the middle.
+
+## The assumptions, and what breaks
+
+<Plain>
+
+Black-Scholes gets its neat answer by assuming a tidy world:
+
+- Prices wander randomly with a **constant weather forecast**: volatility never changes during the option's life.
+- Moves are smooth: no **overnight gaps** or crashes, just lots of tiny steps.
+- You can trade at any moment, with **no costs**, borrow and lend at one rate, and buy or sell any amount.
+
+None of these is exactly true. The model still works remarkably well as a common language, and the next figure shows both where it fits and where it doesn't.
+
+</Plain>
+
+<Pro>
+
+The derivation rests on:
+
+1. **Lognormal prices:** $$dS = \mu S\,dt + \sigma S\,dW$$ with constant $$\sigma$$.
+2. **Continuous hedging:** a portfolio of the option and $$-\Delta$$ shares is riskless over each instant, so it must earn $$r$$. That argument is what removes $$\mu$$ from the price.
+3. **Frictionless markets:** no transaction costs, taxes, short-sale limits; constant, known $$r$$ and $$q$$.
+4. **European exercise.** (SPY options are American; the early-exercise premium is zero for calls when no dividend falls before expiry, and modest for puts, [lesson B5](/vol/b5/).)
+
+The assumption that fails in a way you can *see* is constant volatility. Real SPY returns have fat tails ([lesson C2](/vol/c2/)) and big moves tend to happen on the way down. The market prices that by charging different volatilities at different strikes. Black-Scholes, with one $$\sigma$$, cannot produce that pattern; so traders keep the formula and let $$\sigma$$ vary by strike. That is the volatility smile ([lesson C8](/vol/c8/)).
+
+</Pro>
+
+<ModelVsMarket client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, mid prices; rate 4.6%, no dividend" />
+
+Start with **puts at one flat vol** (14.1%, the at-the-money level). Near the money the model fits within a few cents. Out of the money it collapses: the 720 put is underpriced by **$2.12**, and the 650 put, worth $0.80 in the market, gets a model value of essentially zero. A 14% world says a 15% fall in a month almost never happens; the market disagrees and charges 32% volatility for that strike. On the call side the error flips: at 14.1% the model *overprices* the 790 and 800 calls by about $1.50 and $1.43, because the market uses only 12% there.
+
+Now switch to **each strike's own IV**. The calls reprice to within about 11 cents, and out-of-the-money puts to within 5 cents. The remaining misses are in the deep in-the-money puts (790, 800), which the model underprices by up to **$1.03**: that is the American early-exercise premium the European formula leaves out ([lesson B3](/vol/b3/)). The general lesson: Black-Scholes is used not as a forecast but as a translator between price and volatility, one volatility per option.
+
+## Common mistakes
+
+- **Reading N(d1) as the probability of finishing in the money.** That is N(d2); N(d1) is delta. They are close only for short-dated, low-volatility options.
+- **Treating risk-neutral probabilities as forecasts.** They assume the stock grows at the risk-free rate; they say nothing about expected return.
+- **Using one volatility across all strikes.** A flat vol misprices the wings of the SPY chain by dollars, not cents.
+- **Applying the European formula to deep ITM American puts.** It misses the early-exercise premium.
+
+<Takeaway>
+
+- Black-Scholes: call = S·N(d1) − K·e^(−rT)·N(d2), the value of receiving the stock minus the value of paying the strike, both only when you exercise.
+- For the 770 call: 416.97 − 403.00 = 13.97 at 14.1% volatility.
+- N(d2) is the risk-neutral probability of finishing ITM (52.5%); N(d1) is delta (0.542).
+- The model assumes constant volatility, lognormal prices, continuous costless hedging and European exercise.
+- With each strike's own IV, the formula reproduces the chain; with one flat vol, it misprices the wings. That gap is the smile.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="B4"
+  questions={[
+    {
+      q: 'In C = S·N(d1) − K·e^(−rT)·N(d2), what does the second term represent?',
+      options: [
+        'The probability of profit',
+        'The present value of paying the strike, counted only in the outcomes where you exercise',
+        'The time value of the option',
+        'The dividend adjustment',
+      ],
+      answer: 1,
+      why: 'K·e^(−rT) is the discounted strike; N(d2) is the risk-neutral probability you will pay it.',
+    },
+    {
+      q: 'For the 770 call, N(d1) = 0.542 and N(d2) = 0.525. Which is the risk-neutral probability of finishing in the money?',
+      options: ['0.542', '0.525', '0.017', '0.5 exactly'],
+      answer: 1,
+      why: 'N(d2) is the probability; N(d1) is delta. The gap is 0.016 here and grows with σ√T.',
+    },
+    {
+      q: 'At one flat 14.1% volatility, the model gives the 650 put essentially zero value, but it trades at $0.80. What does this say?',
+      options: [
+        'The put is mispriced; sell it',
+        'The market prices a much higher chance of a large fall than a constant-vol lognormal allows',
+        'The interest rate is wrong',
+        'Black-Scholes cannot price puts',
+      ],
+      answer: 1,
+      why: 'Crash risk and fat tails are priced through higher IV on low strikes (32% here). A flat vol ignores it.',
+    },
+    {
+      q: 'Which assumption is what removes the stock\'s expected return from the formula?',
+      options: [
+        'Lognormal prices',
+        'No dividends',
+        'Continuous, costless delta hedging makes the hedged position riskless, so it earns the risk-free rate',
+        'European exercise',
+      ],
+      answer: 2,
+      why: 'A riskless portfolio must earn r. Since the hedged option is riskless, its value cannot depend on μ.',
+    },
+  ]}
+/>

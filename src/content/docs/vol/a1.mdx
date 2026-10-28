@@ -1,0 +1,205 @@
+---
+title: What an option is
+description: Know exactly what a call or a put gives each side, read every field of a contract and a quote line, and find any contract on a real option chain.
+lessonId: A1
+prereqs: []
+minutes: 20
+---
+
+import ContractAnatomy from '../../../components/widgets/a/ContractAnatomy.tsx';
+import RightsFlow from '../../../components/widgets/a/RightsFlow.tsx';
+import ChainViewer from '../../../components/widgets/a/ChainViewer.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+On October 27, 2026, you could pay **$1,390** for one SPY contract that let you buy 100 shares at $770 any time over the next month. What exactly did that money buy, who took the other side, and what were they on the hook for? Everything else in this course is built on the answer.
+
+## Rights and obligations
+
+<Plain>
+
+An option is a **deposit that holds a price for you**. You pay a small amount now (the premium) so that, for a set period, you can buy or sell something at a price agreed today. If prices move in your favor, you use it. If they don't, you walk away and lose only the deposit.
+
+There are two kinds:
+
+- A **call** holds a *buying* price. It pays off when the price goes up.
+- A **put** holds a *selling* price. It is an **insurance policy**: it pays off when the price falls, and the premium is what the insurance costs.
+
+Every option has two sides. The **buyer** pays the premium and gets a *choice*. The **seller** (also called the writer) collects the premium and takes on a *promise*: if the buyer decides to use the option, the seller has to go through with the deal.
+
+</Plain>
+
+<Pro>
+
+A listed equity option is a standardized contract cleared through the Options Clearing Corporation (OCC). The four primitive positions:
+
+| Position | Pays / receives | Right or obligation |
+| --- | --- | --- |
+| Long call | pays premium | right to **buy** the underlying at $$K$$ |
+| Short call | receives premium | obligation to **sell** at $$K$$ if assigned |
+| Long put | pays premium | right to **sell** the underlying at $$K$$ |
+| Short put | receives premium | obligation to **buy** at $$K$$ if assigned |
+
+The holder's right is valuable only when it beats the market, so at expiration the contract is worth
+
+$$
+C_T = \max(S_T - K,\,0), \qquad P_T = \max(K - S_T,\,0)
+$$
+
+The option is a zero-sum transfer between the two sides: the short's P/L is exactly the negative of the long's. Long options have losses capped at the premium; short options have capped gains and large (for a short call, unbounded) losses. That asymmetry is why brokers require margin from sellers but not from buyers.
+
+</Pro>
+
+<RightsFlow client:visible />
+<SnapshotNote detail="770 strike, Nov 27, 2026 expiry, mid prices" />
+
+Toggle the stage. At the trade only the premium moves. At expiration, either the right is used and **shares and cash change hands at 770**, or nothing moves and the seller simply keeps the $1,390 (call) or $1,124 (put). The details of that exchange, and when it happens automatically, are the subject of [lesson A2](/vol/a2/).
+
+## The contract specs
+
+<Plain>
+
+To pin down an option you need five facts, the same way a deposit slip names what is reserved, at what price, and until when:
+
+1. **Underlying:** what you can buy or sell. Here, SPY, the fund that tracks the S&P 500.
+2. **Strike:** the price you've locked in, for example $770.
+3. **Expiration:** the last day the deal holds, for example November 27, 2026.
+4. **Type:** call (buy) or put (sell).
+5. **Size:** one contract covers **100 shares**. Prices are quoted per share, so a quote of 13.90 costs $1,390 for one contract.
+
+</Plain>
+
+<Pro>
+
+| Spec | SPY standard | Notes |
+| --- | --- | --- |
+| Underlying | SPDR S&P 500 ETF (SPY) | Physically settled in shares |
+| Multiplier | 100 | Premium in dollars = quote × 100 |
+| Strikes | $1 increments near the money (wider listed for the far wings) | The snapshot pulled a subset |
+| Expirations | Daily, weekly, monthly, quarterly, LEAPS | Nov 27, 2026 is a Friday weekly |
+| Style | American | Holder may exercise any business day up to expiry |
+| Settlement | Physical delivery of 100 shares per contract | See [A2](/vol/a2/) |
+
+**American** style means exercise is allowed at any time before expiration; **European** style only at expiration. Most single-stock and ETF options are American; most index options (SPX, NDX) are European and cash-settled. Contract size can be adjusted after corporate actions (splits, special dividends), which is why you sometimes see "non-standard" deliverables; always check the deliverable before trading an odd-looking series.
+
+Notional exposure is easy to underestimate: one SPY contract controls $$100 \times 769.66 = \$76{,}966$$ of stock, even though the 770 call costs $1,390.
+
+</Pro>
+
+<ContractAnatomy client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, mid prices; expiry values use intrinsic value" />
+
+Try the 770 call first. It costs $1,390. If SPY ends up 2% higher, at 785, the right is worth $15 a share, $1,500, so the buyer makes $110 and the seller loses $110. Unchanged at 770, the buyer loses the full $1,390. Now switch to the 750 put: much cheaper at $594, because SPY has to fall below 750, about 2.6% lower, before it is worth anything at expiration.
+
+## Reading a quote line
+
+<Plain>
+
+A broker shows each contract as one line of numbers. The four you need first:
+
+- **Bid:** the best price someone will pay you right now if you sell.
+- **Ask:** the best price someone will sell to you right now if you buy.
+- **Mark:** the midpoint between bid and ask. A fair reference price, not a guaranteed fill.
+- **IV (implied volatility):** the market's **weather forecast for price swings**, backed out from the price. Higher IV means a more expensive option. Module C covers it.
+
+Brokers often add the Greeks (delta, theta and so on). Delta is the **speedometer**: how many cents the option moves when SPY moves a dollar. You'll meet each one in module D.
+
+</Plain>
+
+<Pro>
+
+A quote line such as
+
+`SPY 11/27/2026 770 C · bid 13.87 · ask 13.93 · mark 13.90 · IV 14.1% · Δ 0.54`
+
+reads: underlying, expiration, strike, type, then the **national best bid and offer** (NBBO) across all options exchanges. The OCC symbol encodes the same fields in fixed width: `SPY   261127C00770000` (root padded to six characters, YYMMDD, C/P, strike × 1000 in eight digits). The mark is a convention, usually the bid-ask midpoint; Greeks and IV shown on retail screens come from the vendor's model and are computed from the mark. The spread (here 6 cents) is a cost you pay every time you cross it; [lesson A4](/vol/a4/) measures it across the chain.
+
+</Pro>
+
+## The option chain
+
+All the contracts for one expiration are laid out in a grid called the chain: one row per strike, calls on the left, puts on the right.
+
+<ChainViewer client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry; a subset of listed strikes" />
+
+Three patterns to look for:
+
+1. **Calls get cheaper as the strike rises; puts get more expensive.** A right to buy at 700 is worth far more than a right to buy at 840.
+2. **The shading flips at the current price.** Calls below 769.66 and puts above it are *in the money*: they would be worth something if they expired right now ([lesson A3](/vol/a3/)).
+3. **Puts below the market cost more than calls the same distance above it.** The 740 put (about $30 below SPY) is $4.44; the 800 call (about $30 above) is $2.14. Investors pay up for crash insurance. That pattern, the skew, gets its own lesson ([C8](/vol/c8/)).
+
+<Plain title="Why buy the right instead of the shares?">
+
+Owning 100 SPY shares ties up about $77,000. The 770 call gives you most of the upside above 770 for $1,390, and the most you can lose is that $1,390. The trade-off: the deposit is gone if SPY doesn't rise far enough before the deadline. You get leverage and a cap on the loss; you pay for it with time.
+
+</Plain>
+
+<Pro title="Pro detail: what the premium buys">
+
+The premium is the market's price for an asymmetric payoff. Splitting it into the part that is already "in hand" (intrinsic value) and the part that pays for possibility (time value) is the subject of [A3](/vol/a3/); pricing that possibility is modules B and C. For now, one useful anchor: with 31 days left the at-the-money call and put together cost $25.14, about 3.3% of SPY. That is roughly what the market expects SPY's average move to be by November 27 ([lesson C2](/vol/c2/)).
+
+</Pro>
+
+## Common mistakes
+
+- **Forgetting the multiplier.** A quote of 13.90 is $1,390 per contract, not $13.90.
+- **Thinking the seller has a choice.** The seller has none. Once assigned, they must deliver (call) or buy (put) at the strike.
+- **Confusing "buying a put" with "selling a call."** Both profit when SPY falls, but the put buyer's loss is capped at the premium while the call seller's loss is open-ended.
+- **Treating the mark as a fill price.** You buy at or near the ask and sell at or near the bid.
+
+<Takeaway>
+
+- A call is the right to buy, a put the right to sell, 100 shares at the strike until expiration.
+- The buyer pays the premium and holds a choice; the seller collects it and carries an obligation.
+- Specs: underlying, strike, expiration, type, and the 100-share multiplier. SPY options are American style and settle in shares.
+- A quote line gives bid, ask, mark and model values like IV and delta; the cost of one contract is quote × 100.
+- The chain shows every strike for one expiration, calls left and puts right, with in-the-money options on opposite sides of the current price.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="A1"
+  questions={[
+    {
+      q: 'You sell one SPY 750 put at $5.94. What have you agreed to?',
+      options: [
+        'To sell 100 SPY at $750 if the buyer wants',
+        'To buy 100 SPY at $750 if the buyer exercises',
+        'To buy 100 SPY at $750 on November 27 no matter what',
+        'To pay $594 if SPY falls',
+      ],
+      answer: 1,
+      why: 'The put buyer holds the right to sell at 750; you, the writer, must buy at 750 if they exercise. You collected $594 for taking on that obligation.',
+    },
+    {
+      q: 'The 790 call shows bid 4.42, ask 4.46. Roughly what does buying one contract cost?',
+      options: ['$4.46', '$44.60', '$446', '$4,460'],
+      answer: 2,
+      why: 'You buy at the ask, 4.46 per share, times the 100-share multiplier: $446.',
+    },
+    {
+      q: 'With SPY at 769.66, which of these is in the money?',
+      options: ['780 call', '760 put', '760 call', '765 put'],
+      answer: 2,
+      why: 'A call is in the money when SPY is above its strike. 769.66 > 760, so the 760 call is. The 760 and 765 puts need SPY below their strikes.',
+    },
+    {
+      q: 'What does "American style" mean for an SPY option?',
+      options: [
+        'It trades only on US exchanges',
+        'The holder can exercise on any business day up to expiration',
+        'It settles in cash',
+        'It can only be exercised at expiration',
+      ],
+      answer: 1,
+      why: 'American style allows exercise any time before expiry; European style only at expiry. It has nothing to do with geography.',
+    },
+  ]}
+/>

@@ -1,0 +1,191 @@
+---
+title: Elementary strategies
+description: Choose and read the basic option strategies (covered call, cash-secured put, protective put, collar, straddle, strangle and verticals) by the market view each expresses, with real SPY prices.
+lessonId: A6
+prereqs: [A5]
+minutes: 25
+---
+
+import StrategyMatcher from '../../../components/widgets/a/StrategyMatcher.tsx';
+import CoveredVsCsp from '../../../components/widgets/a/CoveredVsCsp.tsx';
+import CollarBuilder from '../../../components/widgets/a/CollarBuilder.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+A strategy is a way of saying something about the market with options. "I think SPY goes up" can be said with a long call, a call spread or a short put, and each says it differently: how much you pay, how much you can make, and what happens if you're wrong. This lesson matches the common views to the simple strategies that express them, using the payoff diagrams from [lesson A5](/vol/a5/).
+
+## Start from the view
+
+<Plain>
+
+Before picking a strategy, answer two questions:
+
+1. **What do I expect?** Up, down, sideways, a big move in either direction, or "I own SPY and want to protect it."
+2. **How do I want to pay?** Pay a premium up front (and lose at most that), keep the cost low by giving up some of the upside, or collect a premium (and take on the risk someone else is paying to avoid).
+
+Paying the premium is buying insurance or placing a deposit. Collecting it is *being* the insurer: you earn the premium most of the time and pay out when the storm comes.
+
+</Plain>
+
+<Pro>
+
+Every elementary strategy is a combination of the four building blocks plus stock. Two properties classify them:
+
+- **Direction (delta):** positive for bullish structures, negative for bearish, near zero for volatility plays.
+- **Volatility exposure (vega and gamma):** net long options gain from bigger moves and lose to time decay; net short options earn time decay and lose from big moves.
+
+| View | Pay premium (long vol) | Lower cost | Collect premium (short vol) |
+| --- | --- | --- | --- |
+| Bullish | long call | bull call spread | short (cash-secured) put |
+| Bearish | long put | bear put spread | bear call spread |
+| Neutral | n/a | butterflies (G4) | covered call, short put |
+| Big move | long straddle | long strangle | n/a (opposite view) |
+| Hedge long stock | protective put | collar | covered call (a cushion only) |
+
+The cost column is also a volatility column: the right-hand strategies are short volatility, the left-hand ones long. Choosing between "long call" and "short put" for a bullish view is a volatility decision as much as a directional one ([G1](/vol/g1/)).
+
+</Pro>
+
+<StrategyMatcher client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, mid prices; P/L per contract at expiration" />
+
+Click through the grid. A few pairs worth comparing:
+
+- **Bullish, pay vs keep cost low.** The 770 call costs $1,390 and needs SPY above 783.90. Selling the 790 call against it cuts the cost to $946 and the breakeven to 779.46, but caps the profit at $1,054.
+- **Bearish, collect premium.** The 780/800 bear call spread collects $620 and keeps it all if SPY stays below 780. The worst case is $1,380, when SPY finishes above 800.
+- **Big move.** The 770 straddle costs $2,514 and needs SPY outside 744.86–795.14. The 750/790 strangle costs $1,038 but needs SPY outside 739.62–800.38.
+
+## Covered calls and cash-secured puts
+
+<Plain>
+
+These are the two most popular income strategies, and they are close cousins.
+
+- **Covered call:** you own 100 shares and sell a call above the price. You collect the premium now. If SPY rises above the strike, your shares are called away at the strike, so your upside stops there.
+- **Cash-secured put:** you set aside enough cash to buy 100 shares and sell a put below (or at) the price. You collect the premium now. If SPY falls below the strike, you buy the shares at the strike.
+
+Both make a little if SPY stays put or rises modestly, and both lose most of what SPY loses on a big drop. The covered call seller already owns the shares; the put seller is getting *paid to wait* to buy them.
+
+</Plain>
+
+<Pro>
+
+At expiration, per share,
+
+$$
+\underbrace{S_T - S_0 + C - \max(S_T - K, 0)}_{\text{covered call}} \quad\text{vs}\quad \underbrace{P - \max(K - S_T, 0)}_{\text{short put}}
+$$
+
+Subtract and the $$S_T$$ terms cancel: the difference is the constant $$K - S_0 + C - P$$. Put-call parity says $$C - P = S_0 - K e^{-rT}$$, so the constant is $$K(1 - e^{-rT})$$: **interest on the strike**. A covered call is a short put plus a bond paying the strike, which is why the two lines are parallel. The put seller who earns interest on the cash collateral ends up in the same place. The snapshot confirms it near the money: at 770 the gap is exactly $3.00, equal to 31 days of interest at 4.6% on $770.
+
+Practical differences remain: the covered call has more capital tied up in a position that may pay dividends (which accrue to the stock owner; the put price already reflects them), assignment comes from opposite directions, and tax treatment differs. Desks call this pair **synthetically equivalent** ([F1](/vol/f1/)).
+
+</Pro>
+
+<CoveredVsCsp client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, mid prices; interest at the parity-implied 4.6%" />
+
+At the 780 strike the covered call collects $834 and makes at most $1,868 (if SPY finishes at 780 or above: $10.34 of share gain plus the $8.34 premium). The cash-secured put collects $1,582 and makes at most that. The covered call line sits $2.86 per share above the put line everywhere, and turning on the interest on the put's $78,000 of collateral ($3.05 per share) closes the gap to $0.19. Try other strikes: the leftover is $0.20 or less from 750 to 780, then grows to $0.54 at 790 and $1.06 at 800. Those puts are in the money, with wide quotes and some early-exercise value (they are American, [A2](/vol/a2/)), both of which lift the put price above what the European parity formula allows.
+
+## Protective puts and collars
+
+<Plain>
+
+If you already own SPY, a put is an **insurance policy** on it. A **protective put** at 750 costs $594 per 100 shares and guarantees you can sell at 750 no matter how far the market falls. Your worst case is fixed; your upside is intact, minus the premium.
+
+A **collar** pays for that insurance by giving up some upside: you also sell a call above the price. The call premium offsets the put premium. Pick the strikes so they nearly cancel and the insurance costs almost nothing, but your gains stop at the call strike.
+
+</Plain>
+
+<Pro>
+
+Protective put, per share: worst case $$K_p - S_0 - P$$, unlimited upside less $$P$$. With the 750 put at $5.94, the floor is $$750 - 769.66 - 5.94 = -25.60$$, a **−$2,560** worst case per 100 shares, and the breakeven rises to 775.60.
+
+Collar: long stock + long $$K_p$$ put + short $$K_c$$ call. Worst case $$K_p - S_0 - (P - C)$$; best case $$K_c - S_0 - (P - C)$$. The structure is economically a **bull call spread from $$K_p$$ to $$K_c$$** plus a bond ([F1](/vol/f1/)). Because equity skew makes downside puts expensive relative to upside calls, a "zero-cost" collar on SPY usually has its put further from spot than its call: on the snapshot, the **740 put ($4.44) exactly pays for the 790 call ($4.44)**, so the floor is $29.66 below spot while the cap is only $20.34 above. Collars are standard for concentrated stock holders, and index collars by large funds are a visible source of the persistent demand that shapes the skew ([C8](/vol/c8/)).
+
+</Pro>
+
+<CollarBuilder client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, mid prices; per 100 shares" />
+
+The default 750 put / 790 call collar costs **$1.50** a share ($150) and bounds the outcome at expiration between **−$2,116** (−2.7%) and **+$1,884** (+2.4%). Change the put to 740 and the collar costs nothing: worst case −$2,966, best case +$2,034. Try 760 and 780 and you are *paid* $0.25 a share to accept a range of −$941 to +$1,059.
+
+## Straddles, strangles and verticals, a preview
+
+<Plain>
+
+Two more families round out the basics, each with its own lesson later:
+
+- **Straddles and strangles** buy a call and a put together. They don't care which way SPY moves, only how far: they are bets on the **weather forecast for price swings** being too mild. Selling them is the opposite bet.
+- **Vertical spreads** buy one option and sell another of the same type at a different strike. They are cheaper directional bets with a ceiling on profit, like the bull call spread and the bear put spread above.
+
+</Plain>
+
+<Pro>
+
+A long straddle is long gamma and vega with near-zero delta at inception; its breakevens are the strike ± the combined premium, so at the snapshot SPY must move more than $25.14 (3.3%) by November 27. That is essentially the market's expected move ([C2](/vol/c2/)), which makes buying the straddle a pure bet that realized volatility will exceed the 14% implied. Verticals trade a capped payoff for a lower premium and, because they combine a long and a short option, partially offset vega and theta; they also embed a view on the **skew** between their strikes. [G3](/vol/g3/) covers straddles and strangles, and [G1](/vol/g1/) why traders use spreads at all.
+
+</Pro>
+
+## Common mistakes
+
+- **Treating covered calls as low-risk.** A covered call loses almost as much as the stock on a big decline; the premium is only a cushion.
+- **Selling puts without the cash to buy the shares.** A naked short put on SPY at 750 obliges you to pay $75,000 if assigned.
+- **Choosing a strategy by its maximum profit.** The probability of reaching it matters as much. A bull call spread's $1,054 maximum needs SPY above 790.
+- **Forgetting the volatility side of a directional choice.** A long call and a short put are both bullish but take opposite views on volatility.
+
+<Takeaway>
+
+- Pick the market view first (up, down, flat, big move, hedge), then how you want to pay (premium, lower cost, collect).
+- Buying options is long volatility with limited loss; selling them is short volatility with limited gain.
+- A covered call and a cash-secured put at the same strike have the same shape; the gap is interest on the strike.
+- A protective put sets a floor under stock; a collar pays for the floor by capping the upside, and skew pushes zero-cost puts further from spot than the calls.
+- Straddles and strangles are bets on the size of the move; verticals are cheaper directional bets with a cap.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="A6"
+  questions={[
+    {
+      q: 'You expect SPY to rise modestly over the next month and want to collect premium rather than pay it. Which strategy fits?',
+      options: ['Long call', 'Cash-secured put', 'Long straddle', 'Protective put'],
+      answer: 1,
+      why: 'Selling a put collects premium and profits if SPY stays above the strike less the premium. It is a bullish, short-volatility position.',
+    },
+    {
+      q: 'Why do a covered call and a cash-secured put at the same strike have parallel payoff lines?',
+      options: [
+        'Coincidence of the snapshot prices',
+        'Put-call parity: stock plus short call equals short put plus a bond paying the strike',
+        'Both are bearish',
+        'Both use the same expiry',
+      ],
+      answer: 1,
+      why: 'Long stock − call = −put + K·e^(−rT). The constant gap is interest on the strike, which the put seller earns on the collateral.',
+    },
+    {
+      q: 'A collar on 100 SPY at 769.66 uses the 750 put ($5.94) and the 790 call ($4.44). What is the worst case at expiration?',
+      options: ['−$1,966', '−$2,116', '−$2,560', '−$594'],
+      answer: 1,
+      why: 'Net cost 5.94 − 4.44 = 1.50. Worst case per share = 750 − 769.66 − 1.50 = −21.16, or −$2,116 per 100 shares.',
+    },
+    {
+      q: 'You expect a big move but don’t know the direction. The straddle costs $25.14 and the 750/790 strangle $10.38. What do you give up with the strangle?',
+      options: [
+        'Nothing; it is strictly better',
+        'It needs a larger move: breakevens at 739.62 and 800.38 instead of 744.86 and 795.14',
+        'It has unlimited loss',
+        'It cannot be exercised early',
+      ],
+      answer: 1,
+      why: 'The strangle is cheaper because its strikes are further from spot, so SPY must travel further before either option is worth more than the total premium.',
+    },
+  ]}
+/>

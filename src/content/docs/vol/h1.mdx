@@ -1,0 +1,197 @@
+---
+title: Comparing spreads by risk
+description: Rank volatility spreads by the risk behind their edge, using max loss, edge per unit of vega, breakeven volatility and the spread of outcomes.
+lessonId: H1
+prereqs: [G2, G7]
+minutes: 25
+bookRef: the chapters on risk analysis
+---
+
+import SpreadCompare from '../../../components/widgets/h/SpreadCompare.tsx';
+import EdgeVsForecast from '../../../components/widgets/h/EdgeVsForecast.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+Suppose you think SPY will move more than the options say. Three spreads all express that view, and at your forecast they all show a profit in the model. Which one do you trade? The one with the most edge is not automatically the answer. This lesson is about the other half of the decision: **how much can go wrong on the way to that edge**.
+
+## Same view, three trades
+
+<Plain>
+
+At the October 27 close, the November 27 SPY options were priced for about **14%** volatility. Say your forecast is **16%**: a bumpier month than the market expects. Three ways to buy that view:
+
+- **Long 770 straddle:** buy the 770 call and the 770 put. You pay $2,514 per pair and need SPY to move a lot, either way.
+- **Long 750/790 strangle:** buy the 750 put and the 790 call. Cheaper ($1,038), but SPY has to travel further before either one pays.
+- **1×2 call backspread:** sell one 770 call, buy two 790 calls. You *collect* $502 up front, profit from a big rally, and lose most if SPY ends right at 790.
+
+All three gain if your forecast is right. They lose in very different ways if it is wrong, and that difference is what this lesson measures.
+
+</Plain>
+
+<Pro>
+
+For a spread with legs $$i$$, the **theoretical edge** at forecast $$\hat\sigma$$ is
+
+$$
+E(\hat\sigma) = \sum_i n_i \big[ V_i(\hat\sigma) - P_i \big]
+$$
+
+where $$V_i$$ is the model value, $$P_i$$ the price paid (the mark) and $$n_i$$ the signed quantity. Edge says how much you expect to make *if the forecast is right and the model is right*. It says nothing about the dispersion of results around that expectation, or about how quickly the expectation erodes when the forecast is off. A risk comparison needs at least four more numbers: the **maximum loss**, the **vega** (the slope of $$E$$ in $$\hat\sigma$$), the **breakeven volatility** $$\sigma^\ast$$ where $$E(\sigma^\ast)=0$$, and the **distribution of P/L** under the forecast.
+
+</Pro>
+
+<SpreadCompare client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry; costs at marks; edge, Greeks and simulation are model outputs" />
+
+At a 16% forecast with one volatility for every strike, the backspread shows the most edge per contract (**+$427**), then the straddle (**+$352**) and the strangle (**+$267**). The other rows tell a different story about each one.
+
+## Edge per unit of risk
+
+<Plain>
+
+A good way to compare is to ask: **how wrong can I be before this trade stops making sense?**
+
+- The straddle's edge is $352, and every 1-point change in the forecast moves that edge by about $178 (its vega). So the forecast can be about **2 points** too high before the edge is gone.
+- The strangle: $267 of edge, $153 per point. About **1.7 points** of room.
+- The backspread: $427 of edge, only $73 per point. Nearly **6 points** of room.
+
+Then ask: **what is the most I can lose?** The straddle can lose its whole $2,514. The strangle, $1,038. The backspread, $1,498 if SPY finishes exactly at 790. Dividing edge by worst case gives 14%, 26% and 28%.
+
+On those two measures the backspread looks best. Hold that thought: the next section shows why it is partly an illusion.
+
+</Plain>
+
+<Pro>
+
+Two ratios do most of the work.
+
+**Edge ÷ vega** approximates the forecast error you can absorb:
+
+$$
+\hat\sigma - \sigma^\ast \;\approx\; \frac{E(\hat\sigma)}{\mathcal{V}}
+$$
+
+At 16%: straddle $$352/178 \approx 2.0$$ points (breakeven vol 14.0%), strangle $$267/153 \approx 1.7$$ (breakeven 14.2%), backspread $$427/73 \approx 5.9$$ (breakeven 8.7%). The approximation is first-order: the backspread's vega shrinks as the forecast falls, so its true cushion is $$16 - 8.7 = 7.3$$ points.
+
+**Edge ÷ max loss** is a return on worst-case capital: 14%, 26% and 28%. It favors defined-risk structures and penalizes the straddle, whose premium is all at risk.
+
+Neither ratio is complete. Edge per vega ignores the shape of the payoff; edge per max loss ignores how likely the max loss is. The straddle loses its full premium only if SPY pins 770 exactly; the strangle loses all $1,038 whenever SPY finishes anywhere between 750 and 790.
+
+</Pro>
+
+## Where each spread wins
+
+The ranking changes with the forecast, and with how you apply it across strikes. Toggle between **one vol** (every strike priced at your forecast) and **shift the smile** (each strike keeps its market skew, and the whole smile moves up or down with your forecast).
+
+<EdgeVsForecast client:visible />
+<SnapshotNote detail="Nov 27, 2026 marks; model edge per contract" />
+
+<Plain>
+
+With one volatility for every strike, the backspread leads for any forecast between about 9% and 16.5%, and the straddle leads above that. The backspread even shows positive edge when your forecast is *below* the market's 14%.
+
+That should make you suspicious. A spread that "wins" when you think volatility is too high **and** when you think it is too low is not really a volatility trade. Switch to "shift the smile" and the backspread's advantage collapses: it has no edge at all until your forecast passes 14%, and at 16% it shows only about $129.
+
+The reason is skew. The backspread buys 790 calls priced at 12.2% volatility and sells a 770 call priced at 14.1%. Pricing every strike at one number credits it with the 790 call's "cheapness". If the market's skew is right, that cheapness is not edge, it is the going rate.
+
+</Plain>
+
+<Pro>
+
+In flat-vol mode the backspread's edge decomposes into a vega term plus a **skew term**: it is long the 790 strike, whose implied vol is about 1.9 points under the 770's. Valuing both legs at one $$\hat\sigma$$ marks the 790s up by more than the 770 and books the skew difference as edge. In shift-the-smile mode, each leg is valued at $$\sigma_i^{\text{mkt}} + (\hat\sigma - \sigma_{\text{ATM}})$$, so the skew is respected; the backspread's breakeven vol moves from 8.7% to 14.0% and its 16% edge falls from $427 to $129.
+
+This is the general lesson: **ratio spreads and spreads across strikes carry a skew bet alongside the volatility bet**. Before ranking them by edge, decide whether you have a view on the skew itself (lesson [C8](/vol/c8/)). Per dollar at risk, the strangle leads above about 16.3% in flat mode and above 14% once the smile is respected.
+
+</Pro>
+
+## The distribution behind the average
+
+<Plain>
+
+Edge is an *average* result. You trade one outcome, not the average. Look back at the histograms in the first figure at 16%:
+
+- The **straddle** wins about half the time (49%), with a wide spread of results: the worst 5% of paths lose over $2,200; the best 5% make over $4,600.
+- The **strangle** wins only 40% of the time. In about 42% of paths SPY ends between 750 and 790 and it loses the full $1,038, but its winners are large. It is a lottery-ticket profile.
+- The **backspread** wins 72% of the time, usually the $502 it collected (SPY finishes below 770 and everything expires). Its losses cluster near 790 and its gains need a strong rally.
+
+Three trades with similar average edge, three very different experiences. Which one suits you depends on what you can live with: frequent small losses, rare large ones, or a narrow zone of pain.
+
+</Plain>
+
+<Pro>
+
+The simulation draws 20,000 expiry prices (10,000 antithetic pairs, seeded) from the lognormal distribution at $$\hat\sigma$$ with drift $$r$$, so its average lands near the one-vol edge (at 16%, +$398 against +$352 for the straddle; the gap is sampling noise plus the fact that expiry P/L is not discounted). The useful outputs are the moments the model's single number hides:
+
+- **Win rate**, and **skew of P/L**: long premium strategies win less often than they lose, offset by right-skewed payoffs.
+- **5th percentile**: a crude VaR at expiry. The strangle's is its full premium; the straddle's is about $2,281.
+- **Location of the worst case**: the backspread's max loss sits at one price (790), so it is a *path* risk too: near expiry, a market drifting toward 790 erodes it fastest.
+
+A desk would also look at how each spread behaves before expiry (theta per day: −$46, −$40, −$20 at 16%) and how its Greeks change as SPY moves, which is the subject of [lesson H3](/vol/h3/).
+
+</Pro>
+
+## Common mistakes
+
+- **Ranking by edge alone.** Edge is an expectation under your forecast. Two spreads with the same edge can have very different worst cases and win rates.
+- **Pricing every strike at one volatility when comparing spreads across strikes.** It turns the skew into fake edge, especially for ratio spreads and backspreads.
+- **Treating edge ÷ vega as exact.** It is a linear estimate; the true breakeven volatility can sit well away from it when vega changes with the forecast.
+- **Ignoring where and how often the maximum loss occurs.** A maximum loss that applies across a whole range of prices (the strangle between 750 and 790) is far more likely than one that needs SPY to finish at one exact price (the straddle at 770, the backspread at 790).
+
+<Takeaway>
+
+- Edge is the average result if your forecast and the model are right; risk is everything around that average.
+- Edge ÷ vega ≈ how many volatility points your forecast can miss by. Breakeven volatility is the exact version.
+- Edge ÷ max loss compares return on worst-case capital; read it alongside how likely that loss is.
+- Spreads across strikes carry a skew bet. Compare them with the smile respected, or you will mistake skew for edge.
+- Look at the full P/L distribution: win rate, the bad 5%, and where the losses sit.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="H1"
+  questions={[
+    {
+      q: 'A spread has $300 of edge at your forecast and vega of $150 per vol point. Roughly how far can your forecast be too high before the edge disappears?',
+      options: ['0.5 points', '2 points', '4.5 points', '150 points'],
+      answer: 1,
+      why: 'Edge ÷ vega = 300 ÷ 150 = 2 volatility points. It is a first-order estimate; the exact breakeven volatility accounts for vega changing.',
+    },
+    {
+      q: 'With every strike priced at one volatility, the 770/790 call backspread shows positive edge even at a 12% forecast, below the market’s 14%. What is the main cause?',
+      options: [
+        'The backspread is short volatility',
+        'The 790 calls trade at lower implied volatility than the 770 call, and one flat vol books that skew as edge',
+        'Interest rates',
+        'Simulation noise',
+      ],
+      answer: 1,
+      why: 'The backspread is long the 790 strike, whose market IV (12.2%) is under the 770’s (14.1%). A flat forecast marks the 790s up relative to the 770 and calls the difference edge. Respect the smile and the 12% edge turns negative.',
+    },
+    {
+      q: 'At a 16% forecast the straddle and strangle have similar edge per dollar of vega. Why might a trader still prefer the straddle?',
+      options: [
+        'It costs less',
+        'It wins more often: about half the paths, against 40% for the strangle, with a less lopsided distribution',
+        'Its maximum loss is smaller',
+        'It has no theta',
+      ],
+      answer: 1,
+      why: 'The strangle loses its full premium whenever SPY ends between the strikes, which is most of the time. The straddle costs more but wins more often; the choice depends on which distribution you can live with.',
+    },
+    {
+      q: 'Which number best answers “what does this spread lose if I am right about volatility but SPY ends at the worst possible price?”',
+      options: ['Edge', 'Vega', 'Maximum loss at expiry', 'Theta'],
+      answer: 2,
+      why: 'Edge and the Greeks describe averages and sensitivities. The maximum loss at expiry (and where it occurs) describes the worst single outcome.',
+    },
+  ]}
+/>
+
+<BookRef />

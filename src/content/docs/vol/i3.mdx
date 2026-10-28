@@ -1,0 +1,190 @@
+---
+title: Portfolio hedging
+description: Size an index put hedge for a stock portfolio using beta, choose between SPY and SPX, and estimate what the protection costs per year.
+lessonId: I3
+prereqs: [I2]
+minutes: 25
+---
+
+import PortfolioHedgeCalc from '../../../components/widgets/i/PortfolioHedgeCalc.tsx';
+import HedgedPortfolio from '../../../components/widgets/i/HedgedPortfolio.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+Most people who want protection do not own 100 shares of SPY. They own a mix of stocks, and buying a put on each one is expensive and clumsy. The standard answer is to hedge the whole portfolio with index options. That raises three questions: how many puts, which index product, and how much of your risk the index puts can actually cover.
+
+## Beta: translating your portfolio into SPY
+
+<Plain>
+
+Your portfolio does not move one-for-one with SPY. A portfolio heavy in technology stocks might fall 12% when SPY falls 10%; a utility-heavy one might fall only 6%. That ratio is **beta**.
+
+To hedge, convert your portfolio into "SPY dollars": multiply its value by its beta. A $1,000,000 portfolio with beta 1.2 behaves like **$1,200,000 of SPY**. One SPY put covers 100 shares, or $76,966 at 769.66. So you need about $1,200,000 ÷ $76,966 ≈ **15.6 puts**, rounded to 16.
+
+If you ignored beta and bought 13 puts for $1,000,000, you would be about a sixth under-hedged in a selloff.
+
+</Plain>
+
+<Pro>
+
+Beta is the regression slope of the portfolio's returns on the index's returns:
+
+$$
+r_P = \alpha + \beta\, r_{\text{SPY}} + \varepsilon, \qquad \beta = \frac{\operatorname{Cov}(r_P, r_{\text{SPY}})}{\operatorname{Var}(r_{\text{SPY}})}
+$$
+
+The notional hedge is
+
+$$
+N = \frac{\beta \, V_P}{m \, S}
+$$
+
+with $$m$$ the multiplier (100) and $$S$$ the index level. For $$V_P = \$1{,}000{,}000$$, $$\beta = 1.2$$: $$N_{\text{SPY}} = 1{,}200{,}000 / 76{,}966 = 15.59$$, and with SPX at 7722.6, $$N_{\text{SPX}} = 1{,}200{,}000 / 772{,}260 = 1.55$$.
+
+Two caveats desks always add: beta is estimated from history and changes, typically rising in selloffs as correlations go up; and the residual $$\varepsilon$$, the stock-specific part, is not hedged at all.
+
+</Pro>
+
+## Notional vs delta: two meanings of "hedge ratio"
+
+<Plain>
+
+There are two ways to count how many puts you need, and they answer different questions.
+
+- **Notional count** (the 16 above): enough puts to cover the full value at the strike. If SPY falls far below the strike, the puts gain about as fast as the portfolio loses.
+- **Delta count:** enough puts to offset *today's* small moves. An out-of-the-money put moves only a fraction as much as SPY (the 740 put has a delta of −0.196, about a fifth), so you would need about **80** of them to offset a small dip right now.
+
+Insurance buyers use the notional count. Traders who want to flatten their market exposure for the next few days use the delta count, or simply sell futures.
+
+</Plain>
+
+<Pro>
+
+With put delta $$\Delta_P$$, the delta-neutral count is $$N_\Delta = \beta V_P / (m S |\Delta_P|)$$. For the November 740 put, $$N_\Delta = 1{,}200{,}000 / (76{,}966 \times 0.196) = 79.5$$ contracts, 5.1 times the notional count.
+
+A delta-neutral put hedge is long a lot of gamma and vega and pays a lot of theta; it is a volatility position as much as a hedge ([lesson E2](/vol/e2/)). A notional hedge starts with little delta and gains delta as the market falls toward the strike, which is the convex payoff an insurance buyer wants. Most portfolio hedges are notional; short futures or a short-delta overlay handle the linear part when needed.
+
+</Pro>
+
+<PortfolioHedgeCalc client:visible />
+<SnapshotNote detail="Nov 27 and Dec 18 SPY puts; SPX premiums scaled from SPY by the 10.03 index ratio" />
+
+With the defaults ($1M, beta 1.2, November 740 put), 16 SPY puts cost **$7,104**, 0.71% of the portfolio for 31 days. Rolled every month at that price, that is about **8.4% a year**. Switch to 2 SPX puts and you over-hedge to 129% of the exposure, at an estimated $8,910; at beta 1.0, 1 SPX put leaves you at 77%. Large SPX contracts make precise sizing hard for portfolios under a few million dollars.
+
+## Which product: SPY or SPX?
+
+<Plain>
+
+SPX options are on the S&P 500 index itself, ten times the size of SPY (7722.6 vs 769.66). For a large portfolio, SPX means fewer tickets and, in the US, often better tax treatment. For a smaller one, SPY lets you match your exposure more closely. [Lesson J1](/vol/j1/) compares the two in detail: settlement, exercise style and size.
+
+</Plain>
+
+<Pro>
+
+Practical differences for a hedger:
+
+- **Size.** One SPX contract covers about $772,000 of exposure; one SPY contract about $77,000. Rounding error is proportionally ten times larger with SPX.
+- **Exercise and settlement.** SPX options are European and cash-settled; SPY options are American and settle into shares. A deep in-the-money SPY put can be assigned early; SPX cannot.
+- **Tax.** In the US, SPX options are Section 1256 contracts (60/40 long/short-term treatment); SPY options are not. Check your own situation.
+- **Pricing.** SPX and SPY options on the same strike and expiry trade at very similar implied volatilities; small differences reflect dividends and early exercise, not a different market view.
+
+</Pro>
+
+## Basis risk: what the index puts cannot cover
+
+<Plain>
+
+An index hedge protects you from the **market** falling. It does nothing about your own stocks falling while the market holds up. If one of your large holdings drops 30% on bad earnings in a flat market, your SPY puts pay nothing.
+
+That leftover risk is called **basis risk**. The figure shows it as the scatter of dots around the hedged line: the more your portfolio differs from SPY, the wider the cloud.
+
+</Plain>
+
+<Pro>
+
+With tracking error $$\sigma_\varepsilon$$ (the annualized volatility of the residual), the unhedged dollar risk over the hedge period is about $$V_P \sigma_\varepsilon \sqrt{T}$$. A $1M portfolio with 8% tracking error has about **$23,300** of one-standard-deviation residual risk over the 31 days to November 27, and no index option touches it.
+
+A concentrated portfolio can have tracking error of 10% to 20% a year. Its residual can be as large as the market risk you just paid to hedge. Hedging it requires single-stock options or a closer proxy (a sector ETF, a custom basket), at higher implied volatility and wider spreads.
+
+</Pro>
+
+<HedgedPortfolio client:visible />
+<SnapshotNote detail="740 put price from the Nov 27 chain; portfolio returns and scatter are simulated" />
+
+With beta 1.2 and 16 puts, the hedged loss is capped near **$53,000** in the beta model (the portfolio falls 4.6% before SPY reaches 740, plus the $7,104 premium). A 20% SPY fall costs $48,269 hedged against $240,000 unhedged. Switch the sizing to **Dollar value** (13 puts) and the same fall costs $84,218: the missing beta shows up as an uncovered slope below the strike. Then raise tracking error and watch the dots spread away from the line.
+
+## Rolling cost over a year
+
+<Plain>
+
+A hedge is not a one-off purchase. If you want cover all year, you keep buying new puts as the old ones expire, and the yearly bill depends heavily on which expiry you buy.
+
+On the snapshot, rolling the November 27 740 put every month costs about 6.8% of the hedged amount per year. The December 18 730 put, a little further out of the money and longer dated, works out to 5.8% a year. Longer-dated cover is cheaper per day, as [lesson I1](/vol/i1/) showed.
+
+</Plain>
+
+<Pro>
+
+Annualized cost of a rolled hedge ≈ premium ÷ spot × 365 ÷ days, before the effect of strikes resetting at each roll. On the term structure, the at-the-money 770 put costs 17.2% a year at 31 days and 8.5% at 143 days. The same arithmetic applies to any strike: the further out of the money and the longer dated, the lower the yearly bill, and the whole curve shifts up after volatility spikes, which is exactly when hedgers tend to want more cover.
+
+Ways desks cut the bill: buy longer-dated puts and roll before the last month; use put spreads or collars ([lesson I2](/vol/i2/)); hedge only beta-weighted exposure above a threshold; or switch to a variance or VIX call overlay. Each choice gives up some protection, and the scenario grid is how to see what.
+
+</Pro>
+
+## Common mistakes
+
+- **Hedging dollar value instead of beta-weighted value.** A beta-1.2 portfolio hedged one-for-one is under-hedged by about a sixth.
+- **Expecting an index hedge to protect a single holding.** Stock-specific losses are basis risk; index puts ignore them.
+- **Confusing the notional count with the delta count.** Both are "hedge ratios"; one is for insurance at the strike, the other for small moves today.
+- **Forgetting that beta changes.** In selloffs, correlations rise and betas often rise with them, so a hedge sized in calm markets can be too small when it matters.
+
+<Takeaway>
+
+- Contracts = beta × portfolio value ÷ (100 × index level): 15.6 SPY or 1.55 SPX puts for $1M at beta 1.2.
+- Notional hedges insure at the strike; delta hedges offset today's small moves (about 80 Nov 740 puts for the same portfolio).
+- SPX is 10.03 times SPY: fewer tickets, European cash settlement, coarser sizing.
+- Basis risk (tracking error) is unhedged by index options: about ±$23,300 over a month for $1M at 8% tracking error.
+- Rolling short-dated puts is expensive per year; longer expiries and spreads cut the bill at the cost of some protection.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="I3"
+  questions={[
+    {
+      q: 'A $2,000,000 portfolio has beta 0.9. About how many SPY puts (SPY at 769.66) does a notional hedge need?',
+      options: ['26', '23', '2', '78'],
+      answer: 1,
+      why: '0.9 × 2,000,000 = 1,800,000 beta-weighted dollars. One SPY put covers 100 × 769.66 = 76,966. 1,800,000 ÷ 76,966 ≈ 23.4.',
+    },
+    {
+      q: 'Why does a delta-neutral hedge with out-of-the-money puts need far more contracts than a notional hedge?',
+      options: [
+        'Because SPX is ten times larger than SPY',
+        'Because each OTM put moves only a fraction (its delta) of the index move',
+        'Because of beta',
+        'Because of dividends',
+      ],
+      answer: 1,
+      why: 'A 0.196-delta put changes by about 0.196 per $1 index move, so offsetting today’s delta takes about 1 ÷ 0.196 ≈ 5 times as many puts.',
+    },
+    {
+      q: 'Your portfolio is fully hedged with SPY puts. SPY is flat, but your largest holding falls 25% on earnings. What do the puts do?',
+      options: ['They pay out in proportion to the loss', 'Nothing: this is basis risk', 'They pay out fully', 'They expire worthless and also lose value due to beta'],
+      answer: 1,
+      why: 'Index puts respond to the index. Stock-specific moves are the residual in the beta model and are not hedged.',
+    },
+    {
+      q: 'Which is a real advantage of SPY over SPX options for a $500,000 portfolio?',
+      options: ['Cash settlement', 'European exercise', 'Finer sizing: each contract is about one tenth the size', 'Section 1256 tax treatment'],
+      answer: 2,
+      why: 'One SPX contract covers about $772,000, more than the whole portfolio. SPY contracts (about $77,000) allow a much closer match. The other three are SPX features.',
+    },
+  ]}
+/>

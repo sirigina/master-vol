@@ -1,0 +1,61 @@
+---
+// "Go deeper" box pointing to the source text. Only used on lessons where the
+// framing follows Natenberg; generic concepts don't carry it.
+import { bookLink } from '../data/site.mjs';
+
+const ref = (Astro.locals.starlightRoute.entry.data as { bookRef?: string }).bookRef;
+---
+
+{
+  ref && (
+    <aside class="bookref not-content">
+      <div class="cover" aria-hidden="true">
+        <span>OV&amp;P</span>
+      </div>
+      <div>
+        <p class="t">Go deeper</p>
+        <p>
+          Sheldon Natenberg, <em>Option Volatility and Pricing</em> (2nd ed.): {ref}. The standard professional text on
+          this material; this lesson is our own explanation, written to complement it.
+        </p>
+        <a href={bookLink()} rel="sponsored noopener" target="_blank">
+          View the book on Amazon ↗
+        </a>
+      </div>
+    </aside>
+  )
+}
+
+<style>
+  .bookref {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid var(--sl-color-hairline-shade);
+    border-radius: 0.75rem;
+    font-size: var(--sl-text-sm);
+  }
+  .cover {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 4.2rem;
+    border-radius: 0.3rem;
+    background: linear-gradient(160deg, #312e81, #4f46e5);
+    color: #e0e7ff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .t {
+    margin: 0;
+    font-weight: 700;
+    color: var(--sl-color-white);
+  }
+  p {
+    margin: 0.2rem 0 0.4rem;
+    color: var(--sl-color-gray-2);
+  }
+</style>

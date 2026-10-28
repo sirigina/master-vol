@@ -1,0 +1,121 @@
+---
+title: Expiration payoff diagrams
+description: Read and build the profit-and-loss picture of any options position at expiration, using real SPY prices.
+lessonId: A5
+prereqs: [A1, A3]
+minutes: 20
+---
+
+import PayoffGallery from '../../../components/widgets/PayoffGallery.tsx';
+import PayoffBuilder from '../../../components/widgets/PayoffBuilder.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+A payoff diagram answers one question: **if I hold this position until expiration, how much do I make or lose at every possible price?** It is the first picture every options trader draws, and the one you will use to sanity-check everything that follows.
+
+## The four building blocks
+
+Every options position, however complicated, is assembled from four shapes. Here they are with real prices: the SPY 770-strike options expiring November 27, 2026, with SPY at 769.66.
+
+<PayoffGallery client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, mid prices" />
+
+<Plain>
+
+Think of an option as a **deposit that holds a price for you**.
+
+- **Long call:** you pay $13.90 per share to lock in the right to *buy* SPY at 770. If SPY ends at 800, your right is worth $30, so you made $16.10. If SPY ends below 770, you walk away and lose only the deposit.
+- **Long put:** you pay $11.24 for the right to *sell* at 770. It is insurance: it pays off when the price falls.
+- **Short call / short put:** you are the one *taking* the deposit. You keep it if nothing happens, and you pay out if the price moves against you.
+
+Look at the shapes: the buyer's line is flat on one side (the most they can lose is the deposit) and slopes on the other. The seller's picture is the exact mirror image. Every dollar one side makes, the other side loses.
+
+</Plain>
+
+<Pro>
+
+At expiration an option is worth its intrinsic value, so profit per share is
+
+$$
+\text{Long call: } \max(S_T - K, 0) - C \qquad \text{Long put: } \max(K - S_T, 0) - P
+$$
+
+where $$S_T$$ is the underlying price at expiration and $$C$$, $$P$$ are the premiums paid. Short positions are the negatives. Multiply by the contract multiplier (100 for US equity options) for dollars per contract.
+
+Two features carry through every strategy:
+
+- **Kinks only occur at strikes.** Between strikes the diagram is a straight line whose slope equals the net number of in-the-money calls minus in-the-money puts in that region (long counts +1, short −1), plus any stock. Count the slopes and you can sketch any position by hand.
+- **Breakeven** for a single long option is strike ± premium: 770 + 13.90 = **783.90** for the call, 770 − 11.24 = **758.76** for the put.
+
+</Pro>
+
+## Build your own
+
+Pick a preset or edit the legs. Every price comes from the same snapshot, so you can compare strategies on equal terms. Hover the chart to read the P/L at any price.
+
+<PayoffBuilder client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, mid prices, 1 contract = 100 shares" />
+
+Try these:
+
+1. **Long call → bull call spread.** Add a short 790 call. The cost drops from $1,390 to $946, and the profit is now capped at $1,054. You have traded away the lottery ticket for a cheaper, more probable bet.
+2. **Covered call vs short put.** Compare the shapes. They are nearly identical. That is not a coincidence; it is put-call parity (lesson F2) showing through.
+3. **Long straddle.** Two breakevens, at 744.86 and 795.14. SPY has to move more than $25 either way before the position makes money at expiration.
+
+<Plain title="Why this matters">
+
+A payoff diagram is the **final scorecard**. It tells you what happens if you hold until the very end. Before that, prices are blurrier. Tick **"Also show value today"** in the builder: the dashed curve is a smoothed version of the hard-edged diagram, because there is still time for anything to happen.
+
+</Plain>
+
+<Pro title="Pro detail: what the diagram hides">
+
+The expiration diagram is necessary but not sufficient. It says nothing about *how likely* each outcome is (that is volatility, module C), how the position behaves *before* expiry (the Greeks, module D), or whether you paid a fair price for the shape (module B). Professionals treat it as a constraint check ("what is my worst case?") rather than a trading signal. Two positions with identical payoff diagrams can still have very different value if one was bought at a better implied volatility.
+
+</Pro>
+
+## Common mistakes
+
+- **Forgetting the premium.** "SPY is above my 770 strike, so I am making money" is wrong until SPY is above 783.90.
+- **Confusing max loss with likely loss.** A short put's max loss is large but improbable; a long out-of-the-money call's max loss is small but probable. The diagram shows magnitudes, not odds.
+- **Reading it as a forecast of today's P/L.** Before expiration the position is worth the dashed curve, not the solid one.
+
+<Takeaway>
+
+- A payoff diagram plots profit or loss at expiration against the underlying price.
+- Long options: limited loss (the premium), large upside. Short options: the mirror image.
+- Lines bend only at strikes; slope = net in-the-money calls − net in-the-money puts (+ stock).
+- Breakeven for a single option = strike ± premium.
+- The diagram shows *what* can happen, not *how likely* it is. That is what volatility tells you.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="A5"
+  questions={[
+    {
+      q: 'You buy the 770 call for $13.90. SPY finishes at 780. What is your profit per contract?',
+      options: ['+$1,000', '−$390', '+$610', '−$1,390'],
+      answer: 1,
+      why: 'The call is worth $10 at expiry, but you paid $13.90, so you lose $3.90 per share, or $390 per contract. You needed SPY above 783.90 to profit.',
+    },
+    {
+      q: 'Which position has the same expiration shape as a covered call?',
+      options: ['Long put', 'Short put', 'Long straddle', 'Bull call spread'],
+      answer: 1,
+      why: 'Both have limited upside and large downside. Owning stock and selling a call is synthetically equivalent to selling a put at the same strike (lesson F1).',
+    },
+    {
+      q: 'Between the strikes of a position, the payoff line is…',
+      options: ['Curved', 'Straight, with slope set by the net number of calls and puts', 'Always flat', 'Always rising'],
+      answer: 1,
+      why: 'Intrinsic value is piecewise linear, so the diagram only bends at strikes. The slope in any region is the net delta at expiration: in-the-money calls count +1, in-the-money puts −1 (reversed for shorts), plus any stock.',
+    },
+  ]}
+/>

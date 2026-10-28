@@ -1,0 +1,183 @@
+---
+title: Bull & bear verticals
+description: Build call and put vertical spreads with real prices, see why debit and credit versions at the same strikes are the same trade, and read how verticals carry the skew.
+lessonId: G8
+prereqs: [G1]
+minutes: 25
+---
+
+import VerticalBuilder from '../../../components/widgets/g/G8_VerticalBuilder.tsx';
+import Equivalence from '../../../components/widgets/g/G8_Equivalence.tsx';
+import RiskRewardMap from '../../../components/widgets/g/G8_RiskRewardMap.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+A vertical spread is the simplest way to take a view on direction with a fixed, known risk: buy one option and sell another of the same type and expiry at a different strike. There are four of them, and they come in two pairs that turn out to be the same trade in different clothes.
+
+## The four verticals
+
+<Plain>
+
+A single call is a deposit that holds a price with no ceiling on the upside. A **vertical** puts a ceiling on it in exchange for a cheaper deposit. Buy the SPY 770 call for $13.90, sell the 790 call for $4.44, and you pay **$9.46** instead of $13.90. In return you give up everything above 790.
+
+There are four ways to build one:
+
+- **Bull call spread:** buy the lower call, sell the higher call. You pay (a *debit*). Profits when SPY rises.
+- **Bear put spread:** buy the higher put, sell the lower put. You pay. Profits when SPY falls.
+- **Bull put spread:** sell the higher put, buy the lower put. You collect (a *credit*). Profits if SPY stays up.
+- **Bear call spread:** sell the lower call, buy the higher call. You collect. Profits if SPY stays down.
+
+Every vertical has a fixed best case and a fixed worst case, both known the moment you trade.
+
+</Plain>
+
+<Pro>
+
+For strikes $$K_1 < K_2$$ and width $$W = K_2 - K_1$$, the bull call spread pays at expiry
+
+$$
+\min\!\left(\max(S_T - K_1, 0),\ W\right)
+$$
+
+so for debit $$D$$: max gain $$W - D$$, max loss $$D$$, breakeven $$K_1 + D$$. A credit vertical with credit $$C$$ has max gain $$C$$, max loss $$W - C$$; for a bull put spread the breakeven is $$K_2 - C$$. The spread's value is bounded by $$0 \le V \le W e^{-rT}$$ (European), and $$V/W$$ approximates $$-\partial C/\partial K$$, the discounted risk-neutral probability of finishing above the strikes, which is why a narrow vertical is often read as a "digital" bet.
+
+</Pro>
+
+<VerticalBuilder client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, mid prices" />
+
+The 770/790 bull call spread costs **$946** per contract. It makes at most **$1,054** (SPY at or above 790 on November 27) and loses at most the $946 (SPY at or below 770). The breakeven is **779.46**, about $10 above where SPY closed. Flip to **Bear** and **Puts** and pick 750/770: the bear put spread costs $530, can make $1,470, and breaks even at **764.70**.
+
+<Plain title="The probability trade-off">
+
+There's no free lunch in the ratio of gain to loss. The bull call spread risks $946 to make $1,054, roughly even money, and the options market puts the chance of SPY finishing above 779.46 at about **40%**. Move both strikes higher and the payout ratio gets much better, but the chance of collecting it falls. The odds and the payout move in opposite directions; the market sets the price so that, before costs and the market's own risk premium, they roughly cancel.
+
+</Plain>
+
+## Debit or credit: the same spread twice
+
+Look closely at the 770/790 bull call spread and the 770/790 **bull put** spread. Both earn nothing extra below 770 and the full $20 width above 790. Their payoffs are the same shape; only the cash flow at the start differs. Put-call parity says they should be worth the same once you account for financing.
+
+<Equivalence client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, mid prices, financing at the 4.6% rate implied by the chain" />
+
+<Plain>
+
+The bull call spread: pay $9.46 now, receive up to $20 later. The bull put spread: collect $10.99 now, pay up to $20 later. Shift one picture up by $20 and you get the other. If they are truly the same trade, $9.46 paid plus $10.99 collected should add up to about $20, the strike width, minus a little interest. They add up to **$20.45**, so the put version is better by about **53 cents**, which is not free money: it is the value of being able to exercise the American-style puts early.
+
+</Plain>
+
+<Pro>
+
+Bull call spread minus bull put spread at the same strikes is a long **box**: long call spread plus short put spread, worth $$W e^{-rT}$$ for European options. So
+
+$$
+D_{\text{call}} + C_{\text{put}} = W e^{-rT}
+$$
+
+With $$W = 20$$, $$r = 4.6\%$$, 31 days: $$20e^{-rT} = 19.92$$. The market sum is $$9.46 + 10.99 = 20.45$$, an excess of 0.53. SPY options are American; a binomial model at the call IVs puts the extra early-exercise value of the 790 put over the 770 put at about 0.55. The in-the-money 790 put carries most of it (that is why the IV that reproduces its mid with a European model, 12.8%, sits above the 12.2% the vendor quotes). In practice, desks price verticals with the same model and trade whichever side is cheaper on bid/ask: at the natural (buy at the ask, sell at the bid) the call spread costs 9.51 and the put spread collects 10.65.
+
+</Pro>
+
+## How verticals carry the skew
+
+A vertical is long one implied volatility and short another. When those two strikes trade at different IVs, the spread's price reflects the **skew**, not just the level of volatility.
+
+<Plain>
+
+On the snapshot, insurance below the market is expensive: the further down the strike, the higher the forecast built into the put (16.5% at 750, 23.8% at 700, against about 14% at 770). Buy a put spread just below the market and you sell the lower put, the one with the stormier forecast. That makes near-the-money put spreads relatively **cheap to buy**, or a poor deal to sell. Call spreads above the market work the other way round, because upside calls trade at a calmer forecast. Far out in the put wing both legs carry a stormy forecast, so even a spread there costs more than a flat forecast would suggest.
+
+</Plain>
+
+<Pro>
+
+Compare market prices with the same spreads priced at a flat 14.0% (the IV solved from the 770 call mid):
+
+| Spread | Market | Flat 14.0% | Effect |
+| --- | --- | --- | --- |
+| 770/790 bull call | 9.46 | 8.02 | Upside skew falls, so the short 790 is cheap: spread dearer |
+| 750/770 bear put | 5.30 | 7.02 | Short 750 put is rich: spread cheaper |
+| 800/820 bull call | 1.70 | 2.46 | Both legs near 11.8%, well under 14%: spread cheaper |
+| 700/720 bear put | 0.93 | 0.44 | Deep wing priced for tail risk: spread dearer |
+
+The rule: a vertical's price moves toward whichever leg the skew favours. Near the money, the steep put skew cheapens bear put spreads and richens bull call spreads relative to flat vol. Away from the money the level of each wing's IV matters more than the slope: deep put spreads, with both legs far above 14%, get more expensive; far call spreads, with both legs below it, get cheaper. When you pick a vertical, you take a position in the slope of the smile between its strikes, and a parallel move in IV barely affects it (its vega is small, 0.15 per share for the 770/790 call spread).
+
+</Pro>
+
+## Reward to risk across every strike pair
+
+The heatmap shows every vertical in the November chain. Rows are the lower strike, columns the upper strike; darker cells pay more per dollar at risk (or, on the probability view, are more likely to profit).
+
+<RiskRewardMap client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, mid prices; probability from the snapshot smile" />
+
+Three patterns:
+
+1. **The further out of the money, the higher the ratio.** The 800/820 bull call pays about 11 to 1, but finishes in profit only about 14% of the time on the market's own pricing.
+2. **Credit spreads are the mirror image.** A bull put spread at 740/750 has a 74% chance of profit and a 0.18 reward-to-risk ratio. Neither number alone says anything about value; together they mostly cancel.
+3. **Wider spreads trade like the outright option.** A 700/820 spread behaves almost like the 700 call; a narrow spread behaves like a bet on a single price level.
+
+<Plain>
+
+Read each cell as a bet with its odds printed on it. The 800/820 call spread pays 11 to 1, a long shot the market thinks comes in about one time in seven. The 740/750 put spread wins three times in four but pays less than a fifth of what it risks. The heatmap is a menu of odds, not a list of bargains.
+
+</Plain>
+
+<Pro>
+
+For a bull call spread, $$D = e^{-rT}\int_{K_1}^{K_2} \mathbb{P}^*(S_T > K)\,dK$$, so the discounted debit per unit width is the risk-neutral probability averaged across the strikes: 0.085 for 800/820, 0.47 for 770/790. Reward-to-risk and probability of profit are two expiry summaries of that one number, so a ranking on either one is a ranking on strike location. The edge, if there is one, lives in the gap between risk-neutral and real-world probabilities. That gap is the risk premium, largest in the put wing, and not something the heatmap shows.
+
+</Pro>
+
+## Common mistakes
+
+- **Treating a high probability of profit as an edge.** A credit spread that wins 74% of the time also loses about 5.7 times its gain when it loses. The market price already balances the two.
+- **Calling a debit spread "safer" than the equivalent credit spread.** At the same strikes they have the same payoff after financing; the only real differences are cash usage, early-exercise risk and bid/ask.
+- **Ignoring early assignment on credit spreads.** An in-the-money short American put can be assigned before expiry, especially when interest rates are high. It doesn't change the maximum loss, but it changes the cash flow.
+- **Ignoring the skew when choosing strikes.** Two verticals with the same width and distance from spot can cost different amounts because of where they sit on the smile.
+
+<Takeaway>
+
+- A vertical buys one option and sells another of the same type and expiry: capped gain, capped loss, known at entry.
+- Bull call (debit) and bull put (credit) at the same strikes have the same payoff after financing; debit + credit ≈ width × discount factor.
+- On the snapshot the 770/790 pair sums to 20.45 versus 19.92 discounted width; the 0.53 gap is the American puts' early-exercise value.
+- Payout ratio and probability of profit move in opposite directions; neither alone is a measure of value.
+- A vertical is a position in the skew between its strikes, with little exposure to the overall level of IV.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="G8"
+  questions={[
+    {
+      q: 'You buy the 770 call at 13.90 and sell the 790 call at 4.44. What is the breakeven at expiry?',
+      options: ['774.44', '779.46', '784.44', '790.00'],
+      answer: 1,
+      why: 'Debit = 13.90 − 4.44 = 9.46. Breakeven = lower strike + debit = 770 + 9.46 = 779.46.',
+    },
+    {
+      q: 'A 770/790 bull put spread collects 10.99. What is its maximum loss per share?',
+      options: ['10.99', '9.01', '20.00', 'Unlimited'],
+      answer: 1,
+      why: 'Max loss on a credit vertical = width − credit = 20 − 10.99 = 9.01, reached if SPY finishes at or below 770.',
+    },
+    {
+      q: 'With European options, a bull call spread debit plus the bull put spread credit at the same strikes should equal…',
+      options: ['Zero', 'The strike width', 'The strike width discounted to today', 'The difference in implied volatilities'],
+      answer: 2,
+      why: 'Together they form a box, which pays the width with certainty at expiry, so it is worth the width discounted at the financing rate.',
+    },
+    {
+      q: 'OTM puts trade at higher IV than ATM options. Compared with flat-vol pricing, a 770/750 bear put spread will look…',
+      options: ['More expensive', 'Cheaper', 'The same, because vega cancels', 'Impossible to price'],
+      answer: 1,
+      why: 'You sell the 750 put, which carries the higher IV. Selling the rich leg lowers the net cost: 5.30 in the market vs 7.02 at a flat 14%.',
+    },
+  ]}
+/>

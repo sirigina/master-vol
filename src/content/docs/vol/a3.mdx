@@ -1,0 +1,192 @@
+---
+title: Moneyness, intrinsic & time value
+description: Classify any option as in, at or out of the money, split its price into intrinsic and time value, and explain why time value peaks at the strike and melts toward expiration.
+lessonId: A3
+prereqs: [A1]
+minutes: 20
+---
+
+import ValueDecomposition from '../../../components/widgets/a/ValueDecomposition.tsx';
+import ValueVsPrice from '../../../components/widgets/a/ValueVsPrice.tsx';
+import MoneynessDelta from '../../../components/widgets/a/MoneynessDelta.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+The SPY 760 call cost $20.84 on October 27, with SPY at 769.66. Of that, $9.66 was money already "in hand." The other **$11.18** paid for something you can't see on a chart: the chance that SPY moves further before November 27. Splitting every option price this way is the first habit of a professional.
+
+## In, at, or out of the money
+
+<Plain>
+
+**Moneyness** answers one question: *if the option expired right now, would it be worth anything?*
+
+- **In the money (ITM):** yes. A call whose strike is below the current price, or a put whose strike is above it.
+- **Out of the money (OTM):** no. A call with a strike above the price, or a put with a strike below it.
+- **At the money (ATM):** the strike is at, or very near, the current price.
+
+With SPY at 769.66, the 760 call is in the money (you could buy at 760 something worth 769.66) and the 760 put is out of the money (nobody wants to sell at 760 when the market pays 769.66). The same strike is in the money for one type and out of the money for the other.
+
+</Plain>
+
+<Pro>
+
+For a call, $$S > K$$ is ITM and $$S < K$$ is OTM; for a put, the reverse. "At the money" is a convention rather than a strike:
+
+- **ATM spot:** the strike nearest $$S$$ (770 here).
+- **ATM forward:** the strike nearest the forward $$F = S\,e^{(r-q)T}$$. With $$r = 4.6\%$$, $$q = 0$$ and 31 days, $$F = 772.67$$, so the call and put at 770 are not perfectly symmetric.
+- **ATM by delta:** the 50-delta strike. Interpolating the quoted deltas puts it at about 773 for both calls and puts, close to the forward, which is no coincidence.
+
+Desks quote strikes by **percent moneyness** $$K/S$$ or, for comparing across expiries and underlyings, by **log-moneyness** $$\ln(K/F)$$ scaled by $$\sigma\sqrt{T}$$, the standardized distance that makes a 10-day and a 1-year strike comparable.
+
+</Pro>
+
+## Intrinsic value and time value
+
+<Plain>
+
+Every option price has two layers:
+
+- **Intrinsic value** is what you'd get by using the option right now: for a call, current price minus strike; for a put, strike minus current price; never below zero.
+- **Time value** is everything else. It pays for the chance that things get better before the deadline, the same way a deposit is worth something even if today's price isn't attractive yet.
+
+Out-of-the-money options are **all** time value. Deep in-the-money options are almost all intrinsic value.
+
+</Plain>
+
+<Pro>
+
+$$
+\text{Option price} = \underbrace{\max(S - K,\,0)}_{\text{intrinsic (call)}} + \text{time value}
+$$
+
+Time value is also called **extrinsic value**. It is the market's price for optionality: the convexity of the payoff combined with the uncertainty of $$S_T$$. Strictly, it also contains a carry component: a call's "intrinsic" relative to the forward is $$F - K$$, not $$S - K$$, so ATM calls carry a bit more time value than ATM puts when rates are positive. That is visible on the snapshot: the 770 call's time value is $13.90 against $10.90 for the 770 put. The $3.00 gap matches the interest on the strike over 31 days, $$770\,(1 - e^{-rT}) = \$3.00$$, which is put-call parity at work ([F2](/vol/f2/)).
+
+</Pro>
+
+<ValueDecomposition client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, mid prices" />
+
+Hover the bars. The 700 call costs $74.37: $69.66 of intrinsic value and only $4.71 of time value. The 840 call is $0.13, all time value. Switch to puts: the 800 put costs $30.41 with $30.34 in intrinsic value, leaving just **$0.07** of time value. Wherever you look, the time value is tallest near the current price.
+
+## Why time value peaks at the money
+
+<Plain>
+
+Time value pays for **uncertainty about which side of the strike you'll end on**.
+
+- A deep in-the-money call will almost certainly finish in the money. You're nearly just holding the stock, so there's little extra to pay for.
+- A far out-of-the-money call will almost certainly expire worthless. Not much possibility to pay for either.
+- An at-the-money option is a coin toss. The outcome is most uncertain there, so the possibility is worth the most.
+
+</Plain>
+
+<Pro>
+
+Time value is the expected value of the option's "insurance" against the wrong side of the strike. For an in-the-money call it equals the same-strike put plus carry (put-call parity); for an out-of-the-money call it is the whole call price. Each of those is largest when the strike is closest to spot, so time value peaks at the strike. In Black-Scholes, the ATM time value for short maturities is approximately
+
+$$
+C_{\text{ATM}} \approx 0.4\,S\,\sigma\sqrt{T}
+$$
+
+($$0.4 \approx 1/\sqrt{2\pi}$$). At 14.06% volatility and 31 days, that is $$0.4 \times 770 \times 0.1406 \times \sqrt{31/365} \approx \$12.6$$, versus the full model price of $14.12 (the gap is the carry term). The formula makes two dependencies explicit: time value scales with **volatility** and with the **square root of time**.
+
+</Pro>
+
+<ValueVsPrice client:visible />
+
+This is a model curve, not market quotes: the 770 option at the snapshot's at-the-money volatility of 14.06%. The shaded wedge between the colored curve and the green floor is time value. It is widest at the strike and pinches toward zero far away on either side.
+
+Now drag **days to expiry**. At 90 days the 770 call (with SPY at 770) is worth $25.94; at 31 days, $14.12; at 10 days, $7.64; at 2 days, $3.29. At expiration the curve collapses onto the hockey stick from [lesson A5](/vol/a5/).
+
+<Plain title="How time value melts">
+
+Time value is **melting ice**. It doesn't melt evenly: a block that lasts a month loses little in the first week and a lot in the last. The at-the-money option above loses about 25 cents a day with a month left, about 41 cents a day with 10 days left, and over a dollar a day on its last day.
+
+</Plain>
+
+<Pro title="Pro detail: decay accelerates, and deep puts can go negative">
+
+Because ATM time value scales with $$\sqrt{T}$$, its daily decay (theta) scales roughly with $$1/\sqrt{T}$$. The model gives −0.25 per day at 31 days, −0.41 at 10 days and −1.18 at 1 day for the 770 call with SPY at 770. [Lesson D3](/vol/d3/) covers theta in full.
+
+Switch the figure to the put and hover around SPY 700: the European Black-Scholes value ($67.13) is **below** intrinsic ($70.00). A European put holder can't collect the strike until expiry, so they lose the interest on it. An American put can't trade below intrinsic, because you'd exercise. That gap is exactly the early-exercise incentive from [lesson A2](/vol/a2/), and it explains why the real 800 put shows only $0.07 of time value.
+
+</Pro>
+
+## Moneyness by delta
+
+Strike distance in dollars means little on its own: $30 out of the money is far for a 2-day option and close for a 1-year one. Traders therefore often name options by **delta** instead: "the 25-delta put."
+
+<MoneynessDelta client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry; deltas as quoted" />
+
+At 25-delta, the call strike is about **791.9** (+22.2 from SPY) and the put strike about **748.3** (−21.4). Pick 10-delta: the call sits around 810 (+40) while the put is down at 713 (−57). The put has to go much further out to reach the same delta, because downside strikes trade at higher implied volatility (the skew, [C8](/vol/c8/)).
+
+<Plain>
+
+Delta works as a rough **odds-of-finishing-in-the-money** score (it's the option's speedometer, [lesson D1](/vol/d1/)). A 50-delta option is a coin toss: at the money. A 10-delta option is a long shot, well out of the money. Naming options this way lets you compare a quiet stock and a wild one on equal terms.
+
+</Plain>
+
+<Pro>
+
+Delta-based moneyness is the standard axis for volatility surfaces in FX and increasingly in equities: skew is quoted as 25-delta risk reversals, and strike grids are interpolated in delta space. Because delta depends on $$\sigma\sqrt{T}$$, it automatically normalizes for time and volatility. The cost: the delta of a given strike changes as spot, time and volatility move, so "the 25-delta put" is a different contract tomorrow.
+
+</Pro>
+
+## Common mistakes
+
+- **Calling every option above the price "in the money."** A 780 put is in the money; a 780 call is out of it. Moneyness depends on type.
+- **Treating time value as free money for the seller.** It is payment for risk. The seller is paid to carry the chance of a big move.
+- **Assuming time value decays in a straight line.** At the money, most of it disappears in the final couple of weeks.
+- **Comparing strikes by dollar distance across expiries.** Use delta or standardized moneyness instead.
+
+<Takeaway>
+
+- ITM: a call below spot or a put above spot. OTM: the reverse. ATM: strike at or near spot (or the forward).
+- Price = intrinsic value + time value. OTM options are pure time value.
+- Time value is largest at the money, where the outcome is most uncertain, and scales with volatility and √time.
+- Time value decays faster as expiration approaches; at expiry only intrinsic value remains.
+- Delta is a standardized way to name moneyness; skew makes equal-delta puts sit further from spot than calls.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="A3"
+  questions={[
+    {
+      q: 'SPY is 769.66. The 780 put trades at $15.82. What are its intrinsic and time value?',
+      options: ['$0 and $15.82', '$10.34 and $5.48', '$15.82 and $0', '$5.48 and $10.34'],
+      answer: 1,
+      why: 'Intrinsic for a put is strike − spot = 780 − 769.66 = 10.34. The rest, 15.82 − 10.34 = 5.48, is time value.',
+    },
+    {
+      q: 'Which option on the snapshot has the most time value?',
+      options: ['The 700 call', 'The 840 call', 'The 770 call', 'The 800 put'],
+      answer: 2,
+      why: 'Time value peaks at the money. The 770 call ($13.90, all time value) beats the 700 call ($4.71 of time value), the 840 call ($0.13) and the 800 put ($0.07).',
+    },
+    {
+      q: 'An at-the-money option is worth $14 with 31 days left. Volatility and price stay the same. Roughly what is it worth with 8 days left?',
+      options: ['About $3.60', 'About $7', 'About $10.50', 'About $14'],
+      answer: 1,
+      why: 'ATM time value scales with √time: √(8/31) ≈ 0.51, so about $7. Linear decay would wrongly give $3.60.',
+    },
+    {
+      q: 'The 25-delta put is about $21 below SPY and the 10-delta put about $57 below. The 10-delta call is only about $40 above. Why the asymmetry?',
+      options: [
+        'Puts have more time to expiry',
+        'Downside strikes carry higher implied volatility (skew), which keeps their deltas larger further out',
+        'Delta is measured differently for puts',
+        'SPY pays a dividend',
+      ],
+      answer: 1,
+      why: 'Higher implied volatility on low strikes keeps their deltas higher, so you have to go further down to reach 10-delta. That is the equity skew.',
+    },
+  ]}
+/>

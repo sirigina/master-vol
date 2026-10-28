@@ -1,0 +1,187 @@
+---
+title: Gamma
+description: Measure how fast delta changes, see why it peaks at the money and near expiry, and estimate a hedged position's P/L from one number.
+lessonId: D2
+prereqs: [D1]
+minutes: 25
+---
+
+import GammaCurves from '../../../components/widgets/d/GammaCurves.tsx';
+import GammaPnl from '../../../components/widgets/d/GammaPnl.tsx';
+import GammaChain from '../../../components/widgets/d/GammaChain.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+[Delta](/vol/d1/) tells you how fast an option's price is moving. Gamma tells you how fast *that* is changing, and it decides whether a hedged options position makes or loses money when SPY moves.
+
+## Gamma is the change in delta
+
+<Plain>
+
+If delta is the option's **speedometer**, gamma is the **accelerator**. It tells you how much the speedometer reading changes for each $1 move in SPY.
+
+The SPY 770 call expiring November 27 has delta 0.54 and gamma about **0.0126**. If SPY rises $1, delta rises to about 0.553. If SPY rises $10, delta climbs by roughly 0.126, to about 0.67. Own 10 contracts and your exposure grows from about 540 shares to about 670 shares without you trading anything.
+
+Owning options means the position quietly gets **longer as the market rises and shorter as it falls**. That is the property everyone is paying for when they buy an option.
+
+</Plain>
+
+<Pro>
+
+Gamma is the second derivative of value with respect to the underlying, the slope of the delta curve:
+
+$$
+\Gamma = \frac{\partial \Delta}{\partial S} = \frac{\partial^2 V}{\partial S^2} = \frac{e^{-qT}\,n(d_1)}{S\,\sigma\sqrt{T}}
+$$
+
+where $$n(\cdot)$$ is the standard normal density. Calls and puts at the same strike and expiry have **identical gamma**, because call delta minus put delta is a constant ($$e^{-qT}$$). Gamma is always positive for a long option and negative for a short one.
+
+Units matter. Quoted gamma is "delta per $1 per share". Per contract multiply by 100: the 770 call's 0.0126 means **1.26 shares** of delta per $1 move per contract.
+
+</Pro>
+
+## Where gamma is largest
+
+Gamma is the slope of the S-curve you saw in [lesson D1](/vol/d1/). The slope is steepest where the curve crosses 0.5, at the strike, and the curve gets steeper as expiry approaches.
+
+<GammaCurves client:visible />
+
+Drag the volatility slider and watch the trade-off.
+
+- **At the money, near expiry, gamma explodes.** At SPY's 769.66 and 14.1% volatility, the 770 strike's gamma is 0.0126 with 31 days left, 0.0222 with 10 days left and 0.0498 with 2 days left. Four times the gamma, from the same strike.
+- **Away from the strike, short-dated gamma collapses.** With 2 days left, a strike $20 away has almost no gamma: the option is already all-or-nothing.
+- **Lower volatility concentrates gamma.** Slide volatility down and the 31-day curve gets taller and narrower. Higher volatility spreads gamma across more strikes, but lowers the peak.
+
+<Plain>
+
+Think of the delta curve as a ramp. Far from expiry it is a long, gentle ramp: delta changes a little over a wide range of prices. Near expiry it becomes a cliff right at the strike. On the cliff, a small step changes everything; that is high gamma.
+
+</Plain>
+
+<Pro>
+
+At the money, $$d_1 \approx 0$$ and $$n(d_1) \approx 0.399$$, so
+
+$$
+\Gamma_{\text{ATM}} \approx \frac{0.4}{S\,\sigma\sqrt{T}}
+$$
+
+Gamma scales as $$1/\sqrt{T}$$ and $$1/\sigma$$. Cutting time to expiry by a factor of four doubles ATM gamma. For an out-of-the-money strike the $$n(d_1)$$ term shrinks faster than $$1/\sqrt{T}$$ grows, so its gamma eventually falls to zero as expiry nears. This is why gamma risk in a book is dominated by the near-the-money strikes of the nearest expiries, and why desks watch "pin" risk into expiration Fridays.
+
+</Pro>
+
+## Long gamma vs short gamma: the hedged P/L
+
+This is where gamma earns its keep. Take one 770 straddle (long the call and the put), sell enough SPY to make it delta-neutral, then let SPY jump.
+
+<GammaPnl client:visible />
+<SnapshotNote detail="770 call and put, Nov 27, 2026 expiry, IVs held at the snapshot" />
+
+The long straddle's hedged P/L is a **parabola**: positive whichever way SPY moves. The short straddle is the same curve upside down. The dashed line is the one-number estimate $$\tfrac{1}{2}\Gamma(\Delta S)^2$$, and it tracks the full reprice closely.
+
+- With straddle gamma of 0.0252, a $10 jump earns about **$126** per hedged straddle by the estimate. The full reprice gives $123 on the way up and $127 on the way down.
+- Double the move to $20 and the estimate quadruples to about **$503**. The full reprice gives $473 up and $502 down. The gap grows with the move because gamma itself changes as SPY moves away from the strike ([lesson D6](/vol/d6/) maps how).
+
+Now switch on **Move + 1 day decay**. The parabola drops by one day of theta, about $41 per straddle, and the zero crossings land near ±$5.70. Smaller moves lose money; bigger moves win. That trade-off between gamma and theta is the subject of [lesson D7](/vol/d7/).
+
+<Plain>
+
+A **long gamma** position is like owning a car that speeds up whenever you hit a bump, in either direction. Big bumps are good news. The catch is the cost of keeping the car: every day, some value melts away (theta).
+
+A **short gamma** position is the opposite. You collect that daily melt as income, but every large move costs you, and the cost grows with the square of the move: a move twice as big hurts about four times as much.
+
+</Plain>
+
+<Pro>
+
+A second-order Taylor expansion of the hedged position (delta zero by construction) over a short interval gives
+
+$$
+\Delta \Pi \approx \tfrac{1}{2}\,\Gamma\,(\Delta S)^2 + \Theta\,\Delta t
+$$
+
+with vega and higher-order terms ignored. Long gamma means $$\Gamma > 0$$: convex P/L in the underlying, paid for by $$\Theta < 0$$. Short gamma is concave and collects theta. The approximation overstates P/L for large moves because gamma falls as the price moves away from the strike (the third-order term, the change in gamma with price, is ignored). Up and down moves are not quite symmetric in the full reprice because the lognormal gamma curve peaks slightly below the strike, so a fall of a given size meets a little more gamma than a rise.
+
+</Pro>
+
+## Gamma in dollars
+
+Quoted gamma ("0.0126 per $1") is hard to compare across underlyings with different prices. A 0.0126 gamma on a $50 stock is a very different risk from the same number on SPY at $770. Desks therefore quote **dollar gamma**.
+
+<Pro>
+
+The most common convention is the change in **dollar delta** for a 1% move in the underlying:
+
+$$
+\$\Gamma_{1\%} = \Gamma \cdot S \cdot (0.01\,S) \cdot \text{multiplier} = \Gamma\,S^2\cdot\frac{\text{multiplier}}{100}
+$$
+
+For one 770 call contract: $$0.0126 \times 769.66^2 \approx 7{,}464$$. A 1% SPY move ($7.70) changes the position's dollar delta by about $7,464. The P/L from that 1% move on a hedged position is half the dollar gamma times 1%, about **$37** per contract. Some risk systems quote "gamma P/L for a 1% move" directly; check which convention a screen uses before comparing numbers.
+
+</Pro>
+
+<Plain>
+
+Dollar gamma answers a practical question: **if the market moves 1%, how many dollars of extra stock exposure will I suddenly have?** It lets a trader add up gamma across SPY, a single stock and a futures contract on one line of a risk report.
+
+</Plain>
+
+Here is gamma across the real November 27 chain. Use the toggle to switch to dollar gamma per contract.
+
+<GammaChain client:visible />
+<SnapshotNote detail="gammas as quoted on the Nov 27, 2026 expiry" />
+
+Gamma peaks near the money, at the 775 and 780 strikes, and falls away on both sides. The call and put curves nearly overlap, as the math says they should. The differences come from the vendor computing each option's gamma separately, at that quote's own IV and with its own model, so the two sides drift apart most where quotes are least symmetric (the 790 and 800 strikes). The peak sits a little above spot for the same reason: implied volatility falls as strikes rise (the skew), and lower volatility means taller gamma near the money.
+
+## Common mistakes
+
+- **Forgetting gamma scales with the square of the move.** A $20 move does four times the damage (or good) of a $10 move to a hedged position, not twice.
+- **Assuming far-dated options are "safer" because gamma is lower.** Lower gamma, but higher vega: long-dated risk is dominated by volatility changes ([lesson D4](/vol/d4/)).
+- **Ignoring how gamma spikes into expiry.** A short at-the-money option with two days left has about four times the gamma it had at 31 days. A quiet position can become a dangerous one without any change in price.
+- **Comparing raw gamma across underlyings.** Use dollar gamma to compare a $770 ETF with a $50 stock.
+
+<Takeaway>
+
+- Gamma = change in delta per $1 move in the underlying. Calls and puts at the same strike have the same gamma.
+- Gamma peaks at the money and rises sharply as expiry nears; OTM and ITM gamma fades toward zero near expiry.
+- A delta-hedged position makes about $$\tfrac{1}{2}\Gamma(\Delta S)^2$$ on a move: long gamma profits from moves either way, short gamma loses.
+- Long gamma pays theta; short gamma collects it.
+- Dollar gamma ($$\Gamma S^2$$ per contract for a 1% move) makes gamma comparable across underlyings.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="D2"
+  questions={[
+    {
+      q: 'An option has delta 0.40 and gamma 0.02. SPY rises $5. Approximately what is the new delta?',
+      options: ['0.42', '0.50', '0.60', '0.45'],
+      answer: 1,
+      why: 'New delta ≈ 0.40 + 0.02 × 5 = 0.50.',
+    },
+    {
+      q: 'Which option has the highest gamma?',
+      options: ['ATM, 60 days to expiry', 'ATM, 3 days to expiry', 'Deep OTM, 3 days to expiry', 'Deep ITM, 60 days to expiry'],
+      answer: 1,
+      why: 'Gamma is largest at the money and grows roughly with 1/√T as expiry approaches. Deep OTM and ITM options near expiry have almost no gamma.',
+    },
+    {
+      q: 'A delta-hedged position earns $50 on a $5 move. Roughly what does it earn on a $15 move (ignoring time)?',
+      options: ['$150', '$450', '$100', '$250'],
+      answer: 1,
+      why: 'Hedged P/L ≈ ½Γ(ΔS)², so tripling the move multiplies the P/L by 9: $50 × 9 = $450.',
+    },
+    {
+      q: 'You are short a delta-hedged straddle. Which outcome hurts you most?',
+      options: ['SPY sits still for a week', 'SPY drifts up $2 a day for a week', 'SPY gaps $25 overnight', 'Implied volatility falls'],
+      answer: 2,
+      why: 'Short gamma loses about ½Γ(ΔS)² on each move. One large gap is far more costly than the same distance in small steps you could rehedge, and a quiet market lets you collect theta.',
+    },
+  ]}
+/>

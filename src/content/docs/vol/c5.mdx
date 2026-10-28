@@ -1,0 +1,180 @@
+---
+title: Implied volatility in practice & VIX
+description: Read VIX as the market's 30-day volatility forecast, turn it into daily, weekly and monthly expected moves, and understand why it rises when stocks fall.
+lessonId: C5
+prereqs: [C2, C4]
+minutes: 20
+---
+
+import VixSpyStack from '../../../components/widgets/c/VixSpyStack.tsx';
+import VixScatter from '../../../components/widgets/c/VixScatter.tsx';
+import VixMoveConverter from '../../../components/widgets/c/VixMoveConverter.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+VIX closed at **17.52** on October 27, 2026. Financial news calls it the "fear gauge", but it is something more useful: a volatility forecast you can read straight off a screen and turn into a price range. This lesson shows what VIX measures, how to convert it into expected moves, and how it behaves alongside the market.
+
+## What VIX is
+
+<Plain>
+
+Every S&P 500 option has an implied volatility, a forecast of how stormy the next weeks will be ([lesson C4](/vol/c4/)). VIX pools many of those forecasts into one number: the market's **30-day weather forecast for the S&P 500**, in the same units as volatility. A VIX of 17.52 means options are priced as if the index will swing about 17.5% over a year, measured over the next 30 days.
+
+It is not a price you can buy directly, and it is not a prediction of direction. It is the price of protection, translated into a forecast.
+
+</Plain>
+
+<Pro>
+
+Cboe computes VIX from out-of-the-money SPX calls and puts across a wide strike range, at the two monthly or weekly expiries that bracket 30 calendar days, then interpolates to exactly 30 days. Conceptually it is the square root of the fair strike of a 30-day **variance swap**:
+
+$$
+\text{VIX}^2 \approx \frac{2e^{rT}}{T}\sum_i \frac{\Delta K_i}{K_i^2}\,Q(K_i) - \frac{1}{T}\left(\frac{F}{K_0}-1\right)^2
+$$
+
+where $$Q(K_i)$$ is the mid price of the OTM option at strike $$K_i$$. The $$1/K^2$$ weights load heavily on low strikes, so VIX includes the expensive downside puts ([lesson C8](/vol/c8/)). That is why it usually sits **above at-the-money implied vol**: at the snapshot, VIX was 17.52 while the SPY 770 strike for November 27 implied 14.06%. Same market, different measure.
+
+</Pro>
+
+## A year of VIX next to SPY
+
+<VixSpyStack client:visible />
+<SnapshotNote detail="VIX and SPY daily closes" />
+
+Line the two panels up and the relationship is plain. Every VIX spike sits on top of a SPY drop:
+
+- **November 20, 2025:** VIX 26.42 during a pullback.
+- **March 27, 2026:** VIX **31.05**, the high of the year, as SPY slid toward its March 30 low of 631.97.
+- **June 10, 2026:** VIX 22.22, a few days after SPY's worst day of the year on June 5.
+- **October 16, 2026:** VIX 19.99, a brief scare near the highs.
+
+Between spikes VIX spent most of its time in the mid-teens. Its median over the year was **17.18**, the average 18.0, and it closed above 20 on only **17%** of days. Notice how fast the spikes fade: 21 sessions after the March 27 peak, VIX was back to 17.83. Volatility tends to return toward its average ([lesson C6](/vol/c6/)).
+
+<Plain>
+
+Read the two panels as a forecast and a record of storms. The forecast (VIX) climbs as SPY starts to drop, not after, and it eases once calm returns. A high reading says the forecasters expect rough weather; it does not say the drop will continue. In March, VIX peaked at 31.05 just one trading day before SPY's low.
+
+</Plain>
+
+<Pro>
+
+Fitting an AR(1) to the year's daily VIX closes gives a persistence coefficient of about **0.90**, which means a deviation from the mean has a half-life of roughly **6.5 sessions**. The annualized volatility of daily log changes in VIX was about **117%**, roughly nine times SPY's own 12.7%. These are one-year estimates driven by a handful of spikes, so treat them as orders of magnitude. VIX futures and options already price this mean reversion, so a spike in spot VIX passes through only partly to longer-dated VIX contracts.
+
+</Pro>
+
+## VIX as an expected move
+
+Because VIX is an annualized standard deviation, the √time rule from [lesson C2](/vol/c2/) converts it into a range for any horizon.
+
+<VixMoveConverter client:visible />
+<SnapshotNote detail="SPX 7722.6, SPY 769.66, VIX 17.52" />
+
+<Plain>
+
+Two shortcuts cover most needs:
+
+- **Per month, divide by about 3.5** (√12 ≈ 3.46). VIX 17.52 means a typical one-month move of about **±5.1%**: roughly ±391 SPX points or **±$38.93** on SPY.
+- **Per day, divide by 16.** VIX 17.52 means a typical day of about **±1.1%**: roughly ±85 SPX points or **±$8.49** on SPY.
+
+As always, "typical" is one standard deviation: about two days in three should land inside, one in three outside. A VIX of 32 says to expect daily swings of about ±2%, the kind of market that makes headlines.
+
+</Plain>
+
+<Pro>
+
+With $$\sigma = \text{VIX}/100$$:
+
+$$
+\text{1-SD move over } n \text{ trading days} \approx S\cdot\sigma\sqrt{n/252}
+$$
+
+Month: $$0.1752\sqrt{21/252} = 5.06\%$$. Day: $$0.1752/\sqrt{252} = 1.10\%$$. Two refinements matter in practice. First, VIX is defined on 30 calendar days, so the calendar version, $$0.1752\sqrt{30/365} = 5.02\%$$, is the cleaner monthly match. Second, VIX is a variance-swap level that includes the put wing and the risk premium, so it **overstates** the typical realized move: over the past year SPY's realized vol averaged about 5.6 points below VIX ([lesson C4](/vol/c4/)). Use it as the market's price of a range, not an unbiased forecast.
+
+</Pro>
+
+## Why VIX rises when stocks fall
+
+<VixScatter client:visible />
+<SnapshotNote detail="255 consecutive trading days, SPY % change vs VIX point change" />
+
+The dots slope clearly down. On average VIX moved **−1.50 points for every +1% in SPY**, with a correlation of **−0.82**. The two moved in opposite directions on **78%** of days. The extremes are telling: on **June 5, 2026**, SPY fell 2.58% and VIX jumped 6.11 points; on **March 31, 2026**, SPY rallied 2.91% and VIX dropped 5.36.
+
+Switch to **By VIX level** and you'll see that the biggest moves cluster at high VIX levels: volatile markets produce volatile volatility.
+
+<Plain>
+
+Think of VIX as the price of insurance. When the market falls, everyone wants protection at once, and insurance gets expensive. When the market rises calmly, fear fades and so does the price of protection. That is why VIX and stocks move like a seesaw.
+
+There is a second reason. A falling stock market tends to *become* more jumpy: losses make investors nervous, leveraged players are forced to sell, and swings get bigger. So VIX isn't just reacting to fear; it is also correctly anticipating a rougher ride.
+
+</Plain>
+
+<Pro>
+
+The negative return-volatility correlation has three standard explanations, all present at once:
+
+- **Leverage effect.** A lower equity value raises a firm's debt-to-equity ratio, which raises equity volatility.
+- **Volatility feedback.** Higher expected volatility raises the required return, which lowers prices today.
+- **Demand for protection.** Hedgers bid up puts in selloffs; dealers short those puts mark implied vol higher to manage their gamma risk.
+
+The asymmetry matters for positions. Short-vol positions are effectively long the market in a crash, and long VIX exposure behaves like a hedge on equity. The fitted slope also gives a quick scenario tool: a 3% SPY drop historically came with roughly a 4 to 5 point VIX jump, which feeds directly into a portfolio's vega P/L ([lesson D4](/vol/d4/)).
+
+</Pro>
+
+## Common mistakes
+
+- **Reading VIX as a percent move per month.** VIX is annualized; divide by about 3.5 for a month and by 16 for a day.
+- **Equating VIX with SPY's at-the-money implied vol.** VIX includes the downside puts and is usually several points higher (17.52 vs 14.06% at the snapshot).
+- **Treating VIX as a direction call.** A high VIX says big moves are priced, not that the market will fall further.
+- **Assuming spikes persist.** VIX spikes have typically faded within weeks; the March 2026 peak of 31.05 was back under 18 within about a month.
+
+<Takeaway>
+
+- VIX is the 30-day implied volatility of the S&P 500, built from a strip of out-of-the-money SPX options.
+- Divide VIX by 16 for a typical daily move and by about 3.5 for a monthly move. At 17.52: about ±1.1% a day, ±5.1% a month.
+- VIX usually runs above at-the-money implied vol because it includes the expensive put wing.
+- VIX and SPY move in opposite directions most days: about −1.5 VIX points per +1% SPY over the past year.
+- VIX spikes with selloffs and tends to fall back toward its average within weeks.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="C5"
+  questions={[
+    {
+      q: 'VIX is 24. Roughly how big is a typical one-day move in the S&P 500?',
+      options: ['±0.5%', '±1.5%', '±2.4%', '±7%'],
+      answer: 1,
+      why: '24 ÷ 16 = 1.5%. VIX is annualized; the daily equivalent divides by about 16 (√252).',
+    },
+    {
+      q: 'With SPY at 769.66 and VIX at 17.52, what is the approximate one-standard-deviation move over a month?',
+      options: ['±$8.50', '±$19', '±$39', '±$135'],
+      answer: 2,
+      why: '17.52 ÷ √12 ≈ 5.06%, and 5.06% of 769.66 ≈ $38.93.',
+    },
+    {
+      q: 'At the snapshot VIX was 17.52 while SPY\'s at-the-money implied vol for November 27 was 14.06%. Which is the main reason for the gap?',
+      options: [
+        'One of the numbers is stale',
+        'VIX includes out-of-the-money puts, which carry higher implied volatility',
+        'VIX measures realized volatility',
+        'SPY pays a dividend',
+      ],
+      answer: 1,
+      why: 'VIX is a variance-swap style measure that weights every OTM strike, and the downside puts carry much higher IV than the at-the-money options (the skew).',
+    },
+    {
+      q: 'SPY falls 2% in a day. Based on the past year\'s relationship, what is VIX most likely to do?',
+      options: ['Fall about 3 points', 'Stay roughly unchanged', 'Rise about 3 points', 'Rise about 15 points'],
+      answer: 2,
+      why: 'The fitted slope was about −1.5 VIX points per 1% SPY move, so a −2% day suggests roughly +3 points. Individual days scatter widely around that.',
+    },
+  ]}
+/>

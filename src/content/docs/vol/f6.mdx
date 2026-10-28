@@ -1,0 +1,188 @@
+---
+title: Early exercise
+description: Know when exercising an American option early beats holding it (calls before a dividend, deep puts for interest), and measure what that right is worth.
+lessonId: F6
+prereqs: [F5, B5]
+minutes: 25
+bookRef: the chapter on early exercise
+---
+
+import EarlyExercisePremium from '../../../components/widgets/f/EarlyExercisePremium.tsx';
+import CallExerciseDecision from '../../../components/widgets/f/CallExerciseDecision.tsx';
+import TreeMini from '../../../components/widgets/f/TreeMini.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+SPY options are American: the holder may exercise on any trading day. Most of the time that right is worth nothing extra, because exercising early throws value away. This lesson pins down the two situations where it doesn't, and what the right is worth when it matters.
+
+## American vs European
+
+<Plain>
+
+A **European** option can only be used on the expiry date. An **American** option can be used any day up to then. More choice can't be worth less, so an American option is always worth at least as much as the European one.
+
+But choice only has value if you'd ever use it. Exercising an option early means trading a deposit that still has time on it for its bare in-the-money amount. Usually the option is worth more alive: **you'd do better selling it** than exercising it. The exceptions come from the two things exercise changes: when you pay or receive the strike money (interest), and whether you own the shares on the day a dividend is paid.
+
+</Plain>
+
+<Pro>
+
+Write the value of an American option as the European value plus an **early-exercise premium**:
+
+$$
+V_{\text{Am}} = V_{\text{Eu}} + \text{EEP}, \qquad \text{EEP} \ge 0
+$$
+
+Exercising early collects intrinsic value and forgoes time value. For a call on a stock with no dividend before expiry, $$C_{\text{Eu}} \ge S - Ke^{-rT} > S - K$$ whenever $$r>0$$, so the option is always worth more than exercising: the early-exercise premium is zero. For calls, only a dividend can make early exercise rational. For puts, the bound $$P_{\text{Eu}} \ge Ke^{-rT} - S$$ is *below* intrinsic value $$K - S$$, so a deep enough put can be worth more exercised than held, even with no dividend. Early exercise is solved numerically, typically with the binomial tree of [lesson B5](/vol/b5/).
+
+</Pro>
+
+## Puts: interest on the strike
+
+<Plain>
+
+Exercising a put means **selling the shares at the strike and getting the cash now**. If the put is very deep in the money, there's little chance SPY recovers above the strike before expiry, so the insurance value left is tiny. Meanwhile the strike money, received today instead of at expiry, starts earning interest.
+
+When the interest you'd earn is worth more than the insurance you'd give up, exercise early. Higher rates, longer time and deeper strikes all push in that direction. At a zero interest rate, there is no reason ever to exercise a put early.
+
+</Plain>
+
+<EarlyExercisePremium client:visible />
+<SnapshotNote detail="put IVs from the Nov 27, 2026 chain, applied to each horizon" />
+
+<Pro>
+
+At the real 31-day horizon and 4.6%, the 770 put's early-exercise premium is **$0.243**, about 2.2% of its European value of $11.20. At the 800 strike it is **$1.375**, 4.7% of $29.38. That is the gap that distorted parity at the deep strikes in [lesson F2](/vol/f2/) and the boxes in [lesson F4](/vol/f4/). Stretch the horizon to one year and the 800 put's premium grows to **$7.14**. At a zero rate, the premium is zero at every strike.
+
+The put early-exercise condition at any node is $$K - S > P_{\text{hold}}$$. A useful bound: the time value given up must be less than the interest on the strike, $$K(1-e^{-r\tau})$$. For the 800 put with 31 days left that interest is $3.12, so the put is exercised once its insurance value (roughly the matching call's price) falls below that.
+
+</Pro>
+
+## Calls: only for the dividend
+
+<Plain>
+
+Exercising a call early costs you twice: you **pay the strike now** instead of later (losing interest), and you **give up the insurance**, the right to walk away if SPY falls. The only thing you could gain is something the share owner gets and the call holder doesn't: **the dividend**.
+
+So the one time to consider exercising a call is the evening before an ex-dividend date. Exercise if the dividend is bigger than the time value you'd give up. With SPY's December dividend going ex on December 18, which is also the December expiry, there's almost no time value left to give up, so nearly every in-the-money December call is exercised the night before.
+
+</Plain>
+
+<CallExerciseDecision client:visible />
+
+<Pro>
+
+On the evening before the ex-date, compare exercise value $$S - K$$ with the ex-dividend call value $$C(S - D, K, \tau)$$. Using parity on the ex-dividend stock, holding is worth
+
+$$
+C(S-D) = (S - D - K) + P(S-D) + K\left(1 - e^{-r\tau}\right)
+$$
+
+so exercise wins exactly when $$D > P(S-D) + K(1 - e^{-r\tau})$$, the rule from [lesson F5](/vol/f5/). Defaults: a December 740 call, SPY 770, one day of life after the ex-date, 15% vol. Exercise collects **$30.00**; holding is worth **$27.99**. The $2.10 dividend beats the put's value (essentially zero) plus one day of interest on 740 ($0.09).
+
+Two things to try. Push the days to expiry out to 80 (a January call) and holding wins: 29 days of interest on the strike is already more than the dividend. Move the strike to 770 and the put value ($3.54) exceeds the dividend: an at-the-money call is never exercised for a $2.10 dividend. The lower panel prices the whole option today: the December 740 call is worth **$39.35** as American and **$37.88** as European, a **$1.47** early-exercise premium that is entirely the dividend.
+
+</Pro>
+
+## Inside the tree
+
+A binomial tree checks the exercise decision at every node: exercise now, or hold for the discounted value of the next step? Hover nodes to compare.
+
+<TreeMini client:visible />
+
+<Plain>
+
+The orange nodes are where exercising beats holding: the lower right part of the tree, where SPY has fallen well below the strike. That's the put's "deep in the money" zone. The boundary between orange and white is the **exercise boundary**: once SPY falls through it, take the money.
+
+Set the rate to zero and every orange node disappears. Raise the rate and the zone grows upward, closer to the current price. Lengthen the time and the boundary starts further below the strike, because SPY has longer to recover, yet the early-exercise premium still grows.
+
+</Plain>
+
+<Pro>
+
+With 8 steps, a 180-day 800 put at 14% vol and 4.6% has 14 early-exercise nodes before expiry and an American value of $41.02 against $37.80 European. The coarse tree overstates both values relative to a fine one, but the shape is right: the exercise boundary $$S^*(t)$$ rises toward the strike as expiry approaches, because the remaining insurance value shrinks faster than the remaining interest. The same machinery with a discrete dividend produces the call boundary: a single column of exercise nodes on the evening before the ex-date.
+
+</Pro>
+
+## Never for time-value reasons
+
+The rule that remains after the exceptions: **if an option still has meaningful time value, don't exercise it, sell it.** Exercising an at-the-money or slightly in-the-money option to "lock in" a gain throws away the time value. A trader who wants out of a 770 call with SPY at 785 sells the call, or sells stock against it; exercising forfeits whatever time value is left above $15 of intrinsic value. The only sound reasons to exercise early are capturing a dividend (calls) and earning interest on the strike (deep puts), and in both cases only when that gain exceeds the time value lost.
+
+<Plain>
+
+Exercising early is like cashing in a deposit at its face value when someone would buy it from you for more. With SPY at 785 and two weeks left, a 770 call priced at 14% volatility is worth about $19.06, roughly **$4 more** than its $15 head start. Exercise and those $4 vanish; sell and you keep them.
+
+</Plain>
+
+<Pro>
+
+With no dividend before expiry, parity splits the call into $$C = (S - K) + P + K(1 - e^{-r\tau})$$. In the 785 example (14 days, 14%, 4.6%), the time value of about $4.06 is the put's $2.71 plus $1.36 of interest on the strike. Exercising gives up both: the protection below 770 and the interest. To remove delta and keep the rest, short about one delta's worth of shares against the call. To exit entirely, sell the call at or near its bid; exercise wins only when the bid is below intrinsic value, which happens mostly in illiquid, deep in-the-money series.
+
+</Pro>
+
+## Common mistakes
+
+- **Exercising to take profits.** Selling the option captures intrinsic plus time value; exercising captures only intrinsic.
+- **Assuming American = European for SPY.** The early-exercise premium is a few cents at the money and over a dollar on deep puts; it shows up in parity, boxes and rolls.
+- **Forgetting the ex-date when long calls.** If the dividend beats the time value, not exercising hands the dividend to the call seller.
+- **Thinking calls are ever exercised early without a dividend.** With a positive rate and no dividend, never.
+
+<Takeaway>
+
+- American = European + early-exercise premium, never negative.
+- Calls: exercise early only just before an ex-date, when the dividend exceeds the put value plus interest on the strike to expiry.
+- Puts: exercise early when deep in the money and interest on the strike exceeds the remaining insurance value; at zero rates, never.
+- On the snapshot, the early-exercise premium is $0.24 on the 31-day 770 put and $1.38 on the 800 put.
+- Otherwise, never exercise for time-value reasons: sell the option instead.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="F6"
+  questions={[
+    {
+      q: 'A stock pays no dividends and rates are positive. When should you exercise an American call early?',
+      options: ['When it is deep in the money', 'Just before expiry', 'Never', 'When volatility drops'],
+      answer: 2,
+      why: 'Without a dividend, the call is always worth at least S − K·e^(−rT), which exceeds S − K. Selling beats exercising, so the early-exercise premium is zero.',
+    },
+    {
+      q: 'What makes a deep in-the-money put worth exercising early?',
+      options: [
+        'A dividend',
+        'Interest earned on the strike received now exceeds the put\'s remaining insurance value',
+        'High volatility',
+        'Low interest rates',
+      ],
+      answer: 1,
+      why: 'Exercise brings the strike money forward. When that interest beats the small chance of the stock recovering above the strike, early exercise wins.',
+    },
+    {
+      q: 'The evening before the ex-date, a 740 call with 1 day left after the ex-date: dividend $2.10, put value $0.00, interest on the strike $0.09. Exercise or hold?',
+      options: ['Exercise', 'Hold', 'Indifferent', 'Sell the put'],
+      answer: 0,
+      why: 'The dividend ($2.10) exceeds put value plus interest ($0.09): exercising and collecting the dividend is worth more than holding the call.',
+    },
+    {
+      q: 'Interest rates fall to zero. What happens to the early-exercise premium of American puts on a non-dividend stock?',
+      options: ['It doubles', 'It is unchanged', 'It goes to zero', 'It becomes negative'],
+      answer: 2,
+      why: 'With no interest to earn on the strike, there is never a reason to exercise a put early, so American and European puts are worth the same.',
+    },
+    {
+      q: 'You own a 770 call with SPY at 785 and two weeks to go. You want out. Best mechanics?',
+      options: ['Exercise and sell the shares', 'Sell the call', 'Buy a put', 'Wait for expiry'],
+      answer: 1,
+      why: 'Selling captures the $15 intrinsic value plus the remaining time value. Exercising captures only the $15.',
+    },
+  ]}
+/>
+
+<BookRef />

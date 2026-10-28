@@ -1,0 +1,157 @@
+---
+title: Index options & futures
+description: Tell SPY, SPX and E-mini futures options apart by size, exercise style and settlement, and size a position in each.
+lessonId: J1
+prereqs: [A2]
+minutes: 20
+---
+
+import IndexProducts from '../../../components/widgets/j/IndexProducts.tsx';
+import SettlementFlow from '../../../components/widgets/j/SettlementFlow.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+"The S&P 500" trades in at least three wrappers: the SPY exchange-traded fund, the SPX index itself, and E-mini futures. They track the same 500 stocks, so their options carry nearly the same implied volatility. What differs is size, what you receive at expiry, and when. Those details decide which one fits a given job.
+
+## Three products, one market
+
+<Plain>
+
+- **SPY** is a fund you can buy like a stock. Each share holds about a tenth of the index's value: 769.66 at the snapshot. SPY options are on 100 shares of this fund.
+- **SPX** is the index itself, 7722.6 at the snapshot. You cannot buy the index, but you can trade options on it. Each SPX option is on $100 times the index, so it is about **ten times** the size of a SPY option.
+- **E-mini S&P 500 futures (ES)** are contracts to buy or sell the index at a fixed price on a future date, worth $50 times the index. There is also a Micro E-mini at $5 times the index. Options on these futures exist too.
+
+Same weather, different umbrellas.
+
+</Plain>
+
+<Pro>
+
+Notional per contract:
+
+$$
+\text{SPY option: } 100 \times 769.66 = \$76{,}966 \qquad \text{SPX option: } 100 \times 7722.6 = \$772{,}260
+$$
+
+$$
+\text{ES: } 50 \times 7722.6 = \$386{,}130 \qquad \text{MES: } 5 \times 7722.6 = \$38{,}613
+$$
+
+The ratio SPX/SPY is **10.03**, not exactly 10. The fund's net asset value carries accrued dividends between quarterly payouts, deducts its expense ratio, and its share terms have drifted slightly from a clean tenth of the index since launch. Desks quote the live ratio rather than assume 10 when converting strikes ([lesson J2](/vol/j2/)).
+
+</Pro>
+
+<IndexProducts client:visible />
+<SnapshotNote detail="SPY close and SPX index level; product terms are the standard listed contracts" />
+
+Slide the exposure down to $250,000. SPY gets within about 8% (3.25 contracts, round to 3). SPX cannot: 0.32 contracts rounds to zero. At $5 million, all four products land within 10% of the target.
+
+## Exercise style and settlement
+
+<Plain>
+
+At expiration, an in-the-money option has to turn into something.
+
+- A **SPY** option turns into **shares**. A call you own becomes 100 SPY shares bought at the strike; a put you own becomes 100 shares sold. You end up holding (or owing) stock over the weekend. SPY options are also **American**: they can be exercised any day before expiry, so a seller can be assigned early.
+- An **SPX** option turns into **cash**. The exchange pays the in-the-money amount times $100 and the position disappears. SPX options are **European**: exercise only at expiry, so no early assignment.
+
+Cash settlement is cleaner: no shares, no weekend surprise. Physical settlement means you have to manage what you receive.
+
+</Plain>
+
+<Pro>
+
+Key differences that change risk and pricing:
+
+- **AM vs PM settlement.** Standard monthly SPX options (third Friday) are AM-settled: last trade is Thursday, and the settlement value is the Special Opening Quotation (SOQ), computed from each component's opening print on Friday. It can differ noticeably from Thursday's close and from Friday's first index tick. SPXW weeklies and dailies are PM-settled on Friday's (or that day's) close. SPY options always settle on the close of the expiration day.
+- **Pin and settlement risk.** A short SPY option near the strike at the close leaves you unsure whether you will be assigned, and after-hours news can move the stock before you can hedge the delivered shares. With AM-settled SPX, the risk is the opening print itself: you are exposed overnight Thursday with no way to trade the settlement value.
+- **Dividends.** SPY pays its dividends (about 1.1% a year, quarterly) to shareholders, not option holders, so calls are worth exercising early just before an ex-date when the dividend exceeds the remaining time value of the put at the same strike ([lesson F6](/vol/f6/)). SPX is a price index: dividends lower the forward but there is no early-exercise decision.
+- **Futures options** exercise into a futures position, not cash or stock. CME quarterly ES options are American; most weekly and end-of-month ES options are European. Quarterly options expire alongside the futures, which themselves cash-settle on the SOQ.
+
+</Pro>
+
+<SettlementFlow client:visible />
+
+Set the weekend gap to −3% with the long SPY call in the money: the shares you were delivered on Friday lose about $2,300 over the weekend, a risk the option never carried. The SPX lane ends at Friday's settlement print with a cash credit and nothing left to manage. The figure applies the same percentage move to both products for clarity; in practice the SOQ, the Friday close and the SPY close are three different numbers.
+
+## Futures basics
+
+<Plain>
+
+A futures contract is an agreement to trade later at a price fixed today. No one pays the full value up front. Each side posts a good-faith deposit called **margin**, a few percent of the contract's value, and every evening the exchange moves cash from the loser's account to the winner's. That nightly cash-up is **daily settlement**, or marking to market.
+
+One ES contract at 7722.6 controls $386,130 of S&P 500 exposure. A 1% move, about 77 index points, moves $3,861 between the two accounts that day.
+
+</Plain>
+
+<Pro>
+
+Futures P/L is linear: $$\text{P/L} = m \,(F_t - F_0)$$ with $$m = \$50$$ for ES, settled daily through variation margin. Initial and maintenance margins are set by the exchange and clearing firm and rise after volatility spikes; they are not a cost but a collateral requirement. The futures price trades above the index by the cost of carry less dividends ([lesson J2](/vol/j2/)).
+
+Why traders use futures alongside options:
+
+- **Delta hedging.** One ES is about 50 index units of delta, roughly 502 SPY shares, in a single, nearly 24-hour, highly liquid ticket.
+- **Capital efficiency.** Margin, not full notional, is posted.
+- **Overnight hedging.** ES trades almost around the clock; SPY options and SPX options have narrower sessions, although SPX has extended hours.
+
+Option pricing on futures uses the Black (1976) model with the futures price as the underlying and no separate carry term, because the futures price already contains it.
+
+</Pro>
+
+## Common mistakes
+
+- **Assuming SPX options settle on Friday's close.** Standard monthly SPX settles on Friday's opening quotation and stops trading Thursday. Only SPXW (weeklies, dailies) settles on the close.
+- **Converting strikes with exactly 10.** The SPX/SPY ratio was 10.03 at the snapshot and moves over time.
+- **Forgetting that a short SPY option can be assigned early.** Short in-the-money calls before an ex-dividend date are the classic case.
+- **Treating futures margin as the risk.** You can lose far more than the margin: one ES contract moves $50 per index point.
+
+<Takeaway>
+
+- SPY options: American, physically settled into 100 shares, PM-settled, about $77,000 notional per contract.
+- SPX options: European, cash-settled, about $772,000 notional; monthlies are AM-settled on the opening quotation, SPXW on the close.
+- E-mini futures: $50 × index (about $386,000), margined and settled daily; Micro E-mini is one tenth of that.
+- SPX/SPY ≈ 10.03, not 10: dividends accrued in the ETF, fees, and drift since launch.
+- Choose by job: SPY for precise small sizing, SPX for size and clean settlement, futures for delta hedging around the clock.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="J1"
+  questions={[
+    {
+      q: 'You are long one SPX 7725 call at expiry and the settlement value is 7800. What do you receive?',
+      options: ['100 SPY shares', '$7,500 cash', '$750 cash', 'One E-mini futures contract'],
+      answer: 1,
+      why: 'SPX options are cash-settled: (7800 − 7725) × $100 = $7,500. No shares change hands.',
+    },
+    {
+      q: 'Which is true of standard monthly (third-Friday) SPX options?',
+      options: [
+        'They can be exercised any day',
+        'They settle on Friday’s closing index level',
+        'They stop trading Thursday and settle on Friday’s opening quotation',
+        'They deliver SPY shares',
+      ],
+      answer: 2,
+      why: 'Monthly SPX options are AM-settled: last trade Thursday, settlement from each stock’s Friday opening price (the SOQ).',
+    },
+    {
+      q: 'About how many SPY options give the same exposure as one SPX option?',
+      options: ['1', '5', '10', '100'],
+      answer: 2,
+      why: 'SPX is about 10.03 times SPY with the same $100 multiplier, so one SPX option ≈ 10 SPY options.',
+    },
+    {
+      q: 'You hold a short in-the-money SPY call the day before SPY goes ex-dividend. What risk is specific to SPY here?',
+      options: ['Cash settlement at the open', 'Early assignment', 'Daily margin calls', 'None, it is European'],
+      answer: 1,
+      why: 'SPY options are American. A call holder can exercise early to capture the dividend, so the short call can be assigned the day before the ex-date.',
+    },
+  ]}
+/>

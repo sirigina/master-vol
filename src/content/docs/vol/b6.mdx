@@ -1,0 +1,186 @@
+---
+title: 'Model vs market: implied volatility'
+description: Solve for the volatility that makes a model match a market price, use implied volatility as the way options are quoted, and see how it varies by strike and expiry on the real SPY chain.
+lessonId: B6
+prereqs: [B4, C2]
+minutes: 25
+bookRef: the chapter on implied volatility
+---
+
+import GoalSeekIV from '../../../components/widgets/b/GoalSeekIV.tsx';
+import IvAcross from '../../../components/widgets/b/IvAcross.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+So far the model has run forwards: put in a volatility, get a price. The market runs it backwards. The 770 call trades at $13.90; the question a trader asks is **what volatility is that price charging?** The answer, implied volatility, is how the whole options market talks.
+
+## Running the model backwards
+
+<Plain>
+
+Five of the six model inputs are facts ([lesson B2](/vol/b2/)). The price is a fact too: it's on the screen. That leaves one unknown, the weather forecast for price swings. So you can turn the question around: **which forecast would make the model's price equal the market's price?**
+
+That forecast is the **implied volatility**. For the 770 call at $13.90, it is **14.02%**. It's the market's forecast, read off the price, the same way you can read a bookmaker's odds off the payout.
+
+</Plain>
+
+<Pro>
+
+Implied volatility is the $$\sigma_{\text{imp}}$$ solving
+
+$$
+V_{\text{model}}(S, K, T, r, q, \sigma_{\text{imp}}) = V_{\text{market}}
+$$
+
+Because the Black-Scholes price rises strictly with $$\sigma$$ (vega is positive), there is exactly one solution whenever the price lies between the no-arbitrage bounds, $$\max(Se^{-qT} - Ke^{-rT}, 0) < C < Se^{-qT}$$. There is no closed form, so it is found numerically, usually by Newton's method:
+
+$$
+\sigma_{n+1} = \sigma_n - \frac{V(\sigma_n) - V_{\text{market}}}{\text{vega}(\sigma_n)}
+$$
+
+For a near-the-money option the price is almost linear in $$\sigma$$, so Newton converges in two or three steps from almost any start. Far from the money, vega is tiny and the curve is flat at low vols, so robust solvers fall back on bisection whenever a Newton step would leave the bracket.
+
+</Pro>
+
+<GoalSeekIV client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, mid prices; rate 4.6%, no dividend" />
+
+Drag your volatility guess and watch the dot slide along the model curve; the vertical red or green bar is how far its price misses the market line. Now reset the guess to 25% and press **Take a Newton step**: the first step lands at 14.03%, the second at 14.02%, and the miss is gone. The 770 call's implied volatility is **14.02%**, a hair below the vendor's 14.13% (vendors use slightly different time and rate conventions).
+
+Two things to try:
+
+- **Pick the 650 put.** The model curve is almost flat until about 20% volatility. At the 770 call's 14% the put would be worth less than a hundredth of a cent; the market's $0.80 needs **31.9%**.
+- **Read the bid and ask as vols.** The 770 call's 13.87 / 13.93 market is **13.99% / 14.05%**. Traders quote the spread in vol points as often as in cents.
+
+## Implied volatility is a quote, not a forecast you have to believe
+
+<Plain>
+
+Comparing options by dollar price is like comparing houses by total price without looking at the size. A $0.80 put and a $13.90 call tell you nothing about which is "expensive".
+
+Implied volatility fixes that. It strips out strike, time and interest, and leaves one number on a common scale. Now the comparison is meaningful: the market is charging about **32%** volatility for the 650 put and **14%** for the 770 call. The far-away insurance is much more expensive per unit of risk.
+
+It is still a forecast in the sense that it's what the market is *charging*. Whether it turns out right is a separate question, answered later by the weather that actually happens (realized volatility, [lesson C2](/vol/c2/)).
+
+</Plain>
+
+<Pro>
+
+Desks quote, hedge and risk-manage options in implied volatility:
+
+- **Quoting.** A market maker's quote is a vol (and an edge around it), converted to price at the moment of trading. When SPY moves, the dollar quote updates automatically while the vol quote holds.
+- **Comparing.** IV normalizes across strikes and expiries, so you can ask whether the 650 put is rich *relative to* the 770 call, or December relative to November.
+- **Model as translator.** Because each option gets its own IV, Black-Scholes is not being asserted as true; it is a monotone map between price and a convenient unit. [Lesson B4](/vol/b4/) showed that with each strike's own IV the model reprices the chain, and with one vol it does not.
+
+Two practical cautions. IV inherits every other input: a stale spot, the wrong rate or a missed dividend shows up as a wrong vol ([lesson B3](/vol/b3/)). And for American options, a European IV absorbs the early-exercise premium: the 800 put's quoted mid gives a European IV of **13.5%** against the vendor's 11.7%, which is in line with the 800 call's 11.8% and consistent with a model that values early exercise.
+
+</Pro>
+
+## One underlying, many volatilities
+
+If Black-Scholes were exactly right, every SPY option would imply the same volatility. They don't. The pattern of IVs across strikes and expiries is information the market is giving you.
+
+<IvAcross client:visible />
+<SnapshotNote detail="by strike: Nov 27, 2026 chain; by expiry: 770 strike, Nov 6, 2026 to Dec 17, 2027" />
+
+**Across strikes** (November 27): implied volatility falls steadily from **32.1%** at the 650 put to about **11.8%** at the 800 to 820 calls, then turns up slightly at the 840 call (12.9%). That downward slope is the **skew**: the market charges far more for protection against a fall than for upside participation. Calls and puts at the same strike sit close together, as parity requires; the visible gaps at 740 and below come from the deep in-the-money calls, whose wide quotes make their IVs noisy.
+
+**Across expiries** (770 strike): at-the-money IV is **14.7%** at 10 days, dips to **14.1%** at 31 days, then rises to **15.9%** at 143 days and **18.1%** at 416 days. That upward slope is the **term structure**. Hover the longer expiries and you'll see the put IV above the call IV; that is the missing dividend from [lesson B3](/vol/b3/), not a real difference.
+
+<Plain>
+
+The same weather forecaster gives different forecasts for different questions. "How stormy will it be in a month?" gets one answer. "What are the chances of a hurricane?" gets a much more nervous one, priced into the far-away puts. "How stormy over the next year?" gets a higher number than next month, because a calm month is easier to predict than a calm year.
+
+Those patterns are not mistakes. They are the market telling you what it fears and how far ahead it is looking.
+
+</Plain>
+
+<Pro>
+
+The collection of IVs indexed by strike and expiry is the **implied volatility surface**. Its two cross-sections are the smile (or skew) at fixed expiry and the term structure at fixed moneyness. For equity indexes the skew is persistently negative because of crash risk, demand for portfolio protection, and the tendency for volatility to rise as the market falls ([lesson C8](/vol/c8/)). The term structure is usually upward-sloping in calm markets, as here (VIX 17.52), and inverts in stress, when near-term IV jumps above long-term ([lesson C7](/vol/c7/)).
+
+Surface fitting is done in forward moneyness, $$\ln(K/F)$$, with one forward per expiry from parity; that both removes the dividend artefact and makes expiries comparable. A trading view is then a view on part of the surface: that the skew is too steep, that December is too cheap relative to November, or that the whole level is too high against expected realized volatility.
+
+</Pro>
+
+## Common mistakes
+
+- **Comparing options by dollar price.** A $0.80 put can be far more expensive than a $13.90 call once both are expressed as implied volatility.
+- **Expecting one IV per underlying.** Every strike and expiry has its own; "SPY's IV" usually means the at-the-money 30-day number.
+- **Forgetting that IV absorbs input errors.** A wrong forward or a European model on an American option shows up as fake skew.
+- **Treating IV as a prediction.** It is what the market charges, including a premium for risk; realized volatility is what actually happens.
+
+<Takeaway>
+
+- Implied volatility is the volatility that makes the model price equal the market price; for the 770 call, 14.02%.
+- It is solved numerically (Newton's method converges in two or three steps near the money).
+- Options are quoted and compared in IV because it removes strike, time and rate effects.
+- On November 27, IV runs from 32.1% (650 put) down to about 11.8% (800 to 820 calls): the skew.
+- At-the-money IV rises from 14.1% (31 days) to 18.1% (416 days): the term structure.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="B6"
+  questions={[
+    {
+      q: 'What is implied volatility?',
+      options: [
+        'The standard deviation of past returns',
+        'The volatility that, plugged into the model, reproduces the option\'s market price',
+        'The VIX index',
+        'The average of call and put prices',
+      ],
+      answer: 1,
+      why: 'It is the model run backwards: the one unknown input solved from the observed price.',
+    },
+    {
+      q: 'Why does Newton\'s method converge quickly for the 770 call but struggle for the 650 put at a low starting guess?',
+      options: [
+        'The 650 put has no implied volatility',
+        'Near the money, price is nearly linear in vol; far out of the money, vega is near zero at low vols, so the update steps are huge',
+        'Puts cannot be solved with Newton\'s method',
+        'The interest rate is different',
+      ],
+      answer: 1,
+      why: 'Newton divides by vega. A flat curve (tiny vega) gives wild steps, which is why solvers fall back on bisection.',
+    },
+    {
+      q: 'The 650 put costs $0.80 and the 770 call $13.90. Which is more expensive in volatility terms?',
+      options: [
+        'The 770 call, because it costs more',
+        'The 650 put: about 32% implied vs about 14%',
+        'They are equal',
+        'Cannot be compared',
+      ],
+      answer: 1,
+      why: 'Dollar prices are not comparable across strikes. In IV terms, the 650 put charges more than twice the 770 call\'s volatility.',
+    },
+    {
+      q: 'Beyond December, the 770 put shows a higher IV than the 770 call at the same expiry. What is the most likely cause?',
+      options: [
+        'Put buyers are more nervous',
+        'The vendor\'s model omits SPY\'s dividend, so the forward is too high and put prices look rich',
+        'Calls are mispriced',
+        'Early exercise of calls',
+      ],
+      answer: 1,
+      why: 'Parity ties call and put IVs together at the same strike once the forward is right. Leaving out a ~1% dividend overstates the forward and splits the IVs.',
+    },
+    {
+      q: 'The 770 call is quoted 13.87 bid / 13.93 ask with vega about 0.89. Roughly how wide is that market in vol points?',
+      options: ['0.07 vol points', '0.6 vol points', '6 vol points', '0.006 vol points'],
+      answer: 0,
+      why: 'Spread ÷ vega = 0.06 ÷ 0.89 ≈ 0.07 vol points (13.99% to 14.05%).',
+    },
+  ]}
+/>
+
+<BookRef />

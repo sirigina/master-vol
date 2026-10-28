@@ -1,0 +1,90 @@
+---
+import Default from '@astrojs/starlight/components/PageTitle.astro';
+import LevelToggle from '../LevelToggle.astro';
+import { tracks, lessonHref } from '../../data/curriculum.mjs';
+
+const data = Astro.locals.starlightRoute.entry.data as {
+  lessonId?: string;
+  prereqs?: string[];
+  minutes?: number;
+};
+const { lessonId, prereqs = [], minutes } = data;
+
+const all = tracks.flatMap((t) => t.modules.flatMap((m) => m.lessons.map((l) => ({ ...l, track: t.slug, module: m }))));
+const find = (id: string) => all.find((l) => l.id === id);
+const mod = lessonId ? find(lessonId)?.module : undefined;
+---
+
+{
+  lessonId && (
+    <div class="lesson-meta not-content">
+      <span class="chip">{lessonId}</span>
+      {mod && <span class="crumb">Module {mod.id} · {mod.title}</span>}
+      {minutes && <span class="crumb">≈ {minutes} min</span>}
+    </div>
+  )
+}
+<Default />
+{
+  lessonId && (
+    <div class="lesson-bar not-content">
+      {prereqs.length > 0 && (
+        <p class="prereqs">
+          Builds on:{' '}
+          {prereqs.map((p, i) => {
+            const l = find(p);
+            const label = `${p} ${l?.title ?? ''}`.trim();
+            return (
+              <>
+                {i > 0 && ', '}
+                {l?.live ? <a href={lessonHref(l.track, p)}>{label}</a> : <span title="Coming soon">{label}</span>}
+              </>
+            );
+          })}
+        </p>
+      )}
+      <LevelToggle />
+    </div>
+  )
+}
+
+<style>
+  .lesson-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.75rem;
+    margin-top: 1rem;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+  }
+  .chip {
+    font-family: var(--__sl-font-mono, ui-monospace);
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.375rem;
+    background: var(--sl-color-accent-low);
+    color: var(--sl-color-accent-high);
+  }
+  .crumb + .crumb::before {
+    content: '·';
+    margin-inline-end: 0.75rem;
+  }
+  .lesson-bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+    margin-top: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--sl-color-hairline);
+  }
+  .prereqs {
+    margin: 0;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+  }
+</style>

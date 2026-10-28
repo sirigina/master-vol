@@ -1,0 +1,172 @@
+---
+title: Delta
+description: The four ways traders use delta (speed, hedge ratio, share equivalent, and rough probability), with real SPY deltas.
+lessonId: D1
+prereqs: [A5, C2]
+minutes: 25
+bookRef: the chapters on risk measurement
+---
+
+import DeltaChain from '../../../components/widgets/DeltaChain.tsx';
+import DeltaCurves from '../../../components/widgets/DeltaCurves.tsx';
+import DeltaHedge from '../../../components/widgets/DeltaHedge.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+If you learn only one Greek, learn delta. It tells you how much your option's price moves when the stock moves, and that one number gets used four different ways on a trading desk.
+
+## Delta as speed
+
+<Plain>
+
+Delta is the option's **speedometer relative to the stock**. A delta of 0.54 means: when SPY moves $1, this option moves about 54 cents.
+
+- A call that is deep in the money (very likely to pay off) moves almost dollar-for-dollar with the stock: delta near **1**.
+- A call far out of the money (a long shot) barely reacts: delta near **0**.
+- Puts move the *opposite* way to the stock, so their deltas are **negative**, between 0 and −1.
+
+</Plain>
+
+<Pro>
+
+Delta is the first derivative of option value with respect to the underlying price:
+
+$$
+\Delta = \frac{\partial V}{\partial S}, \qquad \Delta_{\text{call}} = e^{-qT} N(d_1), \qquad \Delta_{\text{put}} = \Delta_{\text{call}} - e^{-qT}
+$$
+
+With no dividend before expiry, call delta minus put delta at the same strike is 1. Check it on the snapshot: the 770 call shows **+0.54** and the 770 put **−0.47**. The gap is 1.01; the extra 0.01 is rounding and the quotes not being perfectly simultaneous.
+
+</Pro>
+
+Here is delta across the real November 27 chain. Calls run from nearly 1 (deep in the money, left) to nearly 0 (far out of the money, right); puts mirror them below zero.
+
+<DeltaChain client:visible />
+<SnapshotNote detail="deltas as quoted on the Nov 27, 2026 expiry" />
+
+## How delta changes with price, time, and volatility
+
+Delta isn't fixed. Move SPY and it changes; let time pass and it changes; change volatility and it changes. Use the controls to see all three.
+
+<DeltaCurves client:visible />
+<SnapshotNote detail="model curves for the 770 strike, rate implied from the chain" />
+
+Three patterns to notice:
+
+1. **The S-curve.** Delta rises from 0 to 1 as SPY passes the strike. That changing slope is **gamma**, the next lesson.
+2. **Time sharpens it.** With 31 days left, the curve is gentle. With 2 days left, it is almost a step: the option is about to become either worth something or nothing.
+3. **Volatility softens it.** Higher volatility means more uncertainty about where SPY ends up, so even far-away options keep some delta. Slide volatility to 40% and watch the 31-day curve flatten.
+
+<Plain>
+
+The speedometer reading is not fixed. Near the strike it changes quickly as SPY moves; close to expiry it jumps toward full speed (1) or a standstill (0); and when the forecast turns stormier, every option's reading drifts toward the middle, because nothing looks settled.
+
+</Plain>
+
+<Pro>
+
+Each pattern is a second-order Greek. The change with price is gamma, $$\partial\Delta/\partial S$$ ([lesson D2](/vol/d2/)); the change with time is charm, $$\partial\Delta/\partial t$$; the change with volatility is vanna, $$\partial\Delta/\partial\sigma$$, positive for out-of-the-money calls and negative for in-the-money ones. [Lesson D6](/vol/d6/) maps all three. A delta hedge is only as good as the last time these effects were netted out.
+
+</Pro>
+
+## Delta as a hedge ratio and a share equivalent
+
+This is how professionals actually use delta. A position's total delta tells you **how many shares of stock it behaves like**, and therefore how many shares to trade to neutralize the price risk.
+
+<DeltaHedge client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry, snapshot IV held fixed" />
+
+Ten 770 calls at delta 0.54 behave like owning about **540 shares** of SPY. Sell 540 shares and the position is *delta-neutral*: a small move in SPY barely changes its value.
+
+Now move SPY by $10 or $20. The delta estimate and the full reprice drift apart, and the hedged P/L is **positive in both directions**. That gap is gamma at work. A long option position gets longer as the market rises and shorter as it falls, which is exactly why traders pay time decay to own it (lessons [D2](/vol/d2/) and [D7](/vol/d7/)).
+
+<Plain>
+
+The share-equivalent idea makes options comparable to stock. Owning 10 of these calls is, *right now*, like owning 540 shares, but for about $13,900 instead of $415,000. The catch is in "right now": the share count changes as the price moves and as time passes.
+
+</Plain>
+
+<Pro>
+
+Delta is a local, linear approximation. For a move $$\Delta S$$ the change in option value is better approximated by
+
+$$
+\Delta V \approx \Delta \cdot \Delta S + \tfrac{1}{2}\,\Gamma\,(\Delta S)^2
+$$
+
+so a delta-neutral long-option position earns $$\tfrac{1}{2}\Gamma(\Delta S)^2$$ on any move, at the cost of theta while it waits. A hedge set at one price is wrong at the next; maintaining it ("dynamic hedging") is the core activity of an options market maker and the subject of module E.
+
+</Pro>
+
+## Delta as a rough probability
+
+Traders often say a 0.16-delta option has "about a 16% chance" of finishing in the money. The 800 call on the snapshot has delta **0.16**. It is a useful rule of thumb, with two caveats.
+
+<Pro>
+
+- The precise risk-neutral probability of finishing in the money is $$N(d_2)$$, not $$N(d_1)$$. For short-dated options they are close; for long-dated or high-volatility options they diverge.
+- It is a risk-neutral probability (the model grows SPY at the financing rate, not at its real expected return), not a real-world forecast. Your broker's "chance of profit" is different again because it subtracts the premium.
+
+</Pro>
+
+<Plain>
+
+Rule of thumb: **delta ≈ odds of finishing in the money**. At-the-money options are roughly 50/50 (delta near 0.5). A 0.10-delta option is a long shot, about 1 in 10. It's good enough for quick intuition; don't use it for precise risk.
+
+</Plain>
+
+## Common mistakes
+
+- **Treating delta as constant.** It is only accurate for small moves and short periods.
+- **Forgetting the multiplier.** Delta 0.54 on one contract is 54 shares of exposure, not 0.54 shares.
+- **Ignoring sign.** Long puts and short calls both carry negative delta: both make money when SPY falls.
+- **Reading delta as a real-world probability.** It is a model quantity under risk-neutral assumptions.
+
+<Takeaway>
+
+- Delta = how much the option price moves per $1 move in the underlying.
+- Calls: 0 to 1. Puts: 0 to −1. Call delta − put delta = 1 at the same strike (no dividends).
+- Position delta × 100 = share-equivalent exposure; trade the opposite to hedge.
+- Delta changes with price (gamma), time, and volatility. Short-dated options have step-like deltas.
+- Delta ≈ rough odds of finishing in the money, but the exact figure is N(d₂).
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="D1"
+  questions={[
+    {
+      q: 'You own 5 contracts of a call with delta 0.40. What is your share-equivalent position?',
+      options: ['2 shares', '40 shares', '200 shares', '500 shares'],
+      answer: 2,
+      why: '5 contracts × 100 shares × 0.40 = 200 shares.',
+    },
+    {
+      q: 'The 770 call has delta 0.54. Approximately what is the delta of the 770 put (same expiry, no dividend)?',
+      options: ['+0.46', '−0.46', '−0.54', '+0.54'],
+      answer: 1,
+      why: 'Put delta = call delta − 1 = 0.54 − 1 = −0.46. The snapshot shows −0.47, within rounding.',
+    },
+    {
+      q: 'As expiration approaches, the delta of an at-the-money option…',
+      options: ['Stays near 0.5 and becomes very sensitive to price', 'Goes to zero', 'Goes to one', 'Stops changing'],
+      answer: 0,
+      why: 'The curve becomes a step at the strike, so delta stays near 0.5 at the money but swings quickly toward 0 or 1 with small moves. That is high gamma.',
+    },
+    {
+      q: 'You are long 10 calls and short the delta-equivalent shares. SPY jumps $20. Ignoring time, your hedged P/L is most likely…',
+      options: ['Zero', 'Negative', 'Positive', 'Exactly equal to delta × $20'],
+      answer: 2,
+      why: 'Long options have positive gamma: delta grows as the price rises, so the calls gain more than the hedge loses. The same happens on a fall.',
+    },
+  ]}
+/>
+
+<BookRef />

@@ -1,0 +1,196 @@
+---
+title: Put-call parity
+description: State put-call parity, back the market's financing rate out of real SPY quotes, and use parity to check any option price.
+lessonId: F2
+prereqs: [F1, B3]
+minutes: 25
+---
+
+import ParityChecker from '../../../components/widgets/f/ParityChecker.tsx';
+import ParityBalance from '../../../components/widgets/f/ParityBalance.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+If a call minus a put is just stock bought later ([lesson F1](/vol/f1/)), then the price of that difference cannot float freely: it is pinned to the stock price, the strike and the interest rate. That pin is put-call parity, and it is the first consistency check every options trader runs.
+
+## The equation
+
+<Plain>
+
+Two ways to end up owning SPY at expiry:
+
+1. **Buy the shares today** and keep them.
+2. **Buy the call, sell the put** (the synthetic), keep in the bank the cash you would have spent on shares, and pay the strike at expiry.
+
+Both end with the same shares, so they must cost the same. The synthetic route leaves your money earning interest for a month, so the call-minus-put price has to be a bit *higher* to compensate. Parity says exactly how much: **call minus put equals the stock price minus today's value of the strike**.
+
+If a stock pays a dividend before expiry, the share owner gets it and the synthetic owner doesn't, so the call-minus-put price drops by that amount.
+
+</Plain>
+
+<Pro>
+
+For European options on a stock with continuously compounded rate $$r$$ and known dividends:
+
+$$
+C - P = S - K e^{-rT} - \text{PV}(D)
+$$
+
+Equivalent forms: $$C - P = e^{-rT}(F - K)$$ with forward $$F = (S - \text{PV}(D))\,e^{rT}$$. The relation holds whatever the volatility or model, because it is enforced by a static, model-free replication: no hedging, no assumptions about the distribution.
+
+For American options it becomes a pair of bounds,
+
+$$
+S - \text{PV}(D) - K \;\le\; C - P \;\le\; S - K e^{-rT}
+$$
+
+because early exercise gives the put (and, around dividends, the call) extra value. SPY options are American, which matters in the data below.
+
+</Pro>
+
+## A balance that volatility cannot tip
+
+Move any slider. Volatility changes the call and the put a lot, but it changes them by the same amount, so the scale stays level. Only stock, strike, rate and time move the balance point. Then add a mispricing to the call and see what trade the imbalance suggests.
+
+<ParityBalance client:visible />
+
+At SPY 770 and the 770 strike with 31 days at 4.6%, both pans read **3.00**: interest on 770 for a month. Slide volatility from 14% to 40% and the call and put each gain about $23.17, while the difference stays at 3.00 to the cent.
+
+<Plain>
+
+A stormier weather forecast makes both the call deposit and the put insurance dearer, and by the same amount: a bigger swing helps each one equally, just in opposite directions. The gap between them doesn't care about the weather. It exists because the call buyer pays the strike later, so only the stock price, the strike, the rate and the time can move it.
+
+</Plain>
+
+<Pro>
+
+Differentiate $$C - P = S - Ke^{-rT}$$: the volatility term is absent, so $$\partial(C-P)/\partial\sigma = 0$$ and the call and put have identical vega and gamma. What remains is $$\partial(C-P)/\partial S = 1$$ and $$\partial(C-P)/\partial r = KTe^{-rT}$$, about 0.065 per 10 basis points for the 770 strike over 31 days. A mispricing added to the call shows up one-for-one in the pan difference. If the call is rich by $$x$$, a conversion (sell the call, buy the put, buy stock) locks in $$x$$ less trading costs ([lesson F3](/vol/f3/)).
+
+</Pro>
+
+## Reading the rate off the real chain
+
+Rearrange parity and the rate becomes the unknown:
+
+$$
+r = -\frac{1}{T}\,\ln\!\left(\frac{S - (C - P)}{K}\right)
+$$
+
+Every call/put pair on the chain gives its own estimate. Here they are for both expiries in the snapshot.
+
+<ParityChecker client:visible />
+<SnapshotNote detail="Nov 27 (31 days) and Dec 18 (52 days) expiries, mid prices" />
+
+<Plain>
+
+The 770 strike, right at the money, gives **4.60%**, which is where this course's reference rate comes from. The other strikes scatter: 4.75–5.04% from 700 to 765 (with an outlier of 5.85% at 740), then sliding to **3.05% at 800**. That isn't twelve different interest rates. It is three kinds of noise:
+
+- **Wide quotes.** The 740 call is quoted 36.96 bid, 38.58 ask: $1.62 wide. Its mid can be off by half a dollar, and the rate it implies has a range several percentage points wide. The tight 770 pair (6 cents wide on each side) pins the rate to within about 0.2 points.
+- **Rounding.** Over 31 days, one cent on C − P shifts the implied rate by about 0.015 percentage points. Small for one cent, large for the 30-cent mid errors on wide quotes.
+- **American puts.** The deep in-the-money puts at 780–800 can be exercised early, so they're worth more than the European formula allows. That makes C − P smaller and the implied rate too low. Switch the toggle to *American model* and the 780–800 rates jump back to about 5.1–5.8%.
+
+</Plain>
+
+<Pro>
+
+The shaded band per strike is the range of rates a trader could actually lock in: buying the synthetic at the ask on the call and the bid on the put gives one bound, selling it at the other side gives the other. Parity is "violated" only if the true financing rate falls outside a strike's band. With the European formula, 4.6% falls outside the band at 750, 775, 790 and 800, which looks like four arbitrages. With the American model, one rate of about 5.0% sits inside every strike's band: no strike offers a riskless trade once early exercise is priced.
+
+With the American-model toggle on, each strike's rate is solved so that a binomial tree with early exercise reproduces the quoted C − P. The November rates then cluster at **5.0–5.1%** for the liquid 750–780 strikes. That is the more honest estimate of the financing rate embedded in SPY options; the 4.6% European reading at 770 is slightly low because even the at-the-money put has about $0.24 of early-exercise value. This course keeps 4.6% as its reference rate, the parity rate a trader reads straight off the at-the-money quote.
+
+</Pro>
+
+## December and the dividend
+
+Switch the checker to December 18. With the European formula and no dividend, the rates fall to **3.2–4.2%**, below November. Money did not get cheaper between the two expiries; **SPY's December dividend** is in the price.
+
+SPY's quarterly dividend usually goes ex on the third Friday of December, which in 2026 is December 18: **expiration day itself**. A share owner who holds through the ex-date gets roughly $2.10; a synthetic owner doesn't. Parity says that should lower C − P by the dividend's present value, and that's what the December quotes show.
+
+<Plain>
+
+The timing makes it messy. Because the dividend goes ex on the last day, a call holder can **exercise the night before** and collect the dividend themselves. That right makes December calls worth more than they would be otherwise, and pushes C − P back up. So the market prices in only part of the dividend. With the *American model + $2.10 dividend* toggle, the December rates come back to **4.6–4.7%**, consistent with November.
+
+</Plain>
+
+<Pro>
+
+The European formula with the full dividend subtracted overshoots the other way: 770 implies 5.52% and 730 implies 6.17%. Neither "ignore it" nor "subtract it all" is right when the ex-date sits next to expiry. The American model handles both effects at once: the dividend lowers the forward, and the holder's right to exercise early around the ex-date restores part of the call value. The resulting December rates (4.63% at 770 at mid, with the tighter 750–790 strikes within 0.1 point) are a little under the November American-model reading, a difference well inside the spread on the wider December quotes and in the uncertainty about the exact dividend. When a dividend sits near expiry, desks back out the **implied dividend** at a known rate instead: hold $$r$$ fixed and solve parity for $$\text{PV}(D)$$.
+
+</Pro>
+
+## Parity as a consistency check
+
+Parity is how traders check a quote before trusting it.
+
+- **Screen check.** If a call's implied volatility is far from the put's at the same strike, parity is being fed the wrong rate or dividend. With the right inputs, call and put IVs at one strike agree. On the November chain they nearly do: 770 call 14.13% vs put 13.98%.
+- **Model check.** A pricing model that produces call and put values violating parity has a bug in its rate, dividend or exercise handling.
+- **Trade check.** If a quote breaks parity *after* spreads, there's a riskless trade: a conversion or reversal, [lesson F3](/vol/f3/).
+
+<Plain>
+
+Parity is like checking a receipt: the call, the put, the share price and the interest have to add up. When they don't, the usual culprit is a wrong input, such as a stale rate or a forgotten dividend, not free money. A gap counts as a trade only if it is still there after you pay the bid/ask on every leg.
+
+</Plain>
+
+<Pro>
+
+A parity residual and a call-put IV gap are the same error in different units: residual $$\approx$$ IV gap $$\times$$ vega. At 770, the 0.15-point gap (14.13% vs 13.98%) times a vega of 0.885 is about 13 cents of C − P. That is small enough to come from the vendor's rate, dividend and exercise assumptions rather than a tradable mispricing. The tradable threshold is the cost of the round trip in all three legs: at 770 that is about $0.07 per share at natural prices. Any residual inside that band is noise, and any rate or dividend you back out should come from the tightest at-the-money pairs.
+
+</Pro>
+
+## Common mistakes
+
+- **Reading every strike's implied rate as a real rate.** Wide quotes and American exercise move it by points; use the tightest at-the-money pairs.
+- **Ignoring dividends.** Any ex-date before (or on) expiry belongs in parity. Leaving December's out drops the implied rate by more than a point.
+- **Applying European parity to American options without thinking.** Deep in-the-money puts and calls before an ex-date carry early-exercise value; parity becomes a range, not an equality.
+- **Expecting volatility to show up.** Volatility moves both sides equally; it never appears in parity.
+
+<Takeaway>
+
+- Put-call parity: C − P = S − K·e^(−rT) − PV(dividends). It holds for any volatility and any model.
+- At the 770 strike on November 27, C − P = 2.66 and S − PV(K) = 2.66: the implied rate is 4.60%.
+- Strike-by-strike rates scatter from 3% to 6% because of bid/ask width, rounding and American early exercise.
+- December quotes show SPY's dividend, ex on expiry day; an American model with the dividend brings the rates back to about 4.6–4.7%.
+- Use parity to check quotes, find the market's rate or dividend, and spot conversion and reversal opportunities.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="F2"
+  questions={[
+    {
+      q: 'SPY is 769.66, the 31-day 770 call is 13.90 and the put is 11.24. What does put-call parity say about the rate?',
+      options: ['About 1%', 'About 4.6%', 'About 14%', 'It cannot be found without volatility'],
+      answer: 1,
+      why: 'C − P = 2.66, so K·e^(−rT) = 769.66 − 2.66 = 767.00. Solving 770·e^(−r·31/365) = 767 gives r ≈ 4.6%. No volatility needed.',
+    },
+    {
+      q: 'Implied volatility rises from 14% to 25% overnight with SPY unchanged. What happens to C − P at the same strike?',
+      options: ['It rises', 'It falls', 'It is unchanged', 'It depends on the strike'],
+      answer: 2,
+      why: 'Both options gain the same amount from higher volatility (same vega), so their difference is unchanged. Parity does not contain volatility.',
+    },
+    {
+      q: 'The 800 strike implies a rate of only 3.05% from mid prices. The most likely reason is…',
+      options: [
+        'Interest rates are lower for in-the-money options',
+        'The 800 put is American and its early-exercise value makes C − P smaller',
+        'The call is overpriced',
+        'The dividend',
+      ],
+      answer: 1,
+      why: 'The deep in-the-money 800 put is worth over $1 more than its European equivalent because it can be exercised early. Accounting for that brings the rate back to about 5.8%; the remaining gap is the wide 800 put quote.',
+    },
+    {
+      q: 'A stock will pay a $2 dividend before expiry. Compared with no dividend, C − P at every strike will be…',
+      options: ['About $2 higher', 'About $2 lower (its present value)', 'Unchanged', 'Higher for calls, lower for puts'],
+      answer: 1,
+      why: 'The share owner receives the dividend; the synthetic owner does not. So the synthetic (C − P) is worth the present value of the dividend less, before any early-exercise effect.',
+    },
+  ]}
+/>

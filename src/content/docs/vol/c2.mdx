@@ -1,0 +1,203 @@
+---
+title: Volatility as a number & expected moves
+description: What "14% volatility" actually means, how to turn it into dollar ranges for any horizon, and how SPY's real moves compare.
+lessonId: C2
+prereqs: [C1]
+minutes: 25
+bookRef: the chapter on volatility
+---
+
+import ReturnsHistogram from '../../../components/widgets/ReturnsHistogram.tsx';
+import RuleOf16 from '../../../components/widgets/RuleOf16.tsx';
+import ExpectedMoveCone from '../../../components/widgets/ExpectedMoveCone.tsx';
+import RealizedVsImplied from '../../../components/widgets/RealizedVsImplied.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+At the close on October 27, 2026, the SPY options expiring a month later were priced at an implied volatility of about **14%**. That single number is the most important input in options trading. This lesson turns it into something you can picture: a price range, in dollars, over any time frame.
+
+## What the number means
+
+<Plain>
+
+Volatility is a **weather forecast for price swings**. It doesn't say whether tomorrow will be warmer or colder (up or down), only how big the swings are likely to be.
+
+"14% volatility" means: over a full year, SPY will *typically* end up within about 14% of where it started, up or down. "Typically" here means roughly two years out of three. The other one-in-three, it moves more.
+
+A stock with 50% volatility is a place with wild weather. One with 10% is a mild coastal town.
+
+</Plain>
+
+<Pro>
+
+Volatility $$\sigma$$ is the annualized standard deviation of continuously compounded (log) returns. Under the standard model, the log return over a horizon of $$t$$ years is normally distributed with standard deviation $$\sigma\sqrt{t}$$:
+
+$$
+\ln\!\left(\frac{S_t}{S_0}\right) \sim \mathcal{N}\!\left(\mu t,\ \sigma^2 t\right)
+$$
+
+So "one standard deviation" over $$t$$ is $$\sigma\sqrt{t}$$ in return terms, and about $$S_0\,\sigma\sqrt{t}$$ in price terms for small moves. Convention uses **trading days** for $$t$$: one day is $$1/252$$ of a year.
+
+</Pro>
+
+## From a yearly number to any horizon
+
+Volatility grows with the **square root** of time, not with time itself. A month is 1/12 of a year, but its range is $$\sqrt{1/12} \approx 0.29$$ of the yearly range, not 0.08. That is why traders carry around a few shortcuts. The most famous: **divide annual volatility by 16 to get a typical daily move**, because $$\sqrt{252} \approx 15.9$$.
+
+<RuleOf16 client:visible />
+<SnapshotNote detail="defaults: SPY close and ATM implied vol" />
+
+At 14% volatility and $770, a typical day is about ±0.88%, or roughly **±$6.80**. A day where SPY moves $14 is a two-standard-deviation day: unusual, but it should happen about once a month.
+
+<Plain title="Why square root?">
+
+Picture a walk where each step is a coin flip: one step left or one step right. After 100 steps you are not 100 steps away; ups and downs mostly cancel, and you're typically only about **10 steps** (√100) from the start. Daily price moves behave the same way, so a month of moves adds up to much less than 21 times one day.
+
+</Plain>
+
+<Pro>
+
+For a horizon of $$n$$ trading days the one-SD return is $$\sigma\sqrt{n/252}$$; on a calendar clock it is $$\sigma\sqrt{d/365}$$. The two differ slightly because weekends and holidays count on the calendar clock: to November 27 the snapshot IV gives 4.15% over 22 trading days and 4.10% over 31 calendar days. Option quotes and this site's pricing use calendar days; realized volatility is measured on trading days. Pick one clock per comparison.
+
+</Pro>
+
+## Picture it: the expected-move cone
+
+Here is SPY's last three months, then the range the options market implied for the next month. Drag the volatility slider to see how the cone widens or narrows.
+
+<ExpectedMoveCone client:visible />
+<SnapshotNote detail="cone uses the Nov 27, 2026 expiry, 22 trading days" />
+
+At the market's implied volatility, the one-standard-deviation range by November 27 is about **±$32**, roughly 738 to 802.
+
+Now look at the orange bracket. That is the price of the 770 straddle (the call plus the put): **$25.14**. Traders read the straddle price as the market's estimate of the *average* absolute move to expiry. It is smaller than the one-standard-deviation move because the average size of a normal move is about 0.8 standard deviations ($$\sqrt{2/\pi} \approx 0.80$$). Check it: $$0.80 \times 32 \approx 25.6$$. Close.
+
+<Plain>
+
+The cone is the weather forecast drawn as a map. The darker band is where SPY should land about two times in three; the lighter band, about 19 times in 20. The cone widens quickly at first and then more slowly, the square-root rule again. The straddle price is a second, simpler reading of the same forecast: what the market charges for the average-sized move.
+
+</Plain>
+
+<Pro title="Pro detail: the straddle as a volatility gauge">
+
+For an at-the-money straddle with short time to expiry, Black-Scholes gives the approximation
+
+$$
+\text{Straddle} \approx 0.8 \times S\,\sigma\sqrt{t}
+$$
+
+so you can back out a rough implied volatility from any straddle quote without a model: $$\sigma \approx \text{Straddle} / (0.8\,S\sqrt{t})$$. With 25.14, 769.66 and 22 trading days, that gives about 13.8%, close to the quoted 14.1%. Desk traders do this in their heads all day.
+
+</Pro>
+
+## Reality check: are SPY's moves really "normal"?
+
+The forecast above assumes daily moves follow a bell curve. Here are SPY's actual 256 daily moves over the past year, with a bell curve of the same volatility drawn on top.
+
+<ReturnsHistogram client:visible />
+<SnapshotNote detail="daily closes Oct 20, 2025 to Oct 27, 2026" />
+
+Two things stand out, and both matter for pricing:
+
+- **Too many quiet days.** About 75% of days fell within one standard deviation; a normal curve says 68%. The peak is taller and narrower than the bell.
+- **Too many big days.** A normal curve predicts about 12 days beyond two standard deviations; SPY had **16**, and 3 beyond three standard deviations where the curve predicts less than one.
+
+This pattern, called *fat tails*, is the rule in real markets, not the exception. It is the main reason options at far-away strikes trade at higher implied volatilities than the model says they should ([lesson C8](/vol/c8/)).
+
+<Plain>
+
+The two halves of the pattern pull option prices in different directions. Because most days are calmer than the forecast, a single volatility number overstates the ordinary day. Because the storms are bigger, it understates the rare violent one. Insurance against a crash (a far out-of-the-money put) pays only on those storm days, so its sellers charge more than a bell curve says it is worth.
+
+</Plain>
+
+<Pro>
+
+The sample kurtosis is 3.78 against 3 for a normal. Fat tails also bend the straddle rule from the previous section: the $$\sqrt{2/\pi} \approx 0.80$$ ratio of mean absolute move to SD holds only for a normal. SPY's realized ratio over the year was **0.77**, so at a given volatility a leptokurtic market's average move is a little smaller than the bell implies, while its tail moves are larger. Models that handle this let volatility vary over time (stochastic volatility) or add jumps. Either one produces the implied-volatility smile instead of the flat line Black-Scholes assumes.
+
+</Pro>
+
+## Implied vs realized: the forecast and the weather
+
+There are two volatilities in this lesson, and keeping them apart is half of options trading.
+
+- **Realized (historical) volatility:** how much the price *actually* moved, measured from past closes.
+- **Implied volatility:** the volatility *priced into options* right now, a forecast of the future.
+
+<RealizedVsImplied client:visible />
+<SnapshotNote detail="realized vol from daily closes; implied vol from the 770 strike" />
+
+At the snapshot, SPY had realized about **10%** over the past 20 days while options implied **14%**. Options were priced for a bumpier ride than the recent one.
+
+<Plain>
+
+The forecast (implied) and the weather that actually happened (realized) usually differ. For indexes like SPY, the forecast is **usually a bit higher** than what follows, the same way insurance premiums are usually more than the average claim. Sellers want to be paid for the risk of a storm.
+
+That does not make selling options free money: when the storm comes, realized volatility can leap far above implied, as it did around the March 2026 low on the chart.
+
+</Plain>
+
+<Pro>
+
+The persistent gap between index implied and subsequent realized volatility is the **volatility risk premium**. It exists because investors pay up for crash protection and because short-volatility positions have negatively skewed payoffs. A trader comparing 14% implied with 10% realized is asking whether that gap is big enough to compensate for the tail risk; it is a judgment, not an arbitrage. Note too that close-to-close realized vol is a noisy estimator: the 10-day window swings far more than the 60-day, as the toggle shows. [Lesson C4](/vol/c4/) covers the different volatilities, and [C6](/vol/c6/) covers forecasting.
+
+</Pro>
+
+## Common mistakes
+
+- **Scaling volatility linearly with time.** A week is not 1/52 of the yearly move; it is $$\sqrt{1/52} \approx 1/7$$ of it.
+- **Treating one standard deviation as a boundary.** One day in three lands outside it, by definition.
+- **Comparing implied and realized measured over different horizons.** Match the windows: 30-day implied against a forward-looking 30 days of realized.
+
+<Takeaway>
+
+- Volatility is the annualized standard deviation of returns: a measure of size of moves, not direction.
+- Scale it by √time: daily ≈ σ/16, weekly ≈ σ/7, monthly ≈ σ/3.5.
+- One standard deviation covers about two-thirds of outcomes; the at-the-money straddle prices about 0.8 of it.
+- Real returns have fat tails: more quiet days and more extreme days than the bell curve.
+- Implied volatility is the market's forecast; realized is what happened. For indexes, implied usually runs above realized.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="C2"
+  questions={[
+    {
+      q: 'A stock trades at $200 with 32% implied volatility. Roughly how big is a typical one-day move?',
+      options: ['$0.13', '$2', '$4', '$6.40'],
+      answer: 2,
+      why: '32% ÷ 16 = 2% per day, and 2% of $200 is $4.',
+    },
+    {
+      q: 'If the one-month expected move is ±$20, what is the approximate one-year expected move at the same volatility?',
+      options: ['±$240', '±$69', '±$20', '±$35'],
+      answer: 1,
+      why: 'Time scales by √12 ≈ 3.46, so $20 × 3.46 ≈ $69. Not × 12.',
+    },
+    {
+      q: 'SPY had 16 days beyond two standard deviations when a normal distribution predicts about 12. What is this called?',
+      options: ['Mean reversion', 'Fat tails', 'Volatility crush', 'Skew'],
+      answer: 1,
+      why: 'More extreme outcomes than a normal distribution predicts is the definition of fat tails (excess kurtosis).',
+    },
+    {
+      q: 'Implied volatility is 14% and realized volatility over the past month was 10%. Which is true?',
+      options: [
+        'Options are mispriced and should be sold',
+        'The market is pricing a bumpier future than the recent past',
+        'Realized volatility will rise to 14%',
+        'Implied volatility must fall to 10%',
+      ],
+      answer: 1,
+      why: 'Implied is a forecast. The gap tells you what the market expects and how much it charges for risk, not what will happen.',
+    },
+  ]}
+/>
+
+<BookRef />

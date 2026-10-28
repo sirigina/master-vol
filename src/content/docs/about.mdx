@@ -1,0 +1,38 @@
+---
+title: How to use this site
+description: How lessons are structured, where the data comes from, the analogies we use, and important disclaimers.
+---
+
+import { bookLink } from '../../data/site.mjs';
+
+## Lesson structure
+
+Each lesson has an ID (module letter + number), a list of lessons it builds on, two explanation layers, interactive figures, key takeaways, and a short self-check. Use **Explain it: Both / Plain English / Pro** at the top of any lesson; your choice is remembered on this device.
+
+## The analogy set
+
+To keep the plain-English layer consistent, the same analogies are used everywhere:
+
+| Concept | Analogy |
+| --- | --- |
+| An option | A deposit that holds a price for you; for puts, an insurance policy |
+| Premium | The deposit or insurance payment |
+| Volatility | A weather forecast for price swings: how big, not which direction |
+| Implied vs realized volatility | The forecast vs the weather that actually happened |
+| Delta | A speedometer: how fast the option moves relative to the stock |
+| Gamma | The accelerator: how fast delta itself changes |
+| Theta | Melting ice: value that drains away each day |
+
+## About the market data
+
+Examples use a single **static snapshot**: SPY and its options at the close on October 27, 2026, pulled at the time the site was built. Every example that uses market data says so. Prices have moved since; the concepts don't depend on them. Where a calculation needs an interest rate, we use the rate implied by the option prices themselves (put-call parity), about 4.6% at the snapshot.
+
+## Sources and attribution
+
+The curriculum is inspired by Sheldon Natenberg's *Option Volatility and Pricing*, the standard text for professional options traders. All explanations, examples, and figures on this site are our own. Where a lesson follows the book's framing closely, it says so and points to the relevant part of the book. Concepts that are common knowledge across the field are not attributed.
+
+If you want the full treatment, the book is worth owning: <a href={bookLink()} rel="sponsored noopener" target="_blank">Option Volatility and Pricing on Amazon</a>. As an Amazon Associate this site earns from qualifying purchases.
+
+## Not investment advice
+
+This site is for education only. Nothing here is a recommendation to buy or sell any security or to use any strategy. Options involve significant risk, can lose value quickly, and are not suitable for all investors. Read the [Characteristics and Risks of Standardized Options](https://www.theocc.com/company-information/documents-and-archives/options-disclosure-document) before trading.

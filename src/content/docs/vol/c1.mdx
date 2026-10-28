@@ -1,0 +1,204 @@
+---
+title: Random walks & the normal distribution
+description: See why coin-flip price moves spread out into a bell curve, read the 68-95-99.7 rule, and scale a daily move to any horizon with the square root of time.
+lessonId: C1
+prereqs: []
+minutes: 20
+---
+
+import RandomWalkSim from '../../../components/widgets/c/RandomWalkSim.tsx';
+import NormalExplorer from '../../../components/widgets/c/NormalExplorer.tsx';
+import SpyVsNormal from '../../../components/widgets/c/SpyVsNormal.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+Option pricing starts from one modest assumption: nobody knows which way the next move goes. This lesson shows what that assumption implies. Pile up enough unpredictable moves and you get a bell curve, a precise rule for how often big moves happen, and a range that grows with the square root of time.
+
+## A walk made of coin flips
+
+<Plain>
+
+Stand on a line and flip a coin. Heads, step right; tails, step left. Do it 100 times. Where do you end up?
+
+Almost never 100 steps away; that would need 100 heads in a row. Usually the heads and tails mostly cancel and you finish somewhere near the start, give or take about **10 steps**. A few walkers drift out to 20 or 25. Hardly anyone gets to 40.
+
+Now picture thousands of walkers doing this at once and mark where each one stops. The marks pile up in a hump in the middle and thin out to both sides. That hump is the **bell curve**, and it shows up whenever many small, independent pushes add together. Daily price changes are a lot like that: news, orders and opinions pushing a little up or a little down.
+
+</Plain>
+
+<Pro>
+
+Let $$X_i = \pm 1$$ with equal probability, independent. The position after $$n$$ steps is $$W_n = \sum_{i=1}^{n} X_i$$, with
+
+$$
+\mathbb{E}[W_n] = 0, \qquad \operatorname{Var}(W_n) = \sum_{i=1}^n \operatorname{Var}(X_i) = n, \qquad \operatorname{SD}(W_n) = \sqrt{n}.
+$$
+
+Variances of independent steps add; standard deviations do not. By the central limit theorem, $$W_n/\sqrt{n}$$ converges in distribution to a standard normal $$\mathcal{N}(0,1)$$ as $$n$$ grows, whatever the distribution of the individual steps (as long as they are independent with finite variance). In the limit of many tiny steps the walk becomes **Brownian motion**, the building block of the Black-Scholes model.
+
+</Pro>
+
+<RandomWalkSim client:visible />
+
+Press **Flip new coins** and watch the histogram on the right fill in. With 100 steps the spread of end points settles near **10**, which is √100. Drag the steps to 400 and the spread doubles to about 20, not quadruples. The orange curves mark ±√steps at every point along the way: the cloud of walks widens like a square root, fast at first and then more slowly.
+
+One detail for the curious: with whole-number steps the share landing inside ±√steps runs a little above 68% (about 73% for 100 steps), because the end points sit on a grid. More steps shrink that gap.
+
+## Mean and standard deviation
+
+<Plain>
+
+Two numbers describe a bell curve completely.
+
+- The **mean** is the center, where the hump peaks. For a fair coin it is zero: no direction is favored.
+- The **standard deviation** (SD) is the typical distance from the center. It sets how wide the hump is.
+
+For prices, the standard deviation of returns is what traders call **volatility**. It is the weather forecast for price swings: it tells you how big the swings tend to be, never which way they go.
+
+</Plain>
+
+<Pro>
+
+For a sample $$x_1,\dots,x_n$$:
+
+$$
+\bar{x} = \frac{1}{n}\sum_i x_i, \qquad s = \sqrt{\frac{1}{n-1}\sum_i (x_i-\bar{x})^2}
+$$
+
+The normal density with mean $$\mu$$ and standard deviation $$\sigma$$ is
+
+$$
+f(x) = \frac{1}{\sigma\sqrt{2\pi}}\exp\!\left(-\frac{(x-\mu)^2}{2\sigma^2}\right)
+$$
+
+and the probability of landing within $$k$$ standard deviations is $$N(k) - N(-k) = 2N(k) - 1$$, where $$N$$ is the standard normal cumulative distribution. In option pricing the variable that is assumed normal is the **log return** $$\ln(S_t/S_0)$$, not the price itself; lesson [C3](/vol/c3/) explains why.
+
+</Pro>
+
+## The 68-95-99.7 rule
+
+The normal curve comes with fixed proportions. About **68%** of outcomes land within one standard deviation of the mean, **95%** within two, and **99.7%** within three. Switch between the bands, or choose a custom width.
+
+<NormalExplorer client:visible />
+<SnapshotNote detail="SPY close used to put a dollar scale on the axis" />
+
+<Plain>
+
+Turn the percentages into frequencies and the rule becomes practical. If SPY's daily moves were perfectly normal at 14% volatility, one SD on a day would be about **±0.88%**, roughly $6.79.
+
+- A move bigger than one SD would happen about **1 day in 3**. Routine.
+- A move bigger than two SD (about $13.58) would happen about **1 day in 22**, roughly once a month.
+- A move bigger than three SD would happen about **1 day in 370**, which is less than once a year.
+
+That last line is where real markets misbehave. Keep reading.
+
+</Plain>
+
+<Pro>
+
+The tail probabilities are $$2(1-N(k))$$: 31.7% for $$k=1$$, 4.55% for $$k=2$$, 0.27% for $$k=3$$. With 252 sessions a year, a normal model expects about 11.5 two-sigma days and 0.68 three-sigma days per year. These are the benchmarks against which "fat tails" are measured. The daily SD at annual volatility $$\sigma$$ is $$\sigma/\sqrt{252} \approx \sigma/15.9$$, the "rule of 16" covered in [lesson C2](/vol/c2/).
+
+</Pro>
+
+## Spreading with the square root of time
+
+Because variances add, the range of a random walk grows with the square root of the number of steps. The same holds for prices if daily moves are independent.
+
+<Plain>
+
+If a typical SPY day is ±$6.79, a typical week is not 5 × $6.79 = $34. Up days and down days partly cancel, just like the coin flips. The week's typical range is √5 ≈ 2.24 times the day's, about **±$15**. A month of about 21 trading days is √21 ≈ 4.6 times, about **±$31**. A full year of 252 days is √252 ≈ 15.9 times, about **±$108**.
+
+To make a range twice as wide you need four times as long. That single fact explains why short-dated options are so cheap relative to long-dated ones, and why time decay speeds up near expiration (lesson [D3](/vol/d3/)).
+
+</Plain>
+
+<Pro>
+
+For independent, identically distributed daily log returns with SD $$\sigma_d$$, the $$n$$-day return has
+
+$$
+\operatorname{SD}_n = \sigma_d\sqrt{n}, \qquad \sigma_{\text{annual}} = \sigma_d\sqrt{252}.
+$$
+
+So at 14% annualized, $$\sigma_d = 0.14/\sqrt{252} = 0.882\%$$, the 5-day SD is $$0.14\sqrt{5/252} = 1.97\%$$ and the 21-day SD is $$0.14\sqrt{21/252} = 4.04\%$$. The scaling fails when returns are autocorrelated (trending or mean-reverting at short horizons) or when volatility itself changes over the period. Both happen in practice, which is why traders treat √t as a baseline rather than a law.
+
+</Pro>
+
+## Reality check: SPY is almost normal
+
+The bell curve is a model. Here is how SPY's past year of daily moves stacks up against it.
+
+<SpyVsNormal client:visible />
+<SnapshotNote detail="256 daily log returns, Oct 20, 2025 to Oct 27, 2026" />
+
+SPY had **192 of 256 days (75%)** within one standard deviation, more than the 68% the bell predicts. It also had **16 days** beyond two standard deviations against a predicted 11.6, and **3** beyond three against a predicted 0.7. Real returns are calmer most of the time and wilder some of the time. That pattern, fat tails, is why the bell curve is a starting point rather than the last word. [Lesson C2](/vol/c2/) shows the full histogram and what it means for option prices.
+
+<Plain>
+
+Think of the bell curve as a weather forecast that gets the ordinary day right but is too relaxed about storms. SPY's biggest move of the year, on March 31, 2026, was about **3.5 times** its typical daily move. A perfect bell curve expects a day that size about once in nine years; SPY delivered it within one.
+
+</Plain>
+
+<Pro>
+
+Measured on the same 256 log returns, the daily SD is 0.798% (12.7% annualized), the skewness is −0.07 and the kurtosis is 3.78, an excess of **0.78** over the normal's 3. Taken alone, 16 two-sigma days against 11.6 expected is not conclusive: a Poisson count with that mean reaches 16 or more about 13% of the time. Three three-sigma days against 0.69 expected is stronger evidence, with a probability of about 3%. A common source of excess kurtosis is volatility that changes over the sample: a mix of calm and stormy normal regimes is fat-tailed overall, even if each day is drawn from a bell curve.
+
+</Pro>
+
+## Common mistakes
+
+- **Scaling a daily move linearly.** Five days of ±0.88% is about ±2%, not ±4.4%. Ranges grow with √time.
+- **Treating a two-SD move as rare.** At about 1 day in 22, it is a monthly event.
+- **Reading the mean as a forecast of direction.** The bell curve centered at zero says nothing about which way the next move goes; it only describes sizes.
+- **Trusting the 99.7% literally.** Real markets produce three-SD days several times more often than a normal curve allows.
+
+<Takeaway>
+
+- Many small, independent up-or-down moves add up to a bell-shaped (normal) distribution.
+- The mean sets the center; the standard deviation sets the width. For returns, the annualized SD is volatility.
+- About 68% of outcomes fall within ±1 SD, 95% within ±2 SD, 99.7% within ±3 SD.
+- Variances add, so the range grows with √time: four times the horizon, twice the range.
+- SPY is close to normal but has more quiet days and more extreme days than the bell predicts.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="C1"
+  questions={[
+    {
+      q: 'A coin-flip walk has 400 steps of ±1. What is the standard deviation of where it ends?',
+      options: ['400', '200', '20', '4'],
+      answer: 2,
+      why: 'Variance adds: 400 steps of variance 1 give variance 400, so the SD is √400 = 20.',
+    },
+    {
+      q: 'Under a normal distribution, how often should a move bigger than two standard deviations (either direction) happen?',
+      options: ['About 1 time in 3', 'About 1 time in 22', 'About 1 time in 370', 'Never'],
+      answer: 1,
+      why: 'About 4.55% of outcomes fall outside ±2 SD, which is roughly 1 in 22. For daily moves that is about once a month.',
+    },
+    {
+      q: 'A stock has a typical daily move of ±1%. Assuming independent days, what is its typical move over 16 trading days?',
+      options: ['±16%', '±8%', '±4%', '±1%'],
+      answer: 2,
+      why: 'Ranges scale with √time: √16 = 4, so ±1% × 4 = ±4%.',
+    },
+    {
+      q: 'Over the past year SPY had 3 days beyond three standard deviations. A normal curve predicts about 0.7. What does this tell you?',
+      options: [
+        'SPY returns have fatter tails than the normal distribution',
+        'Volatility was measured incorrectly',
+        'SPY will crash soon',
+        'The mean return was too high',
+      ],
+      answer: 0,
+      why: 'More extreme days than the bell allows is the signature of fat tails, a feature of nearly every real market.',
+    },
+  ]}
+/>

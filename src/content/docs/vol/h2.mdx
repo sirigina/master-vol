@@ -1,0 +1,169 @@
+---
+title: Position Greeks
+description: Add up Greeks across legs and contracts, express them in shares and dollars, and read a position risk report the way a desk does.
+lessonId: H2
+prereqs: [D6]
+minutes: 20
+---
+
+import PositionGreeks from '../../../components/widgets/h/PositionGreeks.tsx';
+import PnlExplain from '../../../components/widgets/h/PnlExplain.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+A single option's Greeks are a few decimals on a screen. A real position has several legs, different expiries, maybe some stock, and many contracts. What you need is one set of numbers for the **whole position**, in units you can act on: shares, dollars per day, dollars per volatility point.
+
+## Greeks add up
+
+<Plain>
+
+Greeks behave like ingredients in a recipe: to get the total, add up what each leg contributes, counting short legs as negative.
+
+Take an iron condor on SPY: sell the 750 put and the 790 call, buy the 720 put and the 820 call as protection. Each leg has its own speedometer (delta), accelerator (gamma), melting ice (theta) and sensitivity to the forecast changing (vega). Add them leg by leg and you get the condor's:
+
+- It **earns about $16 a day** from melting ice, if nothing else changes.
+- It **loses about $83** for every 1-point rise in implied volatility.
+- It behaves like being **short about 8 shares** of SPY right now.
+
+Three numbers, and you already know what this position wants: a quiet market and falling volatility.
+
+</Plain>
+
+<Pro>
+
+Greeks are partial derivatives, and differentiation is linear, so position Greeks are signed, quantity-weighted sums:
+
+$$
+\Delta_P = \sum_i n_i\,m\,\Delta_i + n_S, \qquad \Gamma_P = \sum_i n_i\,m\,\Gamma_i, \qquad \Theta_P,\ \mathcal{V}_P,\ \rho_P \text{ likewise}
+$$
+
+with $$n_i$$ the signed contract count, $$m = 100$$ the multiplier and $$n_S$$ the share count (stock has delta 1 and no other Greeks). Each term must use the leg's own time to expiry and its own implied volatility, which is why calendars and skewed books cannot be summarized by "the" option's Greeks.
+
+</Pro>
+
+<PositionGreeks client:visible />
+<SnapshotNote detail="Nov 27 and Dec 18, 2026 expiries; Greeks recomputed from quoted IVs" />
+
+Try the presets. The iron condor and short strangle are both short gamma and short vega with positive theta; the long straddle is the mirror image. The **calendar** is the interesting one: short gamma (the November leg dominates) yet **long vega** (the December leg dominates). Each Greek can point a different way depending on which leg drives it.
+
+## Units: shares, dollars, points
+
+<Plain>
+
+The numbers on an option chain are quoted per share. A contract covers 100 shares, so the first step is always **× 100**. After that, each Greek has a natural unit:
+
+- **Delta in shares.** The condor's −8.5 shares means it gains or loses like being short 8.5 shares of SPY: about $6,500 worth.
+- **Gamma in shares per $1.** How many shares your delta changes when SPY moves $1.
+- **Theta in dollars per day.** What one calendar day of melting ice is worth, with nothing else changing.
+- **Vega in dollars per volatility point.** What you make or lose if every implied volatility rises by 1 point (say 14% to 15%).
+
+These units let you compare positions that look nothing alike.
+
+</Plain>
+
+<Pro>
+
+Desk risk reports use a few standard conversions:
+
+| Greek | Report unit | Conversion |
+| --- | --- | --- |
+| Delta | shares, and **dollar delta** | $$\Delta_P$$ and $$\Delta_P \cdot S$$ |
+| Gamma | shares per $1, or **delta change per 1% move** | $$\Gamma_P$$ and $$\Gamma_P \cdot S/100$$ |
+| Gamma P/L | dollars for a 1% move | $$\tfrac12\,\Gamma_P\,(0.01\,S)^2$$ |
+| Theta | $ per calendar day | $$\Theta_P$$ |
+| Vega | $ per vol point | $$\mathcal{V}_P$$ |
+| Rho | $ per rate point | $$\rho_P$$ |
+
+For the condor: dollar delta is $$-8.50 \times 769.66 \approx -\$6{,}543$$; gamma of −1.32 shares per dollar means delta drops about 10 shares for each 1% rally, and a 1% move in either direction costs about $39 from gamma alone. Dollar Greeks make SPY risk comparable with SPX or single-stock risk; percentage-move gamma makes a $770 index comparable with a $50 stock.
+
+</Pro>
+
+## Reading a risk report: the P/L explain
+
+A risk report is a prediction. Each morning, a desk compares yesterday's P/L with what the Greeks said it should be. That breakdown, the **P/L explain** (or attribution), is how traders check that they understand their own position.
+
+<PnlExplain client:visible />
+<SnapshotNote detail="Nov 27 / Dec 18, 2026 option Greeks; full reprice with Black-Scholes" />
+
+<Plain>
+
+Start with the short strangle, SPY down 1% and volatility up 1 point. The report says:
+
+- **Delta:** +$10. The position was very slightly short, so a dip helped a little.
+- **Gamma:** −$62. The accelerator works against a short-option position in any move.
+- **Vega:** −$147. Volatility rose, and the position is short volatility.
+- **Theta:** +$34. One day of melting ice collected.
+
+Add them: about **−$165**. The full reprice says **−$159**. Close: the Greeks explain the day well. Now push SPY down 3% and volatility up 4 points. The Greeks predict −$1,083; the reprice says −$963. The gap grows quickly with the size of the move. That is the subject of the next lesson.
+
+</Plain>
+
+<Pro>
+
+The explain is the second-order Taylor expansion of position value:
+
+$$
+\Delta\Pi \approx \Delta_P\,\delta S + \tfrac12\,\Gamma_P\,\delta S^2 + \mathcal{V}_P\,\delta\sigma + \Theta_P\,\delta t
+$$
+
+The **unexplained** remainder collects cross terms (vanna $$\partial^2 V/\partial S\,\partial\sigma$$, charm, volga) and higher-order terms. A desk watches it closely: a persistently large unexplained P/L means the Greeks are stale, a leg is mis-marked, or the book has exposure the report does not capture (skew moves, dividends, a missing trade). For the strangle at −3% / +4 points, about $110 of the +$120 residual is the interaction of the two shocks: with volatility 4 points higher the strangle's gamma shrinks from −2.09 to −1.75 shares per dollar, so the gamma term computed at today's volatility overstates the loss.
+
+</Pro>
+
+## Common mistakes
+
+- **Forgetting the multiplier.** A delta of −0.0125 per share for the strangle is −1.25 shares per contract; at 20 contracts it is −25 shares. Always state Greeks per position, not per share.
+- **Netting vega across expiries.** The calendar shows +$26 of vega, but it is long $115 of December vega and short $89 of November vega. Front-month and back-month implied vols do not move together point for point (lesson [H4](/vol/h4/)).
+- **Reading a small net delta as "no risk".** The strangle's net delta is about one share. Its gamma means that is only true for SPY at 769.66.
+- **Mixing theta conventions.** Some platforms report theta per trading day, others per calendar day. Ours is per calendar day.
+
+<Takeaway>
+
+- Position Greeks are signed, quantity-weighted sums of the legs' Greeks, × 100 per contract; stock adds only delta.
+- Report delta in shares and dollars, gamma in shares per $1 or per 1% move, theta in $/day, vega in $/vol point.
+- Different legs can drive different Greeks: a calendar is short gamma but long vega.
+- The P/L explain checks the report against reality. Small moves are well explained; large ones leave a growing residual.
+- A net Greek can hide large offsetting exposures, especially across expiries.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="H2"
+  questions={[
+    {
+      q: 'You are short 20 call contracts with delta 0.30 and long 400 shares of SPY. What is your net delta in shares?',
+      options: ['−200', '−600', '+340', '−60'],
+      answer: 0,
+      why: '20 × 100 × (−0.30) = −600 shares from the calls, plus 400 shares of stock: −600 + 400 = −200 shares.',
+    },
+    {
+      q: 'A position has vega of −$150 per vol point. Implied volatility rises from 14% to 17% overnight, nothing else changes. Roughly what is the vega P/L?',
+      options: ['−$150', '−$450', '+$450', '−$4.50'],
+      answer: 1,
+      why: 'Three vol points × −$150 per point ≈ −$450. Vega is quoted per 1 point, so the move is 3, not 0.03.',
+    },
+    {
+      q: 'The Nov/Dec 770 call calendar (short November, long December) has which combination?',
+      options: ['Long gamma, long vega', 'Short gamma, long vega', 'Long gamma, short vega', 'Short gamma, short vega'],
+      answer: 1,
+      why: 'The short front-month option has more gamma (−1.25 vs +0.94 shares per $1) and the long back-month option has more vega (+$115 vs −$89). Net: short gamma, long vega.',
+    },
+    {
+      q: 'Yesterday the Greeks predicted −$400 and the actual P/L was −$320. What does the $80 unexplained amount most likely reflect?',
+      options: [
+        'A bookkeeping error, always',
+        'Second-order and cross effects the first-order report leaves out, or exposures it does not capture',
+        'Theta, which is not in the report',
+        'Nothing: Greeks are exact',
+      ],
+      answer: 1,
+      why: 'The explain uses delta, gamma, vega and theta. Cross terms (vanna, volga, charm), higher-order terms, skew changes and mis-marks land in the residual. A large or persistent residual is a signal to investigate.',
+    },
+  ]}
+/>

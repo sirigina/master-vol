@@ -1,0 +1,33 @@
+---
+// The professional layer: precise definitions, math, and trader practice.
+interface Props {
+  title?: string;
+}
+const { title = 'Pro detail' } = Astro.props;
+---
+
+<section class="layer layer-pro">
+  <p class="tag not-content">{title}</p>
+  <slot />
+</section>
+
+<style>
+  .layer {
+    margin-top: 1.5rem;
+    padding: 1rem 1.15rem;
+    border-radius: 0.75rem;
+    border-inline-start: 4px solid var(--pro-border);
+    background: var(--pro-bg);
+  }
+  .tag {
+    margin: 0 0 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sl-color-gray-2);
+  }
+  .layer > :global(:first-child + *) {
+    margin-top: 0;
+  }
+</style>

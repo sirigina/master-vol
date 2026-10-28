@@ -1,0 +1,181 @@
+---
+title: Rho & dividends
+description: Measure an option's sensitivity to interest rates and dividends, and use it to explain why vendor put IVs on SPY run above call IVs past December.
+lessonId: D5
+prereqs: [D1, B3]
+minutes: 20
+---
+
+import RhoTime from '../../../components/widgets/d/RhoTime.tsx';
+import DividendSlider from '../../../components/widgets/d/DividendSlider.tsx';
+import DividendGap from '../../../components/widgets/d/DividendGap.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+Interest rates and dividends are the quiet inputs. For a one-month SPY option they barely matter. For a one-year option they move prices by dollars, and if a model gets them wrong, the implied volatilities it reports are wrong too.
+
+## Rho: sensitivity to interest rates
+
+<Plain>
+
+A call is a **deposit that holds a price**: you pay a small amount now to lock in the right to buy SPY later at 770. Meanwhile, the $770 you haven't spent yet can sit in the bank earning interest. The higher interest rates are, the more that delay is worth, so **higher rates make calls worth more**.
+
+A put works the other way. The put holder will *receive* $770 later if they exercise, and money received later is worth less when rates are high. So **higher rates make puts worth less**.
+
+For short-dated options the effect is small. The 770 call expiring November 27 gains about 34 cents if rates rise one percentage point. For a call expiring in December 2027 the same rate move is worth about **$4.80**.
+
+</Plain>
+
+<Pro>
+
+Rho is the sensitivity to the risk-free rate, quoted per 1 rate point (0.01):
+
+$$
+\rho_{\text{call}} = K\,T\,e^{-rT}N(d_2)\cdot 0.01, \qquad \rho_{\text{put}} = -K\,T\,e^{-rT}N(-d_2)\cdot 0.01
+$$
+
+It grows roughly linearly with $$T$$, unlike vega ($$\sqrt{T}$$). With the snapshot's 4.6% financing rate: the November 27 770 call has rho **+0.34** ($34 per contract) and the put −0.31. The December 17, 2027 770 call, at its quoted 17.6% IV, has rho **+4.77** ($477 per contract) and the put −3.62. A full reprice with rates one point higher adds $4.84 to the December 2027 call, close to its rho.
+
+Desks hedge rho in long-dated books (LEAPS, structured products) with rate futures or by matching financing; in short-dated books it is usually ignored. Note that "the rate" for options is really the financing rate implied by put-call parity, not the Treasury bill rate ([lesson B3](/vol/b3/)).
+
+</Pro>
+
+<RhoTime client:visible />
+
+Drag volatility and notice what does *not* change much: rho depends mostly on time and moneyness. At 31 days, rho ($34 per contract) is small next to vega ($89), and a one-point rate move is far rarer than a one-point volatility move; at 416 days it is larger than the call's vega ($306).
+
+## Dividends lower calls and raise puts
+
+<Plain>
+
+When SPY pays a dividend, its price drops by about the dividend amount on the ex-dividend date. Option holders do not receive the dividend. So a known dividend is a **known future drop** in the price:
+
+- It makes calls worth **less** (the stock is expected to give up some value before expiry).
+- It makes puts worth **more** (the same drop helps them).
+
+SPY pays roughly 1.1% a year, in four quarterly payments of about $2.10 a share at today's price, with ex-dates around the third Friday of December, March, June and September.
+
+</Plain>
+
+<Pro>
+
+With a continuous dividend yield $$q$$, the model prices off the forward $$F = S\,e^{(r-q)T}$$. Put-call parity becomes
+
+$$
+C - P = S\,e^{-qT} - K\,e^{-rT}
+$$
+
+so every dollar of present-value dividends lowers $$C - P$$ by a dollar, split between a lower call and a higher put. Dividend sensitivity (sometimes called psi or "dividend rho") is $$-S\,T\,e^{-qT}N(d_1)$$ for a call and $$+S\,T\,e^{-qT}N(-d_1)$$ for a put, per unit of yield. For an index ETF a continuous yield is a reasonable approximation; for single stocks with one or two known payments, desks model discrete cash dividends.
+
+</Pro>
+
+<DividendSlider client:visible />
+
+With the December 2027 expiry at its 18.1% ATM IV, moving the yield from 0 to 1.1% drops the 770 call from **$79.27 to $73.23** and lifts the put from **$40.28 to $43.83**. The call-minus-put gap shrinks from $38.99 to $29.40, by $9.59, the present value of a 1.1% yield over 416 days (about four or five quarterly payments). Switch to November 27 and the same slider barely moves anything: no ex-date falls before that expiry, and in the model a 1.1% yield over 31 days is only about 72 cents.
+
+## Why vendor put IVs exceed call IVs beyond December
+
+The snapshot has a puzzle in it. At the 770 strike, the call and put should have nearly the same implied volatility: by put-call parity, they are the same bet on volatility. Through November 27 the vendor's call and put IVs agree within half a point. From December 18 on, the put's IV is **0.6 to 1.0 points higher** every time.
+
+<DividendGap client:visible />
+<SnapshotNote detail="770-strike call and put mids and vendor IVs across 9 expiries, rate 4.6%" />
+
+The vendor computes IVs **without the dividend**. Look at what parity says. With no dividend, $$C - P$$ at 416 days should be about $38.99. The market's call and put mids differ by only **$31.83**. Switch the chart to "Implied yield": solving parity for the dividend gives about **0.8–1.3% a year** for every expiry from December 18 on, close to SPY's real yield. The market is pricing the dividends correctly; the vendor's model is not.
+
+What happens next is mechanical. A model that leaves out the dividend thinks the forward is too high. It sees a call price that looks too low for that forward, so it backs out a **lower** IV for the call; it sees a put that looks too expensive, so it backs out a **higher** IV for the put. The gap starts at the first expiry that includes an ex-date (December 18, 52 days) and stays roughly constant after.
+
+Two details in the chart:
+
+- The near expiries (10 to 24 days) show small *negative* implied yields. The 4.6% rate was calibrated to make parity hold exactly at 31 days; shorter maturities carry slightly different financing rates and quote noise. That is a few cents, not a dividend.
+- The parity gap is the cleaner signal. Rebuilding the IVs with SPY's quarterly dividends removes the put-over-call pattern; with the full 1.1% yield (about $2.12 a quarter) it overshoots, leaving call IVs up to about 0.8 points above put IVs, which says the market is pricing dividends a little below that (about 0.8–1.0% from March on). These are American options and mids are not perfectly simultaneous, so a few tenths of a point of noise remain either way.
+
+<Plain>
+
+Think of it as a weather forecaster who forgets that a known front is coming through. Every forecast they make for the call side looks too calm, and every forecast for the put side looks too stormy. The market isn't confused; the calculator is missing an input.
+
+</Plain>
+
+<Pro>
+
+When call and put IVs at the same strike disagree systematically, check carry before concluding anything about volatility. The difference is a statement about the forward: it implies a dividend or borrow rate different from the one in the model. Desks back out an "implied forward" (or implied dividend/borrow) from parity across strikes and use it to compute a single IV per strike. On hard-to-borrow stocks the same effect shows up as a borrow fee rather than a dividend. Never trade "puts rich to calls" at the same strike on a vendor IV gap without doing this first.
+
+</Pro>
+
+## Dividends and early exercise
+
+SPY options are American: they can be exercised any day. Usually that right is worth nothing extra for a call, because exercising early throws away the call's time value. A dividend is the exception. On the day before an ex-date, an in-the-money call whose remaining time value is less than the dividend is worth more exercised (you collect the dividend) than held. The same carry logic works on puts in reverse: a deep in-the-money put can be worth exercising early to receive the strike and earn interest on it. [Lesson F6](/vol/f6/) covers the rules and the trade-offs.
+
+<Plain>
+
+If you are **short** an in-the-money SPY call the day before an ex-dividend date and its remaining time value is less than the dividend, expect to be assigned. The holder can collect the dividend by exercising, and you will owe it.
+
+</Plain>
+
+<Pro>
+
+A call holder should exercise on the last day before the ex-date when the dividend exceeds the time value the call will still have after the price drops. By put-call parity that remaining time value is roughly the put value at the same strike plus the interest saved by paying the strike later. Deep ITM short-dated calls are the usual candidates. Market makers watch for this every quarter; failing to exercise when it pays is a free gift to the short side.
+
+</Pro>
+
+## Common mistakes
+
+- **Ignoring rho on long-dated options.** For a December 2027 SPY call, a one-point rate move is worth more than a one-point volatility move.
+- **Comparing call and put IVs from a model that ignores dividends.** The gap past December on SPY is a dividend artifact, not a volatility signal.
+- **Forgetting dividends lower call value.** A high-yield stock's calls look cheap and puts rich for this reason alone.
+- **Getting assigned before an ex-date.** Short in-the-money calls carry early-exercise risk the day before a dividend.
+
+<Takeaway>
+
+- Rho = change in value per 1-point rate move. Calls positive, puts negative; it grows roughly linearly with time.
+- Nov 27 770 call: rho $34 per contract. Dec 2027 770 call: about $477.
+- Dividends lower calls and raise puts: call − put ≈ S − PV(dividends) − PV(strike).
+- Vendor IVs for SPY 770 puts exceed calls from December on because the vendor leaves out the dividend; parity implies a yield of roughly 1%.
+- Dividends create early-exercise decisions for in-the-money calls just before ex-dates ([lesson F6](/vol/f6/)).
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="D5"
+  questions={[
+    {
+      q: 'Rates rise by one percentage point. Which option gains the most?',
+      options: ['A 1-month ATM put', 'A 1-month ATM call', 'A 14-month ATM call', 'A 14-month ATM put'],
+      answer: 2,
+      why: 'Calls have positive rho, and rho grows roughly with time to expiry. The long-dated call gains most; puts lose.',
+    },
+    {
+      q: 'SPY announces a larger-than-expected dividend. What happens to its options, all else equal?',
+      options: ['Calls up, puts down', 'Calls down, puts up', 'Both up', 'No change'],
+      answer: 1,
+      why: 'A larger dividend means a bigger expected price drop at the ex-date, which lowers call values and raises put values.',
+    },
+    {
+      q: 'A vendor shows the Dec 2027 770 put at 18.6% IV and the 770 call at 17.6%. The most likely explanation is…',
+      options: [
+        'Traders expect a crash',
+        'The vendor model ignores the dividend',
+        'Calls are illiquid',
+        'Rho is negative for puts',
+      ],
+      answer: 1,
+      why: 'Without the dividend the model overstates the forward, so it reads the call as cheap (low IV) and the put as expensive (high IV). Parity on the mids implies about a 0.8% yield.',
+    },
+    {
+      q: 'When is early exercise of an American call most likely to be worthwhile?',
+      options: [
+        'Far from expiry, out of the money',
+        'Just before an ex-dividend date, deep in the money',
+        'Right after the dividend is paid',
+        'Whenever implied volatility falls',
+      ],
+      answer: 1,
+      why: 'Exercising captures the dividend. That pays only if the dividend exceeds the time value given up, which is small for deep ITM calls.',
+    },
+  ]}
+/>

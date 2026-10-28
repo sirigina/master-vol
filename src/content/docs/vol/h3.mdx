@@ -1,0 +1,177 @@
+---
+title: Scenario analysis
+description: See why Greeks only describe small moves, and replace them with full revaluation grids and stress scenarios over price, volatility and time.
+lessonId: H3
+prereqs: [H2]
+minutes: 25
+---
+
+import GreeksVsReprice from '../../../components/widgets/h/GreeksVsReprice.tsx';
+import ScenarioHeatmap from '../../../components/widgets/h/ScenarioHeatmap.tsx';
+import ScenarioTable from '../../../components/widgets/h/ScenarioTable.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+
+Greeks answer "what happens if SPY moves a little?" Risk management needs the answer to a different question: **what happens if SPY moves a lot, volatility jumps, and a week goes by, all at once?** For that, traders stop using the Greeks and reprice the whole position under each scenario.
+
+## Why Greeks are local
+
+<Plain>
+
+The speedometer (delta) and accelerator (gamma) describe the car **right now**. They predict the next few seconds well. Ask them where the car will be in ten minutes, after a turn and a hill, and the prediction falls apart.
+
+Greeks work the same way. They are measured at today's price, today's volatility and today's date. For a 1% or 2% move they are excellent. For a 10% move they can be wrong by thousands of dollars, and not always in the same direction:
+
+- For the **short 750/790 strangle**, the Greeks predict a 10% drop costs about **$6,085**. A full reprice says **$4,476**. The Greeks *overstate* the loss.
+- For a **short 700 put** (9% out of the money), the Greeks predict **$1,318**. The full reprice says **$1,982**. The Greeks *understate* it by half.
+
+The second case is the dangerous one, and it is typical of short out-of-the-money options.
+
+</Plain>
+
+<Pro>
+
+The Greek estimate is a second-order Taylor expansion around the current state:
+
+$$
+\Delta\Pi_{\text{Greeks}} = \Delta\,\delta S + \tfrac12\,\Gamma\,\delta S^2 + \mathcal{V}\,\delta\sigma + \Theta\,\delta t
+$$
+
+It is exact only if gamma, vega and theta are constant across the move. They are not. Gamma peaks near each strike and falls away from it, so the error depends on where the strikes sit relative to the move:
+
+- **Strangle, −10%:** SPY lands at 692.69, far past the 750 put. The put's gamma, high near 750, collapses deep in the money; the quadratic keeps accelerating. The estimate overshoots.
+- **Short 700 put, −10%:** SPY lands just below 700, where the put's gamma is *highest*. Today, 9% out of the money, its gamma is small (−0.26 shares per dollar for the position), so the quadratic barely bends. The estimate undershoots by $665.
+
+The higher-order terms (speed $$\partial\Gamma/\partial S$$, plus vanna and volga when vol moves too) are what the Taylor series truncates. Full revaluation sidesteps the problem: price every leg with the model at the shocked inputs and difference against today.
+
+</Pro>
+
+<GreeksVsReprice client:visible />
+<SnapshotNote detail="Nov 27 / Dec 18, 2026 options at quoted IVs; instant moves, no time decay" />
+
+Switch between positions. The shaded band is the error of the delta-gamma-vega estimate. It is negligible inside ±2% for every book here and grows roughly with the cube of the move beyond that. Add a volatility shock with the slider and the cross terms join in.
+
+## The revaluation grid
+
+<Plain>
+
+The standard tool is a **grid**: SPY price across the columns, change in implied volatility down the rows, and in each cell the P/L from repricing every option. It's like checking a weather map instead of one thermometer: you see the whole landscape at once.
+
+Read it like a topographic map:
+
+- **Short premium** books (strangle, condor) have a green hill in the middle and red slopes on every side. They make money only in a small region: SPY roughly unchanged and volatility not rising.
+- **Long premium** books (the straddle) are the reverse: a red valley in the middle, green everywhere else.
+- The **days forward** slider shows time passing. Watch the strangle's green hill grow as melting ice accumulates, while its red edges barely improve. After 20 days (11 left), it is up $750 if nothing happens, but if SPY is 5% lower by then it is down about $968.
+
+</Plain>
+
+<Pro>
+
+A grid of $$P(\delta S_j, \delta\sigma_k, t)$$ over $$j \in \{-10\%,\dots,+10\%\}$$ and $$k \in \{-8,\dots,+8\}$$ points is the backbone of exchange margin systems (SPAN and its successors use a similar price × vol scan) and of desk risk limits. Things to read from it:
+
+- **Worst cell**, the scenario loss. For the short strangle over this grid at day 0: **−$5,262** (SPY +10%, vol +8), against a credit of $1,038. The −10% corner is close behind; with the smile held fixed the two tails are similar, which is itself a warning that the grid ignores skew dynamics.
+- **Asymmetry** between up and down columns, which reveals residual delta and skew in the payoff.
+- **Shape along the vol axis**: if moving up a column helps at some prices and hurts at others, the book's vega changes sign across price. On this grid the calendar is long vega at every price and the covered call is short vega everywhere.
+
+Parallel vol shifts are a simplification. Real sell-offs lift downside put IVs more than at-the-money vol (sticky-strike vs sticky-delta dynamics, lesson [C8](/vol/c8/)). Production grids shock the surface, not one number.
+
+</Pro>
+
+<ScenarioHeatmap client:visible />
+<SnapshotNote detail="Nov 27 / Dec 18, 2026 options; P/L against the model value at the snapshot" />
+
+Hover any cell for the exact number. Compare the strangle with the iron condor: the same center, but the condor's wings cap the corners. That cap is what the condor pays for with $309 less credit.
+
+## Named stress scenarios
+
+<Plain>
+
+A grid shows every combination. Stress tests pick a few **stories** that could actually happen and ask what each one costs:
+
+- **Crash:** SPY −10% and volatility +10 points in one go, roughly the whole February–March 2026 drawdown compressed into a day.
+- **Sell-off:** −5% with volatility +5.
+- **Rally with falling volatility:** +5% and −2 points, the usual pattern when markets rise.
+- **Two quiet weeks:** nothing happens, volatility drifts down a point.
+
+The point is to see each position's *bad story*. The short strangle's is the crash: about **−$4,917**. The long straddle's is two quiet weeks: about **−$788**. Neither is "safe". They are exposed to different stories.
+
+</Plain>
+
+<Pro>
+
+Named scenarios add two things a uniform grid lacks: **joint moves** that respect empirical correlation (index down with vol up; index up with vol down), and **time**. The "two quiet weeks" row combines 14 days of decay with a 1-point vol drop; it is where long-premium books bleed.
+
+Toggle to "Estimate − reprice" to see where the Greek-based report would mislead you. For the crash row the Greek estimate overstates every short-premium loss in this table (strangle −$7,559 vs −$4,917) and overstates the straddle's gain (+$8,591 vs +$5,243). A short-wing position like the 700 put, as shown above, goes the other way. Since the sign of the error depends on the book, the only safe practice is full revaluation for any move beyond about 2 standard deviations of a day (here roughly ±$14 on SPY).
+
+</Pro>
+
+<ScenarioTable client:visible />
+<SnapshotNote detail="Nov 27 / Dec 18, 2026 options; one unit of each preset book" />
+
+## Common mistakes
+
+- **Extrapolating Greeks to large moves.** Delta-gamma is a local estimate; beyond a couple of daily standard deviations, reprice.
+- **Assuming the Greek error is conservative.** It overstates some losses and understates others. Short out-of-the-money options are the classic understatement.
+- **Shocking price without volatility.** Real index sell-offs come with rising implied vol; a price-only grid flatters short-vol books.
+- **Using parallel vol shifts as the whole story.** Skew steepens in sell-offs, so downside puts reprice by more than the at-the-money shift.
+
+<Takeaway>
+
+- Greeks are derivatives at one point: accurate for small moves, unreliable for large ones.
+- Full revaluation reprices every leg under each scenario and has no Taylor error.
+- A price × volatility grid shows a position's whole risk landscape; add a time slider to see decay.
+- Named stress scenarios encode joint moves that actually happen (down with vol up, up with vol down).
+- Every position has a bad story. Find it before the market does.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="H3"
+  questions={[
+    {
+      q: 'For the short 700 put, the delta-gamma estimate of a −10% move is −$1,318 but the full reprice is −$1,982. Why is the estimate too small?',
+      options: [
+        'The model ignores interest rates',
+        'Gamma grows as SPY approaches 700, but the estimate uses today’s small gamma',
+        'Theta was left out',
+        'The estimate double-counts delta',
+      ],
+      answer: 1,
+      why: 'Out-of-the-money options have little gamma today. As SPY falls toward the strike, gamma rises sharply, so the loss accelerates faster than the quadratic predicts.',
+    },
+    {
+      q: 'What does a full revaluation grid compute in each cell?',
+      options: [
+        'Delta × price move',
+        'The Greek estimate of P/L',
+        'The P/L from repricing every leg with the model at that price, volatility and date',
+        'The margin requirement',
+      ],
+      answer: 2,
+      why: 'Each cell is a full reprice: no Taylor approximation, so it captures how Greeks change across the move.',
+    },
+    {
+      q: 'Which scenario hurts a long straddle most in the stress table?',
+      options: ['Crash: −10%, vol +10', 'Rally: +5%, vol −2', 'Two quiet weeks: flat, vol −1', 'Gap up with fear: +3%, vol +3'],
+      answer: 2,
+      why: 'The straddle is long gamma and long vega and pays theta. Two weeks of no movement plus a small vol decline is its worst story: about −$788.',
+    },
+    {
+      q: 'Why do stress scenarios pair SPY declines with rising implied volatility?',
+      options: [
+        'Black-Scholes requires it',
+        'Index implied volatility tends to rise when the market falls, so a price-only shock understates short-vol losses',
+        'Volatility always rises by the same percentage as the price falls',
+        'It makes the numbers round',
+      ],
+      answer: 1,
+      why: 'The negative correlation between index returns and implied vol is one of the most reliable patterns in the market (VIX spiked to 31 at the March 2026 low). A realistic stress respects it.',
+    },
+  ]}
+/>

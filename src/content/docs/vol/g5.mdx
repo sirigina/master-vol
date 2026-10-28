@@ -1,0 +1,169 @@
+---
+title: Ratios & backspreads
+description: Build ratio spreads and backspreads on real SPY strikes, tell which are long or short volatility, size the naked-side risk, and see how skew changes their prices.
+lessonId: G5
+prereqs: [G3]
+minutes: 25
+bookRef: the chapter on volatility spreads
+---
+
+import G5RatioBuilder from '../../../components/widgets/g/G5_RatioBuilder.tsx';
+import G5SkewEffect from '../../../components/widgets/g/G5_SkewEffect.tsx';
+import Quiz from '../../../components/widgets/Quiz.tsx';
+import Plain from '../../../components/Plain.astro';
+import Pro from '../../../components/Pro.astro';
+import SnapshotNote from '../../../components/SnapshotNote.astro';
+import Takeaway from '../../../components/Takeaway.astro';
+import BookRef from '../../../components/BookRef.astro';
+
+Straddles and butterflies are symmetric bets on movement or calm. Ratio spreads and backspreads are lopsided: they combine a volatility view with a directional lean by buying and selling **unequal numbers** of options. They are also where the volatility skew stops being a curiosity and starts paying, or costing, real money.
+
+## Two mirror images
+
+<Plain>
+
+Both structures use options of the same type (all calls or all puts) at two strikes.
+
+- A **ratio spread** buys one option closer to the money and sells *more* options further out, for example buy one 770 put, sell two 750 puts. The extra sale often pays for the whole thing. It makes the most money if SPY drifts to the far strike and stops there. It loses, without limit on the call side, if SPY runs far past it.
+- A **backspread** is the reverse: sell one closer to the money, buy *more* further out. Sell one 770 call, buy two 790 calls. It is cheap or even pays you a credit, it loses most if SPY drifts to the far strike, and it gains more and more the further SPY runs past it.
+
+So the ratio spread is a calm-weather bet with a direction, and the backspread is a stormy-weather bet with a direction.
+
+</Plain>
+
+<Pro>
+
+Write the position as $$+n_1$$ options at $$K_1$$ and $$-n_2$$ at $$K_2$$, same type and expiry, with $$K_2$$ further out of the money. The net count of options $$n_1 - n_2$$ sets the family:
+
+| Structure | Net options | Gamma, vega | Theta | Unlimited side |
+| --- | --- | --- | --- | --- |
+| Ratio (1×2, 1×3) | short | − | + | beyond the short strike |
+| Backspread (2×1, 3×2) | long | + | − | none (risk capped near the long strike) |
+
+At expiry the 1×2 put ratio pays $$(770 - S_T)^+ - 2(750 - S_T)^+ - \text{premium}$$: a tent peaking at 750, then a slope of −1 per dollar below it. With real marks, buy the 770 put at $11.24 and sell two 750 puts at $5.94 for a **$0.64 credit**. Maximum gain $20.64 at 750; breakeven 729.36; below that the position is short one put outright.
+
+</Pro>
+
+<G5RatioBuilder client:visible />
+<SnapshotNote detail="Nov 27, 2026 expiry at mid, each strike at its own IV" />
+
+Start on the default 770/750 put 1×2. The expiry line is the tent; the dashed "today" line is nearly flat around SPY, because at the snapshot the position has small Greeks: delta +6.3 shares, gamma −0.49, vega −$57 and theta +$18 a day. Then try:
+
+- **Switch to Backspread 2×1.** The same strikes now cost $0.64, the tent becomes a valley, and every sign flips. Maximum loss $2,064 at 750; below 729.36 it gains a dollar per dollar.
+- **Slide days forward** and watch the today curve bend toward the expiry shape. With SPY parked at 769.66 the ratio slowly earns its decay.
+- **Switch to calls, ratio 1×2.** The 770/790 call ratio costs $5.02, peaks at $1,498 at 790, and above 804.98 it loses without limit.
+
+## Risk on the naked side
+
+<Plain>
+
+A ratio spread looks harmless near today's price. The danger sits at the edge of the chart, where one of the sold options is not covered by anything.
+
+On the 770/750 put ratio, every dollar SPY falls below the breakeven of 729.36 costs $100 per spread. A 10% drop to about 693 by expiry would lose about **$3,670**, against a best case of $2,064. That loss is the **insurance policy** you sold: OTM puts are expensive because buyers want protection against exactly this kind of fall.
+
+The backspread has no such cliff. Its worst case is capped and sits right at the far strike.
+
+</Plain>
+
+<Pro>
+
+The naked leg dominates once the market moves beyond the short strike, and the Greeks grow as it gets there. For the 770/750 put 1×2 at today's IVs:
+
+| SPY | Delta (shares) | Gamma | Vega ($/pt) |
+| --- | --- | --- | --- |
+| 790 | +0.9 | −0.10 | −22 |
+| 770 | +6.1 | −0.48 | −56 |
+| 750 | +21.4 | −1.06 | −98 |
+| 730 | +46.8 | −1.39 | −111 |
+
+The position becomes longer delta, shorter gamma and shorter vega as SPY falls: exactly the profile that hurts in a selloff, when implied volatility also tends to rise (lesson [C8](/vol/c8/)). Desks size ratios by the scenario loss at a stressed price and IV, not by the max-gain tent. Exchange margin for the naked leg is also substantial, often more than the tent's maximum gain. A 1×3 roughly doubles the naked exposure for a modest extra credit: the 770/750 put 1×3 collects $6.58 but loses $200 per spread for every dollar below 736.71.
+
+</Pro>
+
+## How the skew prices ratios
+
+On the snapshot the SPY smile is steep on the put side: the 770 put trades at 14.0% IV, the 750 put at **16.5%**, the 700 put at 23.8%. Calls go the other way: the 790 call is at 12.2%. A ratio spread sells two of the far options, so the skew lands squarely on its price.
+
+<G5SkewEffect client:visible />
+<SnapshotNote detail="real IVs vs a flat 14.1% ATM IV on every strike" />
+
+<Plain>
+
+Price the 770/750 put ratio as if every strike carried the same 14.1% forecast and it would **cost** $279. At the real prices it **pays** $64. The difference, $343 per spread, is the extra price buyers pay for downside insurance, and the ratio writer collects it twice.
+
+On the call side the skew works against the writer. OTM calls are cheap, so the 770/790 call ratio costs $502 at real prices versus $212 at flat IV.
+
+</Plain>
+
+<Pro>
+
+The skew effect is a vega-weighted IV difference. The 1×2 put ratio is short one net 750 put's worth of vega at a strike 2.5 points rich to the ATM level, and long the 770 put about at the ATM level. Per share, the real-minus-flat premium difference is $$-0.64 - 2.79 = -3.43$$: rich wings sold, fair body bought. That is why put ratio spreads are a staple of index desks: they harvest the skew premium. Two caveats keep it from being free:
+
+- **Skew is not mispricing by itself.** OTM put IVs are high because the downside distribution really is fatter and because selloffs come with rising volatility. The ratio is paid to take that risk.
+- **Spot-vol dynamics.** In SPY selloffs implied volatility tends to rise across the whole surface, so the short puts gain value from vega as well as from price. A model that holds each strike's IV fixed (sticky strike) understates the loss.
+
+The backspread is the mirror: a put backspread buys rich OTM puts, so at real prices it costs $0.64 where flat IV would pay you $2.79. A call backspread buys cheap OTM calls, which is why call backspreads look attractive on equity indexes.
+
+</Pro>
+
+## Common mistakes
+
+- **Judging a ratio by its credit.** The $0.64 credit is the smallest number in the trade; the slope below 729.36 is the one that matters.
+- **Calling every backspread "long volatility" at every price.** With SPY sitting right on the short strike near expiry, a backspread can show negative gamma; it is long volatility over a range, not at every point.
+- **Ignoring the IV path in a selloff.** Put ratios lose on price and on vega at the same time when SPY falls fast.
+- **Comparing ratios across underlyings without checking skew.** The same 1×2 can be a credit in SPY and a debit in a stock with a flat or upward-sloping smile.
+
+<Takeaway>
+
+- Ratio spreads sell more options than they buy: short gamma and vega, positive theta, with a tent peaking at the far strike and naked risk beyond it.
+- Backspreads buy more than they sell: long gamma and vega, negative theta, worst case at the far strike, open-ended gain beyond it.
+- The 770/750 put 1×2 takes in $0.64, peaks at $2,064 at 750 and loses $100 per dollar below 729.36.
+- SPY's put skew makes put ratios cheaper ($343 better than flat IV on 770/750) and put backspreads dearer; call skew does the opposite.
+- Size ratios by the stress loss on the naked side, not by the maximum gain.
+
+</Takeaway>
+
+## Check yourself
+
+<Quiz
+  client:visible
+  id="G5"
+  questions={[
+    {
+      q: 'Buy one 770 call, sell two 790 calls. Which family is this?',
+      options: ['Long volatility', 'Short volatility', 'Pure delta', 'A calendar'],
+      answer: 1,
+      why: 'Net one short call: gamma −1.17, vega −$60, theta +$9 per spread at the snapshot. It wants SPY to drift to 790 and stay calm.',
+    },
+    {
+      q: 'The 770/750 put 1×2 collects $0.64. Where is its breakeven at expiry, and what happens below it?',
+      options: [
+        '749.36; losses are capped',
+        '729.36; it loses $100 per spread for every dollar SPY falls further',
+        '769.36; it gains on a fall',
+        'There is no breakeven',
+      ],
+      answer: 1,
+      why: 'Max value at 750 is $20 + $0.64 = $20.64. One naked put remains, so the P/L falls a dollar per dollar and crosses zero at 750 − 20.64 = 729.36.',
+    },
+    {
+      q: 'Why is the 770/750 put ratio a credit at real prices but a debit at flat IV?',
+      options: [
+        'The interest rate',
+        'The 750 put carries a higher IV (16.5%) than the ATM level, so the two puts sold are worth more',
+        'Puts always cost more than calls',
+        'Bid-ask spreads',
+      ],
+      answer: 1,
+      why: 'The ratio sells two units of the skew-rich OTM put. At 16.5% IV each is worth $5.94; at 14.1% about $4.24. Selling two at the higher price turns a $2.79 debit into a $0.64 credit.',
+    },
+    {
+      q: 'Which structure benefits most from a sudden crash with a spike in implied volatility?',
+      options: ['770/750 put ratio 1×2', '770/790 call ratio 1×2', '770/750 put backspread 2×1', '760/770/780 call butterfly'],
+      answer: 2,
+      why: 'The put backspread is net long one 750 put: long gamma and vega, with open-ended gains as SPY falls. The put ratio is the exact opposite.',
+    },
+  ]}
+/>
+
+<BookRef />

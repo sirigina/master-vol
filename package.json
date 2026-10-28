@@ -1,0 +1,49 @@
+{
+  "name": "master-vol",
+  "version": "1.0.0",
+  "description": "Interactive options & volatility course",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "test": "vitest run",
+    "snapshot": "python3 scripts/snapshot-source.py"
+  },
+  "dependencies": {
+    "@astrojs/markdown-remark": "^7.3.4",
+    "@astrojs/mdx": "^8.1.1",
+    "@astrojs/react": "^7.1.1",
+    "@astrojs/starlight": "^0.42.7",
+    "@astrojs/starlight-tailwind": "^5.0.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@nanostores/react": "^2.0.1",
+    "@observablehq/plot": "^0.6.17",
+    "@radix-ui/react-slider": "^1.6.1",
+    "@radix-ui/react-tabs": "^1.2.1",
+    "@radix-ui/react-toggle-group": "^1.2.1",
+    "@radix-ui/react-tooltip": "^1.4.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.4.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "d3": "^7.9.0",
+    "katex": "^0.19.1",
+    "nanostores": "^1.5.5",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0",
+    "tailwind-merge": "^3.7.0",
+    "tailwindcss": "^4.3.3"
+  },
+  "devDependencies": {
+    "@types/d3": "^7.4.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  },
+  "type": "module",
+  "private": true
+}

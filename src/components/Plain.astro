@@ -1,0 +1,33 @@
+---
+// The beginner layer. Uses the site-wide analogy set (see /about/).
+interface Props {
+  title?: string;
+}
+const { title = 'In plain English' } = Astro.props;
+---
+
+<section class="layer layer-plain">
+  <p class="tag not-content">{title}</p>
+  <slot />
+</section>
+
+<style>
+  .layer {
+    margin-top: 1.5rem;
+    padding: 1rem 1.15rem;
+    border-radius: 0.75rem;
+    border-inline-start: 4px solid var(--plain-border);
+    background: var(--plain-bg);
+  }
+  .tag {
+    margin: 0 0 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sl-color-gray-2);
+  }
+  .layer > :global(:first-child + *) {
+    margin-top: 0;
+  }
+</style>
